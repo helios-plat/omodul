@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "feat/**", "setup/**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e ".[dev]"
+      - run: ruff check omodul/ tests/
+      - name: Layer 3 discipline check
+        run: |
+          if grep -rn "from omodul\." omodul/*.py | grep -v "__init__" | grep -v "_version" | grep -v "_base"; then
+            echo "ERROR: Layer 3 discipline violated"
+            exit 1
+          fi
+      - run: pytest --cov=omodul --cov-report=term-missing --cov-fail-under=90

@@ -1,0 +1,58 @@
+[project]
+name = "omodul"
+version = "0.1.0"
+description = "End-to-end financial analysis features built on oprim + oskill"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Wiki" }]
+keywords = ["finance", "quantitative", "meta-functions", "backtest", "regime", "risk"]
+
+dependencies = [
+    "oprim>=1.0.0,<2.0.0",
+    "oskill>=1.0.0,<2.0.0",
+    "numpy>=1.24",
+    "scipy>=1.11",
+    "pandas>=2.0",
+    "scikit-learn>=1.3",
+    "statsmodels>=0.14",
+    "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "pytest-benchmark>=4.0",
+    "ruff>=0.1.0",
+    "mypy>=1.5",
+]
+
+[project.urls]
+Repository = "https://github.com/helios-plat/omodul"
+Issues = "https://github.com/helios-plat/omodul/issues"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "omodul/_version.py"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--strict-markers -v"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP"]
+
+[tool.coverage.run]
+source = ["omodul"]
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true
