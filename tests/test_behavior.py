@@ -78,3 +78,18 @@ class TestShadowAccountSimulator:
         labels = pd.Series(["BULL"] * 30 + ["BEAR"] * 30, index=dates)
         result = shadow_account_simulator(trades, market, lambda ts, ctx: {"pnl": 5}, regime_labels=labels)
         assert "regime_breakdown" in result
+
+    def test_no_pnl_column_warns(self):
+        """Missing pnl column warns."""
+        dates = pd.date_range("2023-01-01", periods=30, freq="B")
+        trades = pd.DataFrame({
+            "timestamp": dates[:5], "symbol": "SPY", "side": "buy",
+            "quantity": 100, "price": 400.0,
+        })
+        market = pd.DataFrame({"SPY": np.arange(30) + 400.0}, index=dates)
+        import warnings
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            shadow_account_simulator(trades, market, lambda ts, ctx: None)
+            assert any("pnl" in str(x.message) for x in w)
+

@@ -136,7 +136,7 @@ def thesis_invalidation_monitor(
         if include_trend_analysis and len(rolling_briers) > 10:
             trend_test = oprim.mann_kendall_trend(np.array(rolling_briers))
             trend_increasing = (trend_test["p_value"] < mk_alpha and
-                                trend_test.get("trend", "") in ("increasing", "up"))
+                                trend_test.get("trend", "") == "increasing")
 
         # 4-state judgment
         above_threshold = latest_brier > brier_threshold

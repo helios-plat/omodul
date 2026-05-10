@@ -104,3 +104,15 @@ class TestEventCascadeClusterer:
     def test_missing_columns_raises(self):
         with pytest.raises(ValueError, match="columns"):
             event_cascade_clusterer(pd.DataFrame({"x": [1]}))
+
+    def test_ts_methods_without_timeseries_warns(self):
+        """Requesting DTW without timeseries warns."""
+        rng = np.random.default_rng(42)
+        query = {"signature": rng.normal(0, 1, 5)}
+        candidates = [{"id": "C0", "signature": rng.normal(0, 1, 5)}]
+        import warnings
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            smart_peer_finder(query, candidates, methods=["cosine", "dtw"])
+            assert any("timeseries" in str(x.message) for x in w)
+

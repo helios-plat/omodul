@@ -85,7 +85,7 @@ def regime_replay_search(
         forward_dist = pd.DataFrame(days)
 
         # Cumulative forward at horizon
-        cum_returns = [np.prod(1 + padded[i, :min(forward_days, len(forward_returns_list[i]))]) - 1
+        cum_returns = [float(np.prod(1 + padded[i, ~np.isnan(padded[i])]) - 1)
                        for i in range(len(forward_returns_list))]
         cum_arr = np.array(cum_returns)
         cumulative_forward = {

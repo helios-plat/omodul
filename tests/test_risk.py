@@ -69,3 +69,18 @@ class TestTailRiskAnalyzer:
         result = tail_risk_analyzer(spy_returns, n_bootstrap=200)
         assert result["tail_metrics"]["skewness"] != 0
         assert result["var_es_table"]["var"].min() > 0
+
+    def test_custom_scenario_first_day_shock(self, spy_returns, btc_panel):
+        """Test shock_distribution='first_day'."""
+        scenarios = [{"name": "crash", "type": "custom", "shock_pct": -0.15,
+                      "duration_days": 5, "shock_distribution": "first_day"}]
+        result = scenario_stress_test(spy_returns, btc_panel, scenarios=scenarios)
+        assert result["per_scenario"][0]["performance"] is not None
+
+    def test_custom_scenario_linear_shock(self, spy_returns, btc_panel):
+        """Test shock_distribution='linear'."""
+        scenarios = [{"name": "slow", "type": "custom", "shock_pct": -0.10,
+                      "duration_days": 10, "shock_distribution": "linear"}]
+        result = scenario_stress_test(spy_returns, btc_panel, scenarios=scenarios)
+        assert result["per_scenario"][0]["performance"]["n_days"] == 10
+

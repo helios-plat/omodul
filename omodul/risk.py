@@ -53,8 +53,15 @@ def scenario_stress_test(
         elif s_type == "custom":
             shock_pct = scenario.get("shock_pct", -0.10)
             duration = scenario.get("duration_days", 5)
-            daily_shock = (1 + shock_pct) ** (1 / duration) - 1
-            scenario_returns = pd.Series([daily_shock] * duration)
+            shock_dist = scenario.get("shock_distribution", "geometric")
+            if shock_dist == "first_day":
+                scenario_returns = pd.Series([shock_pct] + [0.0] * (duration - 1))
+            elif shock_dist == "linear":
+                daily = shock_pct / duration
+                scenario_returns = pd.Series([daily] * duration)
+            else:  # geometric (default)
+                daily_shock = (1 + shock_pct) ** (1 / duration) - 1
+                scenario_returns = pd.Series([daily_shock] * duration)
 
         elif s_type == "analogy":
             # Use historical_analogy_search to find similar periods
@@ -187,8 +194,9 @@ def tail_risk_analyzer(
             "normality_rejected": ks["p_value"] < 0.05,
         }
 
-    # Method comparison
-    vars_95 = {r["method"]: r["var"] for r in rows if r["confidence_level"] == confidence_levels[0]}
+    # Method comparison (filter NaN before max/min)
+    vars_95 = {r["method"]: r["var"] for r in rows
+               if r["confidence_level"] == confidence_levels[0] and not np.isnan(r["var"])}
     most_conservative = max(vars_95, key=vars_95.get) if vars_95 else None
     most_liberal = min(vars_95, key=vars_95.get) if vars_95 else None
 

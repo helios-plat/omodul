@@ -30,6 +30,12 @@ def strategy_backtest_report(
         oskill.bootstrap_sharpe, oskill.regime_aware_performance,
         oskill.factor_attribution, oprim.cumulative_returns, oprim.drawdown_curve,
         oprim.value_at_risk
+
+    Note:
+        cpcv_config is passed directly to oskill.cpcv_pipeline. To compute path
+        statistics (median_sharpe, etc.), cpcv_config must include a 'backtest_fn'
+        key: Callable[[np.ndarray, np.ndarray], np.ndarray]. Without it, only
+        splits are returned.
     """
     if not isinstance(strategy_returns, pd.Series):
         strategy_returns = pd.Series(strategy_returns)
@@ -281,7 +287,7 @@ def factor_attribution_report(
                         window_ret, window_fac, bootstrap_ci_enabled=False
                     )
                     rolling_alphas.append(r["alpha"])
-                except Exception:
+                except ValueError:
                     rolling_alphas.append(np.nan)
             alpha_arr = np.array(rolling_alphas)
             valid_alphas = alpha_arr[~np.isnan(alpha_arr)]

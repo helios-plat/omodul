@@ -57,6 +57,13 @@ def smart_peer_finder(
     ts_methods = [m for m in methods if m in ("dtw", "wasserstein")]
     sig_methods = [m for m in methods if m in ("cosine", "euclidean")]
 
+    if ts_methods and not has_ts:
+        import warnings
+        warnings.warn(
+            f"methods {ts_methods} require 'timeseries' in query but none provided; skipped",
+            stacklevel=2,
+        )
+
     # Compute signature-based distances
     scores = np.zeros(n_candidates)
     method_scores: dict[str, np.ndarray] = {}
@@ -169,22 +176,25 @@ def event_cascade_clusterer(
     # Extract embeddings
     embeddings = np.array(df["embedding"].tolist(), dtype=np.float64)
 
-    # Compute distance matrix using oprim
+    # Compute distance matrix using oprim (vectorized: one call per row)
     # cosine distance = 1 - cosine_similarity, clipped to [0, 2]
     n = len(embeddings)
+    # Batch: compute full similarity matrix at once
     dist_matrix = np.zeros((n, n))
-    for i in range(n):
-        sims = oprim.cosine_similarity_batch(embeddings[i], embeddings)
-        dist_matrix[i] = np.clip(1.0 - sims, 0.0, 2.0)
-
-    # Apply time window constraint if specified
-    if time_window_hours is not None:
-        timestamps = df["timestamp"].values
+    sims = oprim.cosine_similarity_batch(embeddings, embeddings)
+    if sims.ndim == 1:
+        # Single query mode - fall back to row-by-row
         for i in range(n):
-            for j in range(n):
-                time_diff = abs((timestamps[i] - timestamps[j]) / np.timedelta64(1, "h"))
-                if time_diff > time_window_hours:
-                    dist_matrix[i, j] = 2.0  # Beyond threshold
+            row_sims = oprim.cosine_similarity_batch(embeddings[i], embeddings)
+            dist_matrix[i] = np.clip(1.0 - row_sims, 0.0, 2.0)
+    else:
+        dist_matrix = np.clip(1.0 - sims, 0.0, 2.0)
+
+    # Apply time window constraint (vectorized)
+    if time_window_hours is not None:
+        timestamps = df["timestamp"].values.astype("datetime64[s]").astype(np.float64)
+        time_diffs = np.abs(np.subtract.outer(timestamps, timestamps)) / 3600.0
+        dist_matrix[time_diffs > time_window_hours] = 2.0
 
     # DBSCAN clustering
     clustering = DBSCAN(eps=eps, min_samples=min_samples, metric="precomputed")

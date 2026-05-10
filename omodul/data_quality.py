@@ -19,6 +19,7 @@ def panel_data_quality_check(
     outlier_threshold_zscore: float = 3.0,
     now_timestamp: pd.Timestamp | None = None,
     score_weights: dict | None = None,
+    freshness_max_days: float = 7.0,
 ) -> dict:
     """Panel data quality check with weighted score.
 
@@ -73,7 +74,7 @@ def panel_data_quality_check(
             last_valid = series.last_valid_index()
             if last_valid is not None:
                 staleness = (now_timestamp - last_valid).total_seconds() / 86400
-                freshness_score = max(0, 1.0 - staleness / 7)  # 7 days = stale
+                freshness_score = max(0, 1.0 - staleness / freshness_max_days)
         field_result["freshness"] = {"score": freshness_score}
 
         # Drift detection
@@ -139,26 +140,24 @@ def cross_source_consistency_check(
     sources = list(multi_source_data.columns)
     n_sources = len(sources)
 
-    # Pairwise correlation
-    corr_data = {}
-    for s1 in sources:
-        row = {}
-        for s2 in sources:
-            if s1 == s2:
-                row[s2] = 1.0
+    # Pairwise correlation (upper triangle only, symmetric fill)
+    corr_data = {s: {s2: np.nan for s2 in sources} for s in sources}
+    for i, s1 in enumerate(sources):
+        corr_data[s1][s1] = 1.0
+        for s2 in sources[i + 1:]:
+            v1 = multi_source_data[s1].dropna()
+            v2 = multi_source_data[s2].dropna()
+            common = v1.index.intersection(v2.index)
+            if len(common) > 10:
+                corr_result = oprim.pearson_spearman_corr(
+                    pd.Series(v1.loc[common].values),
+                    pd.Series(v2.loc[common].values),
+                )
+                c = corr_result.get("pearson_r", np.nan)
             else:
-                v1 = multi_source_data[s1].dropna()
-                v2 = multi_source_data[s2].dropna()
-                common = v1.index.intersection(v2.index)
-                if len(common) > 10:
-                    corr_result = oprim.pearson_spearman_corr(
-                        pd.Series(v1.loc[common].values),
-                        pd.Series(v2.loc[common].values),
-                    )
-                    row[s2] = corr_result.get("pearson_r", np.nan)
-                else:
-                    row[s2] = np.nan
-        corr_data[s1] = row
+                c = np.nan
+            corr_data[s1][s2] = c
+            corr_data[s2][s1] = c
     pairwise_corr = pd.DataFrame(corr_data)
 
     # Pairwise shift

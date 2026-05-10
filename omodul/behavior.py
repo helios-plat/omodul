@@ -58,11 +58,17 @@ def trade_journal_analyzer(
     wins = pnl > 0
     win_rate = float(wins.mean()) if has_pnl else np.nan
 
-    # Disposition Effect
+    # Disposition Effect (simplified - see docstring)
     if "disposition" in diagnostics and has_pnl:
-        realized_gains = (pnl > 0).sum()
-        realized_losses = (pnl < 0).sum()
+        # Simplified Disposition Effect: uses realized PnL only.
+        # Full Odean 1998 requires paper_gains/paper_losses (unrealized positions),
+        # which needs position_id + entry/exit tracking not available in this schema.
+        # This approximation uses win_rate as proxy for PGR and loss_rate as PLR.
+        realized_gains = int((pnl > 0).sum())
+        realized_losses = int((pnl < 0).sum())
         total = realized_gains + realized_losses
+        # Proxy: PGR ≈ P(realize | gain), PLR ≈ P(realize | loss)
+        # Without paper positions, we estimate from holding period if available
         pgr = realized_gains / max(total, 1)
         plr = realized_losses / max(total, 1)
         de_score = pgr - plr
@@ -80,6 +86,7 @@ def trade_journal_analyzer(
             "ci_low": float(ci_low), "ci_high": float(ci_high),
             "interpretation": "strong" if de_score > 0.1 else "moderate" if de_score > 0 else "none",
             "n_trades_used": int(total),
+            "note": "Simplified: full Odean 1998 requires paper_gains/paper_losses columns",
         }
 
     # Overtrading
@@ -190,6 +197,11 @@ def shadow_account_simulator(
     shadow_equity = [initial_capital]
     rule_violations = 0
 
+    has_pnl = "pnl" in actual_trades.columns
+    if not has_pnl:
+        import warnings
+        warnings.warn("actual_trades has no 'pnl' column; actual PnL defaults to 0", stacklevel=2)
+
     # Simple simulation: track daily PnL
     actual_trades_sorted = actual_trades.sort_values("timestamp")
 
@@ -198,7 +210,7 @@ def shadow_account_simulator(
         day_trades = actual_trades_sorted[
             pd.to_datetime(actual_trades_sorted["timestamp"]).dt.normalize() == pd.Timestamp(date).normalize()
         ]
-        if "pnl" in day_trades.columns and len(day_trades) > 0:
+        if has_pnl and len(day_trades) > 0:
             actual_pnl = day_trades["pnl"].sum()
         else:
             actual_pnl = 0.0
@@ -210,10 +222,22 @@ def shadow_account_simulator(
         if shadow_decision is not None:
             shadow_pnl = shadow_decision.get("pnl", 0.0)
 
+        # Rule violation detection: compare direction/quantity, not just presence
+        actual_side = day_trades["side"].values[0] if len(day_trades) > 0 else None
+        actual_qty = day_trades["quantity"].sum() if len(day_trades) > 0 else 0
+        shadow_side = shadow_decision.get("side") if shadow_decision else None
+        shadow_qty = shadow_decision.get("quantity", 0) if shadow_decision else 0
+
         if shadow_decision is not None and len(day_trades) == 0:
-            rule_violations += 1
+            rule_violations += 1  # rule says trade, actual didn't
         elif shadow_decision is None and len(day_trades) > 0:
-            rule_violations += 1
+            rule_violations += 1  # rule says no trade, actual did
+        elif shadow_decision is not None and len(day_trades) > 0:
+            # Both traded: check direction/quantity mismatch
+            if shadow_side and actual_side and shadow_side != actual_side:
+                rule_violations += 1
+            elif shadow_qty > 0 and actual_qty > 0 and abs(shadow_qty - actual_qty) / max(shadow_qty, actual_qty) > 0.2:
+                rule_violations += 1
 
         actual_equity.append(actual_equity[-1] + actual_pnl)
         shadow_equity.append(shadow_equity[-1] + shadow_pnl)
