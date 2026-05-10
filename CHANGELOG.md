@@ -4,6 +4,11 @@
 
 **Status: Candidate release. Dogfood validation pending before 1.0 promotion.**
 
+**1.0 upgrade conditions:**
+- ≥2 calling projects dogfood for ≥3 months
+- Deferred modules (`standardized_performance_report`, `tradingview_signal_export`) decision finalized
+- No breaking API changes needed based on dogfood feedback
+
 ### Added
 
 #### Group 1: Trading Behavior
