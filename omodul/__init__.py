@@ -3,6 +3,7 @@
 from omodul._version import __version__
 from omodul.behavior import shadow_account_simulator, trade_journal_analyzer
 from omodul.data_quality import cross_source_consistency_check, panel_data_quality_check
+from omodul.portfolio import execution_cost_model, kelly_allocator, risk_parity
 from omodul.regime import (
     regime_change_detector,
     regime_conditional_dashboard_data,
@@ -42,4 +43,8 @@ __all__ = [
     # Group 7: Similarity
     "smart_peer_finder",
     "event_cascade_clusterer",
+    # Group 8: Portfolio (NEW from Selene)
+    "kelly_allocator",
+    "risk_parity",
+    "execution_cost_model",
 ]
