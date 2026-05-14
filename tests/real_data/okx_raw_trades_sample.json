@@ -1,0 +1,11 @@
+{
+  "arg": {"channel": "trades", "instId": "BTC-USDT"},
+  "data": [{
+    "instId": "BTC-USDT",
+    "tradeId": "500123456",
+    "px": "45000.5",
+    "sz": "0.15",
+    "side": "buy",
+    "ts": "1700000000000"
+  }]
+}

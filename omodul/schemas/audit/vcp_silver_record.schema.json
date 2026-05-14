@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://omodul.local/schemas/audit/vcp_silver_record",
+  "title": "VCP SILVER Audit Event",
+  "description": "VeritasChain Protocol v1.1 SILVER tier audit event record.",
+  "type": "object",
+  "required": [
+    "event_id",
+    "event_timestamp",
+    "policy_id",
+    "policy_version",
+    "conformance_tier",
+    "event_type",
+    "strategy_instance_id",
+    "strategy_id",
+    "determinism_evidence",
+    "faithfulness_evidence",
+    "decision_payload",
+    "hash_prev",
+    "hash_current",
+    "signature",
+    "signing_key_id"
+  ],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "UUIDv7 time-ordered unique identifier."
+    },
+    "event_timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 UTC timestamp."
+    },
+    "policy_id": {
+      "type": "string",
+      "description": "Policy identifier this event belongs to."
+    },
+    "policy_version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Version of the policy."
+    },
+    "conformance_tier": {
+      "type": "string",
+      "enum": ["SILVER"],
+      "description": "VCP conformance tier."
+    },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "circuit_breaker_state_change",
+        "fill_received",
+        "mode_transition",
+        "order_approved",
+        "order_cancelled",
+        "order_rejected",
+        "order_submitted",
+        "risk_blocked",
+        "signal_dropped",
+        "signal_proposed"
+      ],
+      "description": "One of the 10 valid VCP event types."
+    },
+    "strategy_instance_id": {
+      "type": "string",
+      "description": "Unique identifier for the strategy instance."
+    },
+    "strategy_id": {
+      "type": "string",
+      "description": "Strategy type identifier."
+    },
+    "determinism_evidence": {
+      "type": "object",
+      "required": ["input_snapshot_hash", "stack_version", "random_seed"],
+      "properties": {
+        "input_snapshot_hash": {"type": "string"},
+        "stack_version": {"type": "string"},
+        "random_seed": {}
+      },
+      "description": "Evidence of deterministic execution."
+    },
+    "faithfulness_evidence": {
+      "type": "object",
+      "required": ["stack_calls", "intermediate_results", "precondition_checks"],
+      "properties": {
+        "stack_calls": {
+          "type": "array",
+          "description": "List of function calls made during execution."
+        },
+        "intermediate_results": {
+          "type": "object",
+          "description": "Key intermediate computation results."
+        },
+        "precondition_checks": {
+          "type": "array",
+          "description": "List of precondition check results."
+        }
+      },
+      "description": "Evidence that execution faithfully followed policy."
+    },
+    "decision_payload": {
+      "type": "object",
+      "description": "The decision made in this event."
+    },
+    "hash_prev": {
+      "oneOf": [
+        {"type": "null"},
+        {"type": "string"}
+      ],
+      "description": "SHA-256 of previous event's hash_current, null for first event."
+    },
+    "hash_current": {
+      "type": "string",
+      "description": "SHA-256 hash of this event for chain integrity."
+    },
+    "signature": {
+      "oneOf": [
+        {"type": "null"},
+        {"type": "string"}
+      ],
+      "description": "Optional cryptographic signature."
+    },
+    "signing_key_id": {
+      "oneOf": [
+        {"type": "null"},
+        {"type": "string"}
+      ],
+      "description": "Key ID used for signing, null if unsigned."
+    }
+  },
+  "additionalProperties": false
+}

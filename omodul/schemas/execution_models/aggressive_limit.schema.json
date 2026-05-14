@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://omodul.local/schemas/execution_models/aggressive_limit",
+  "title": "Aggressive Limit Parameters",
+  "description": "Input parameter schema for aggressive_limit execution model.",
+  "type": "object",
+  "required": [
+    "target_notional_usd", "limit_offset_bps", "timeout_sec",
+    "on_timeout", "max_slippage_bps"
+  ],
+  "properties": {
+    "target_notional_usd": {
+      "type": "number",
+      "description": "Order size in USD."
+    },
+    "limit_offset_bps": {
+      "type": "integer",
+      "description": "Limit price offset in basis points from mid."
+    },
+    "timeout_sec": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Seconds before the order times out."
+    },
+    "on_timeout": {
+      "type": "string",
+      "enum": ["market", "cancel"],
+      "description": "Action on timeout."
+    },
+    "max_slippage_bps": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Maximum acceptable slippage in basis points."
+    },
+    "cost_model_name": {
+      "type": "string",
+      "const": "crypto_market_impact_sigmoid"
+    },
+    "cost_model_params": {
+      "type": "object",
+      "description": "Additional cost model parameters."
+    }
+  },
+  "additionalProperties": false
+}

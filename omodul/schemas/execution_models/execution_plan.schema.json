@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://omodul.local/schemas/execution_models/execution_plan",
+  "title": "Execution Plan",
+  "description": "Common schema for execution plans (TWAP and aggressive limit).",
+  "type": "object",
+  "required": ["schedule", "total_expected_impact_bps", "total_slippage_estimate_usd"],
+  "properties": {
+    "schedule": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["slice_index", "offset_sec", "notional_usd", "expected_impact_bps"],
+        "properties": {
+          "slice_index": {
+            "type": "integer",
+            "description": "Zero-based slice index."
+          },
+          "offset_sec": {
+            "type": "integer",
+            "description": "Seconds offset from order start."
+          },
+          "notional_usd": {
+            "type": "number",
+            "description": "Notional for this slice in USD."
+          },
+          "expected_impact_bps": {
+            "type": "number",
+            "description": "Expected market impact in basis points for this slice."
+          }
+        },
+        "additionalProperties": false
+      },
+      "description": "TWAP execution schedule."
+    },
+    "total_expected_impact_bps": {
+      "type": "number",
+      "description": "Sum of per-slice impact in basis points."
+    },
+    "total_slippage_estimate_usd": {
+      "type": "number",
+      "description": "Total estimated slippage cost in USD."
+    }
+  },
+  "additionalProperties": true
+}

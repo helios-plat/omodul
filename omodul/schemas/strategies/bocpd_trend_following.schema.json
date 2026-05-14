@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://omodul.local/schemas/strategies/bocpd_trend_following",
+  "title": "BOCPD Trend Following Config",
+  "description": "Configuration schema for bocpd_trend_following strategy.",
+  "type": "object",
+  "required": [
+    "bocpd_hazard", "trend_window", "confidence_threshold",
+    "target_annual_vol", "max_position_pct", "max_gross_leverage",
+    "rebalance_threshold", "daily_loss_halt_pct", "weekly_loss_halt_pct",
+    "volatility_halt_multiplier", "baseline_realized_vol",
+    "daily_volume_usd", "realized_vol_30d"
+  ],
+  "properties": {
+    "bocpd_hazard": {
+      "type": "number",
+      "minimum": 0.001,
+      "maximum": 0.5
+    },
+    "trend_window": {
+      "type": "integer",
+      "minimum": 2
+    },
+    "confidence_threshold": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0
+    },
+    "direction_mode": {
+      "type": "string",
+      "enum": ["long_only", "short_only", "long_short"],
+      "default": "long_short"
+    },
+    "target_annual_vol": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0
+    },
+    "max_position_pct": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0
+    },
+    "max_gross_leverage": {
+      "type": "number",
+      "minimum": 1.0
+    },
+    "rebalance_threshold": {
+      "type": "number",
+      "minimum": 0.0
+    },
+    "daily_loss_halt_pct": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0
+    },
+    "weekly_loss_halt_pct": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0
+    },
+    "volatility_halt_multiplier": {
+      "type": "number",
+      "minimum": 1.0
+    },
+    "baseline_realized_vol": {
+      "type": "number",
+      "exclusiveMinimum": 0.0
+    },
+    "daily_volume_usd": {
+      "type": "number",
+      "exclusiveMinimum": 0.0
+    },
+    "realized_vol_30d": {
+      "type": "number",
+      "minimum": 0.0
+    },
+    "n_twap_slices": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 5
+    },
+    "slice_duration_sec": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 60
+    }
+  },
+  "additionalProperties": false
+}

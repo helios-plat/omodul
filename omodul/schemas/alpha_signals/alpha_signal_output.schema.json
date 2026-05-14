@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://omodul.local/schemas/alpha_signals/alpha_signal_output",
+  "title": "Alpha Signal Output",
+  "description": "Common output schema for all alpha signal generators.",
+  "type": "object",
+  "required": ["direction", "strength", "confidence", "metadata"],
+  "properties": {
+    "direction": {
+      "type": "string",
+      "enum": ["long", "short", "neutral"],
+      "description": "Signal direction."
+    },
+    "strength": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "description": "Signal strength normalized to [0, 1]."
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "description": "Confidence in the signal."
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Signal-specific diagnostic metadata."
+    }
+  },
+  "additionalProperties": true
+}

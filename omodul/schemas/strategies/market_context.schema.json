@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://omodul.local/schemas/strategies/market_context",
+  "title": "Market Context (market_state)",
+  "description": "Input market state schema for strategy functions.",
+  "type": "object",
+  "required": ["symbols", "features", "current_prices", "current_positions", "capital_usd", "equity_curve"],
+  "properties": {
+    "symbols": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "List of trading symbols."
+    },
+    "features": {
+      "type": "object",
+      "description": "Feature arrays keyed by name (e.g. returns_BTC-USDT)."
+    },
+    "current_prices": {
+      "type": "object",
+      "additionalProperties": {"type": "number"},
+      "description": "Current mid-prices per symbol."
+    },
+    "current_positions": {
+      "type": "object",
+      "additionalProperties": {"type": "number"},
+      "description": "Current notional positions per symbol in USD."
+    },
+    "capital_usd": {
+      "type": "number",
+      "minimum": 0.01,
+      "description": "Total portfolio capital in USD."
+    },
+    "equity_curve": {
+      "type": "array",
+      "items": {"type": "number"},
+      "minItems": 2,
+      "description": "Historical equity values (oldest to newest)."
+    }
+  },
+  "additionalProperties": true
+}

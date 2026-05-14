@@ -1,0 +1,18 @@
+{
+  "arg": {"channel": "tickers", "instId": "BTC-USDT"},
+  "data": [{
+    "instId": "BTC-USDT",
+    "last": "45000.5",
+    "lastSz": "0.1",
+    "askPx": "45001.0",
+    "askSz": "2.5",
+    "bidPx": "44999.5",
+    "bidSz": "3.0",
+    "open24h": "44000.0",
+    "high24h": "45500.0",
+    "low24h": "43500.0",
+    "volCcy24h": "500000000",
+    "vol24h": "11111.5",
+    "ts": "1700000000000"
+  }]
+}

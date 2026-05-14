@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://omodul.local/schemas/strategies/strategy_decision",
+  "title": "Strategy Decision",
+  "description": "Output schema for all strategy pipeline functions.",
+  "type": "object",
+  "required": ["signals", "target_positions", "risk_gate_status", "execution_plans", "audit_evidence"],
+  "properties": {
+    "signals": {
+      "type": "object",
+      "description": "Alpha signals per symbol."
+    },
+    "target_positions": {
+      "type": "object",
+      "description": "Target positions per symbol."
+    },
+    "risk_gate_status": {
+      "type": "string",
+      "enum": ["GREEN", "YELLOW", "ORANGE", "RED"],
+      "description": "Risk gate status."
+    },
+    "execution_plans": {
+      "type": "object",
+      "description": "Execution plans per symbol (only for rebalanced positions)."
+    },
+    "audit_evidence": {
+      "type": "object",
+      "required": ["stack_calls", "intermediate_results", "precondition_checks"],
+      "properties": {
+        "stack_calls": {
+          "type": "array",
+          "description": "List of stack function calls made."
+        },
+        "intermediate_results": {
+          "type": "object",
+          "description": "Key intermediate results for auditability."
+        },
+        "precondition_checks": {
+          "type": "array",
+          "description": "Precondition check results."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

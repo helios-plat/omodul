@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://omodul.local/schemas/risk_models/drawdown_circuit_breaker",
+  "title": "Drawdown Circuit Breaker Output",
+  "description": "Output schema for drawdown_circuit_breaker risk model.",
+  "type": "object",
+  "required": [
+    "status", "daily_loss", "weekly_loss", "max_drawdown",
+    "vol_ratio", "max_position_notional_usd", "max_total_notional_usd",
+    "halt_recovery_hours"
+  ],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["GREEN", "YELLOW", "ORANGE", "RED"],
+      "description": "Circuit breaker status."
+    },
+    "daily_loss": {
+      "type": "number",
+      "description": "Realized daily return (negative = loss)."
+    },
+    "weekly_loss": {
+      "type": "number",
+      "description": "Realized 5-day return (negative = loss)."
+    },
+    "max_drawdown": {
+      "type": "number",
+      "description": "Maximum drawdown over the equity curve (0 = no drawdown, 1 = total loss)."
+    },
+    "vol_ratio": {
+      "type": "number",
+      "description": "Ratio of recent to baseline realized volatility."
+    },
+    "max_position_notional_usd": {
+      "type": "number",
+      "description": "Effective max per-position notional after circuit breaker adjustments."
+    },
+    "max_total_notional_usd": {
+      "type": "number",
+      "description": "Maximum total notional (unchanged by circuit breaker)."
+    },
+    "halt_recovery_hours": {
+      "type": "integer",
+      "description": "Hours until halt can be reviewed."
+    }
+  },
+  "additionalProperties": false
+}

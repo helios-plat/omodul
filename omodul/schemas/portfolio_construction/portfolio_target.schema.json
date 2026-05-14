@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://omodul.local/schemas/portfolio_construction/portfolio_target",
+  "title": "Portfolio Target Output",
+  "description": "Output schema for vol_target portfolio construction.",
+  "type": "object",
+  "required": ["target_positions", "rebalance_count", "total_gross_exposure", "vol_contribution_estimate"],
+  "properties": {
+    "target_positions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["target_notional_usd", "urgency"],
+        "properties": {
+          "target_notional_usd": {
+            "type": "number",
+            "description": "Target notional exposure in USD (negative = short)."
+          },
+          "urgency": {
+            "type": "string",
+            "enum": ["normal", "high"],
+            "description": "Rebalance urgency."
+          }
+        },
+        "additionalProperties": false
+      },
+      "description": "Target positions per symbol."
+    },
+    "rebalance_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of symbols requiring rebalance."
+    },
+    "total_gross_exposure": {
+      "type": "number",
+      "description": "Total absolute notional exposure in USD."
+    },
+    "vol_contribution_estimate": {
+      "type": "number",
+      "description": "Estimated portfolio volatility contribution from rebalanced positions."
+    }
+  },
+  "additionalProperties": false
+}

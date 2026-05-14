@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://omodul.local/schemas/strategies/microstructure_scalper",
+  "title": "Microstructure Scalper Config",
+  "description": "Configuration schema for microstructure_scalper strategy.",
+  "type": "object",
+  "required": [
+    "ofi_window", "entry_threshold", "max_position_pct",
+    "daily_loss_halt_pct", "weekly_loss_halt_pct",
+    "volatility_halt_multiplier", "baseline_realized_vol",
+    "daily_volume_usd", "realized_vol_30d"
+  ],
+  "properties": {
+    "ofi_window": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "OFI window in seconds."
+    },
+    "entry_threshold": {
+      "type": "number",
+      "exclusiveMinimum": 0.0,
+      "description": "Z-score entry threshold."
+    },
+    "exit_threshold": {
+      "type": "number",
+      "minimum": 0.0,
+      "description": "Z-score exit threshold."
+    },
+    "max_hold_seconds": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Maximum position hold time in seconds."
+    },
+    "max_position_pct": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "description": "Maximum position as fraction of capital."
+    },
+    "limit_offset_bps": {
+      "type": "integer",
+      "description": "Limit order offset in basis points."
+    },
+    "max_slippage_bps": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Maximum acceptable slippage."
+    },
+    "timeout_sec": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Order timeout in seconds."
+    },
+    "on_timeout": {
+      "type": "string",
+      "enum": ["market", "cancel"],
+      "description": "Action on order timeout."
+    },
+    "daily_loss_halt_pct": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0
+    },
+    "weekly_loss_halt_pct": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0
+    },
+    "volatility_halt_multiplier": {
+      "type": "number",
+      "minimum": 1.0
+    },
+    "baseline_realized_vol": {
+      "type": "number",
+      "exclusiveMinimum": 0.0
+    },
+    "daily_volume_usd": {
+      "type": "number",
+      "exclusiveMinimum": 0.0
+    },
+    "realized_vol_30d": {
+      "type": "number",
+      "minimum": 0.0
+    }
+  },
+  "additionalProperties": true
+}

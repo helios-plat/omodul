@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://omodul.local/schemas/universe_selection/fixed_list",
+  "title": "Fixed Universe List",
+  "description": "Static universe specification for instrument selection.",
+  "type": "object",
+  "required": ["symbols", "venue", "instrument_type", "instrument_ids", "metadata"],
+  "properties": {
+    "symbols": {
+      "type": "array",
+      "items": {"type": "string"},
+      "minItems": 1,
+      "description": "List of symbol identifiers."
+    },
+    "venue": {
+      "type": "string",
+      "description": "Exchange venue name."
+    },
+    "instrument_type": {
+      "type": "string",
+      "enum": ["spot", "perpetual", "futures", "option", "index_future"],
+      "description": "Type of financial instrument."
+    },
+    "instrument_ids": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Fully qualified instrument IDs (symbol.venue format)."
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Optional market metadata."
+    }
+  },
+  "additionalProperties": false
+}

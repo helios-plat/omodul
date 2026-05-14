@@ -26,6 +26,7 @@ dev = [
     "pytest-benchmark>=4.0",
     "ruff>=0.1.0",
     "mypy>=1.5",
+    "jsonschema>=4.0",
 ]
 
 [project.urls]
@@ -42,6 +43,9 @@ path = "omodul/_version.py"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "--strict-markers -v"
+markers = [
+    "academic_reference: test verifies against published academic/RFC/FIPS reference vectors",
+]
 
 [tool.ruff]
 target-version = "py311"

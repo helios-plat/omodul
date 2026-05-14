@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://omodul.local/schemas/portfolio_construction/vol_target",
+  "title": "Volatility Target Parameters",
+  "description": "Input parameter schema for vol_target portfolio construction.",
+  "type": "object",
+  "required": [
+    "capital_usd", "target_annual_vol", "max_position_pct",
+    "max_gross_leverage", "rebalance_threshold"
+  ],
+  "properties": {
+    "capital_usd": {
+      "type": "number",
+      "minimum": 0.01,
+      "description": "Total portfolio capital in USD."
+    },
+    "target_annual_vol": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "description": "Target annual volatility (e.g. 0.15 for 15%)."
+    },
+    "max_position_pct": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "description": "Maximum position as fraction of capital."
+    },
+    "max_gross_leverage": {
+      "type": "number",
+      "minimum": 1.0,
+      "description": "Maximum total gross exposure as multiple of capital."
+    },
+    "rebalance_threshold": {
+      "type": "number",
+      "minimum": 0.0,
+      "description": "Minimum delta/capital to trigger rebalance."
+    }
+  },
+  "additionalProperties": true
+}

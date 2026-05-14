@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://omodul.local/schemas/alpha_signals/ofi_meanrev",
+  "title": "OFI Mean Reversion Parameters",
+  "description": "Input parameter schema for ofi_meanrev alpha signal.",
+  "type": "object",
+  "required": [
+    "bid_prices", "bid_sizes", "ask_prices", "ask_sizes",
+    "ofi_window_sec", "entry_threshold", "exit_threshold"
+  ],
+  "properties": {
+    "bid_prices": {
+      "type": "array",
+      "items": {"type": "number"},
+      "description": "Bid price array."
+    },
+    "bid_sizes": {
+      "type": "array",
+      "items": {"type": "number"},
+      "description": "Bid size array."
+    },
+    "ask_prices": {
+      "type": "array",
+      "items": {"type": "number"},
+      "description": "Ask price array."
+    },
+    "ask_sizes": {
+      "type": "array",
+      "items": {"type": "number"},
+      "description": "Ask size array."
+    },
+    "ofi_window_sec": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "OFI computation window in seconds."
+    },
+    "entry_threshold": {
+      "type": "number",
+      "minimum": 0.0,
+      "exclusiveMinimum": true,
+      "description": "Z-score threshold to enter a position."
+    },
+    "exit_threshold": {
+      "type": "number",
+      "minimum": 0.0,
+      "description": "Z-score threshold to exit a position."
+    },
+    "direction_mode": {
+      "type": "string",
+      "enum": ["long_only", "short_only", "long_short"],
+      "default": "long_short"
+    }
+  },
+  "additionalProperties": false
+}

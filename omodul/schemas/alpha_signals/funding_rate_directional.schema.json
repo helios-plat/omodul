@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://omodul.local/schemas/alpha_signals/funding_rate_directional",
+  "title": "Funding Rate Directional Parameters",
+  "description": "Input parameter schema for funding_rate_directional alpha signal.",
+  "type": "object",
+  "required": [
+    "spot_prices", "perp_prices", "funding_rates",
+    "funding_threshold_bps_long", "funding_threshold_bps_short",
+    "basis_filter_bps", "lookback_hours"
+  ],
+  "properties": {
+    "spot_prices": {
+      "type": "array",
+      "items": {"type": "number"},
+      "description": "Spot price array."
+    },
+    "perp_prices": {
+      "type": "array",
+      "items": {"type": "number"},
+      "description": "Perpetual price array."
+    },
+    "funding_rates": {
+      "type": "array",
+      "items": {"type": "number"},
+      "description": "Funding rate array (as decimal, e.g. 0.0001 = 1 bps)."
+    },
+    "funding_threshold_bps_long": {
+      "type": "number",
+      "description": "Long threshold in bps (trigger if avg_funding < -this)."
+    },
+    "funding_threshold_bps_short": {
+      "type": "number",
+      "description": "Short threshold in bps (trigger if avg_funding > +this)."
+    },
+    "basis_filter_bps": {
+      "type": "number",
+      "description": "Max residual in bps before marking signal neutral."
+    },
+    "lookback_hours": {
+      "type": "integer",
+      "minimum": 8,
+      "description": "Hours of lookback (must be >= 8, one 8h funding interval)."
+    },
+    "direction_mode": {
+      "type": "string",
+      "enum": ["long_only", "short_only", "long_short"],
+      "default": "long_short"
+    }
+  },
+  "additionalProperties": false
+}

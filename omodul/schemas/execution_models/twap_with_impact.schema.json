@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://omodul.local/schemas/execution_models/twap_with_impact",
+  "title": "TWAP With Impact Parameters",
+  "description": "Input parameter schema for twap_with_impact execution model.",
+  "type": "object",
+  "required": [
+    "target_notional_usd", "daily_volume_usd", "realized_vol_30d",
+    "slice_duration_sec", "n_slices", "cost_model_name"
+  ],
+  "properties": {
+    "target_notional_usd": {
+      "type": "number",
+      "minimum": 0.01,
+      "description": "Total order size in USD."
+    },
+    "daily_volume_usd": {
+      "type": "number",
+      "minimum": 0.01,
+      "description": "Average daily volume of the instrument in USD."
+    },
+    "realized_vol_30d": {
+      "type": "number",
+      "minimum": 0.0,
+      "description": "30-day realized volatility."
+    },
+    "slice_duration_sec": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Duration of each TWAP slice in seconds."
+    },
+    "n_slices": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100,
+      "description": "Number of TWAP slices."
+    },
+    "cost_model_name": {
+      "type": "string",
+      "const": "crypto_market_impact_sigmoid",
+      "description": "Must be 'crypto_market_impact_sigmoid'."
+    },
+    "cost_model_params": {
+      "type": "object",
+      "description": "Additional cost model parameters."
+    },
+    "urgency": {
+      "type": "string",
+      "enum": ["normal", "high"],
+      "default": "normal",
+      "description": "Execution urgency."
+    }
+  },
+  "additionalProperties": false
+}

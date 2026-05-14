@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://omodul.local/schemas/alpha_signals/bocpd_trend",
+  "title": "BOCPD Trend Parameters",
+  "description": "Input parameter schema for bocpd_trend alpha signal.",
+  "type": "object",
+  "required": ["returns", "bocpd_hazard", "trend_window", "confidence_threshold"],
+  "properties": {
+    "returns": {
+      "type": "array",
+      "items": {"type": "number"},
+      "minItems": 2,
+      "description": "Array of log returns."
+    },
+    "bocpd_hazard": {
+      "type": "number",
+      "minimum": 0.001,
+      "maximum": 0.5,
+      "description": "Hazard rate for BOCPD."
+    },
+    "trend_window": {
+      "type": "integer",
+      "minimum": 2,
+      "description": "Number of bars for trend slope computation."
+    },
+    "confidence_threshold": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "description": "Minimum regime probability to emit a directional signal."
+    },
+    "direction_mode": {
+      "type": "string",
+      "enum": ["long_only", "short_only", "long_short"],
+      "default": "long_short",
+      "description": "Direction mode filter."
+    }
+  },
+  "additionalProperties": false
+}
