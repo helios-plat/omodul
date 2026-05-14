@@ -378,3 +378,75 @@ class TestFundingRateArbitrage:
         assert isinstance(ae["stack_calls"], list)
         assert isinstance(ae["intermediate_results"], dict)
         assert isinstance(ae["precondition_checks"], list)
+
+    def test_funding_rate_arbitrage_threshold_signs(self):
+        """Direct sign comparison: negative threshold_long → long; positive threshold_short → short."""
+        symbols = ["BTC-USDT"]
+
+        # -5 bps funding < threshold_long=-3 bps → long
+        features_long = _make_funding_features("BTC-USDT", 24, funding_level=-0.0005)
+        market_state_long = {
+            "symbols": symbols,
+            "features": features_long,
+            "current_positions": {"BTC-USDT": 0.0},
+            "capital_usd": 100_000.0,
+            "equity_curve": _equity_curve(20),
+        }
+        result_long = funding_rate_arbitrage(
+            market_state_long,
+            _funding_config(
+                funding_threshold_bps_long=-3.0,
+                funding_threshold_bps_short=8.0,
+                basis_filter_bps=1000.0,
+                daily_loss_halt_pct=-0.10,
+                weekly_loss_halt_pct=-0.20,
+            ),
+        )
+        assert result_long["signals"]["BTC-USDT"]["direction"] == "long"
+
+        # +10 bps funding > threshold_short=+8 bps → short
+        features_short = _make_funding_features("BTC-USDT", 24, funding_level=0.001)
+        market_state_short = {
+            "symbols": symbols,
+            "features": features_short,
+            "current_positions": {"BTC-USDT": 0.0},
+            "capital_usd": 100_000.0,
+            "equity_curve": _equity_curve(20),
+        }
+        result_short = funding_rate_arbitrage(
+            market_state_short,
+            _funding_config(
+                funding_threshold_bps_long=-3.0,
+                funding_threshold_bps_short=8.0,
+                basis_filter_bps=1000.0,
+                daily_loss_halt_pct=-0.10,
+                weekly_loss_halt_pct=-0.20,
+            ),
+        )
+        assert result_short["signals"]["BTC-USDT"]["direction"] == "short"
+
+
+# ─── Cross-strategy risk sign fix ────────────────────────────────────────────
+
+class TestRiskStatusSignFix:
+    def test_bocpd_trend_following_risk_orange_triggers(self):
+        """daily_loss=-0.06 < halt_pct=-0.05 → ORANGE (sign comparison, not abs)."""
+        # Flat curve then one -6% single-bar drop
+        curve = [10_000.0] * 18 + [10_000.0, 10_000.0 * 0.94]
+        symbols = ["BTC-USDT"]
+        market_state = {
+            "symbols": symbols,
+            "features": {"returns_BTC-USDT": _make_returns(50)},
+            "current_prices": {"BTC-USDT": 45000.0},
+            "current_positions": {"BTC-USDT": 0.0},
+            "capital_usd": 100_000.0,
+            "equity_curve": curve,
+        }
+        result = bocpd_trend_following(
+            market_state,
+            _bocpd_config(
+                daily_loss_halt_pct=-0.05,
+                weekly_loss_halt_pct=-0.15,
+            ),
+        )
+        assert result["risk_gate_status"] == "ORANGE"

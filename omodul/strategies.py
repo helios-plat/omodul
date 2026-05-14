@@ -39,16 +39,19 @@ def _compute_risk_status(
     status = "GREEN"
     if vol_ratio > volatility_halt_multiplier:
         status = "YELLOW"
-    if abs(daily_loss) > daily_loss_halt_pct:
+    if daily_loss < daily_loss_halt_pct:
         status = "ORANGE"
-    if abs(weekly_loss) > weekly_loss_halt_pct:
+    if weekly_loss < weekly_loss_halt_pct:
         status = "RED"
 
     return status, daily_loss, weekly_loss, max_drawdown, vol_ratio
 
 
 def _args_hash(obj) -> str:
-    """Hash a call's arguments for audit evidence."""
+    """Hash a call's arguments for audit evidence.
+
+    Phase 2 SILVER reduced fingerprint, not bit-exact reproducibility.
+    """
     return sha256_hash(canonical_json({"v": str(obj)})).hex()[:16]
 
 
@@ -129,6 +132,8 @@ def bocpd_trend_following(market_state: dict, config: dict) -> dict:
             "risk_status": status,
             "daily_loss": daily_loss,
             "weekly_loss": weekly_loss,
+            "max_drawdown": max_drawdown,
+            "vol_ratio": vol_ratio,
             "signals": signals_out,
             "portfolio": target_positions,
         }
@@ -385,6 +390,10 @@ def microstructure_scalper(market_state: dict, config: dict) -> dict:
                 "stack_calls": stack_calls,
                 "intermediate_results": {
                     "risk_status": status,
+                    "daily_loss": daily_loss,
+                    "weekly_loss": weekly_loss,
+                    "max_drawdown": max_drawdown,
+                    "vol_ratio": vol_ratio,
                     "signals": signals_out,
                     "portfolio": target_positions,
                 },
@@ -583,6 +592,10 @@ def funding_rate_arbitrage(market_state: dict, config: dict) -> dict:
                 "stack_calls": stack_calls,
                 "intermediate_results": {
                     "risk_status": status,
+                    "daily_loss": daily_loss,
+                    "weekly_loss": weekly_loss,
+                    "max_drawdown": max_drawdown,
+                    "vol_ratio": vol_ratio,
                     "signals": signals_out,
                     "portfolio": target_positions,
                 },
@@ -622,9 +635,9 @@ def funding_rate_arbitrage(market_state: dict, config: dict) -> dict:
         if residual_bps > basis_filter_bps:
             direction = "neutral"
             strength = 0.0
-        elif avg_funding_bps < -funding_threshold_long:
+        elif avg_funding_bps < funding_threshold_long:
             direction = "long"
-            denom = max(funding_threshold_long, funding_threshold_short)
+            denom = max(abs(funding_threshold_long), abs(funding_threshold_short))
             strength = min(abs(avg_funding_bps) / denom, 1.0) if denom > 0 else 0.0
         elif avg_funding_bps > funding_threshold_short:
             direction = "short"
