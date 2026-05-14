@@ -1,6 +1,6 @@
 [project]
 name = "omodul"
-version = "0.1.0"
+version = "1.0.0"
 description = "End-to-end financial analysis features built on oprim + oskill"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -9,8 +9,8 @@ authors = [{ name = "Wiki" }]
 keywords = ["finance", "quantitative", "meta-functions", "backtest", "regime", "risk"]
 
 dependencies = [
-    "oprim>=1.0.0,<2.0.0",
-    "oskill>=1.0.0,<2.0.0",
+    "oprim>=2.0.0,<3.0.0",
+    "oskill>=2.0.0,<3.0.0",
     "numpy>=1.24",
     "scipy>=1.11",
     "pandas>=2.0",

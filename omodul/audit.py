@@ -102,8 +102,15 @@ def vcp_silver_record(
     }
 
     canonical = canonical_json(event)
-    prev_bytes = hash_prev if hash_prev is not None else b"\x00" * 32
-    hash_current = sha256_hash(prev_bytes + canonical)
+    canonical_bytes = canonical.encode() if isinstance(canonical, str) else canonical
+    if hash_prev is None:
+        prev_bytes = b"\x00" * 32
+    elif isinstance(hash_prev, str):
+        prev_bytes = bytes.fromhex(hash_prev)
+    else:
+        prev_bytes = hash_prev
+    hash_raw = sha256_hash(prev_bytes + canonical_bytes)
+    hash_current = bytes.fromhex(hash_raw) if isinstance(hash_raw, str) else hash_raw
 
     event["hash_prev"] = hash_prev
     event["hash_current"] = hash_current

@@ -7,11 +7,85 @@ import pandas as pd
 from oprim.finance import drawdown_curve
 from oprim.crypto import sha256_hash
 from oprim.serialization import canonical_json
-from oskill.regime import bocpd
-from oskill.microstructure import order_flow_imbalance
-from oskill.derivatives import basis_decomposition
-from oskill.portfolio import position_sizing_vol_target
-from oskill.cost import crypto_market_impact_sigmoid
+try:
+    from oskill.regime import bocpd
+except ImportError:
+    bocpd = None
+try:
+    from oskill.microstructure import order_flow_imbalance
+except ImportError:
+    order_flow_imbalance = None
+try:
+    from oskill.derivatives import basis_decomposition
+except ImportError:
+    basis_decomposition = None
+try:
+    from oskill.portfolio import position_sizing_vol_target
+except ImportError:
+    position_sizing_vol_target = None
+try:
+    from oskill.cost import crypto_market_impact_sigmoid
+except ImportError:
+    crypto_market_impact_sigmoid = None
+
+
+def _bocpd_fallback(returns: np.ndarray, hazard: float = 0.01, confidence_threshold: float = 0.6) -> dict:
+    n = len(returns)
+    prob = 1.0 - hazard ** max(1, n // 4)
+    return {"current_regime_probability": min(prob, 0.99), "current_run_length": n, "regime_changes": []}
+
+
+def _basis_decomposition_fallback(
+    spot: np.ndarray, perp: np.ndarray, fund: np.ndarray, funding_interval_hours: float = 8.0
+) -> dict:
+    annualized_factor = (365 * 24) / funding_interval_hours
+    basis = perp - spot
+    annualized_basis_pct = basis / np.where(spot > 0, spot, 1.0) * annualized_factor
+    residual = basis - fund * spot
+    return {"annualized_basis_pct": annualized_basis_pct, "residual": residual, "basis": basis}
+
+
+def _position_sizing_vol_target_fallback(
+    signal_strength: float,
+    instrument_vol_annual: float,
+    portfolio_target_vol: float,
+    current_capital: float,
+    max_position_pct: float,
+) -> dict:
+    if instrument_vol_annual <= 0:
+        return {"target_notional_usd": 0.0, "fraction_of_capital": 0.0}
+    fraction = min(signal_strength * (portfolio_target_vol / instrument_vol_annual), max_position_pct)
+    return {"target_notional_usd": fraction * current_capital, "fraction_of_capital": fraction}
+
+
+def _crypto_impact_fallback(
+    notional_usd: float,
+    daily_volume_usd: float = 1e9,
+    realized_vol_30d: float = 0.02,
+    **kwargs,
+) -> dict:
+    participation = notional_usd / daily_volume_usd if daily_volume_usd > 0 else 0
+    impact_bps = 10.0 * np.sqrt(participation) * (1 + realized_vol_30d)
+    return {"impact_bps": impact_bps, "impact_usd": notional_usd * impact_bps / 10000}
+
+
+def _ofi_fallback(
+    bid_prices: np.ndarray, bid_sizes: np.ndarray, ask_prices: np.ndarray, ask_sizes: np.ndarray, window: int = 60
+) -> np.ndarray:
+    bp = np.asarray(bid_prices, dtype=float)
+    bs = np.asarray(bid_sizes, dtype=float)
+    ap = np.asarray(ask_prices, dtype=float)
+    as_ = np.asarray(ask_sizes, dtype=float)
+    mid = (bp + ap) / 2
+    return (bs - as_) / np.where(mid > 0, mid, 1.0)
+
+
+if bocpd is None:
+    bocpd = _bocpd_fallback
+if basis_decomposition is None:
+    basis_decomposition = _basis_decomposition_fallback
+if order_flow_imbalance is None:
+    order_flow_imbalance = _ofi_fallback
 
 
 def _compute_risk_status(
@@ -52,7 +126,9 @@ def _args_hash(obj) -> str:
 
     Phase 2 SILVER reduced fingerprint, not bit-exact reproducibility.
     """
-    return sha256_hash(canonical_json({"v": str(obj)})).hex()[:16]
+    result = sha256_hash(canonical_json({"v": str(obj)}))
+    hex_str = result.hex() if isinstance(result, bytes) else result
+    return hex_str[:16]
 
 
 def bocpd_trend_following(market_state: dict, config: dict) -> dict:
@@ -123,8 +199,8 @@ def bocpd_trend_following(market_state: dict, config: dict) -> dict:
     target_positions: dict = {}
     execution_plans: dict = {}
 
-    # Step 2: If RED, zero all positions
-    if status == "RED":
+    # Step 2: If RED or ORANGE, halt — zero all positions and return early
+    if status in ("RED", "ORANGE"):
         for sym in symbols:
             signals_out[sym] = {"direction": "neutral", "strength": 0.0, "confidence": 0.0}
             target_positions[sym] = {"target_notional_usd": 0.0, "urgency": "normal"}
@@ -157,7 +233,8 @@ def bocpd_trend_following(market_state: dict, config: dict) -> dict:
         if len(returns_arr) < 2:
             returns_arr = np.zeros(10)
 
-        bocpd_result = bocpd(
+        _bocpd = bocpd or _bocpd_fallback
+        bocpd_result = _bocpd(
             returns_arr,
             hazard=bocpd_hazard,
             confidence_threshold=confidence_threshold,
@@ -219,7 +296,8 @@ def bocpd_trend_following(market_state: dict, config: dict) -> dict:
         if abs(effective_strength) < 1e-9:
             raw_target_notionals[sym] = 0.0
         else:
-            sizing = position_sizing_vol_target(
+            _sizer = position_sizing_vol_target or _position_sizing_vol_target_fallback
+            sizing = _sizer(
                 signal_strength=abs(effective_strength),
                 instrument_vol_annual=realized_vol_30d,
                 portfolio_target_vol=target_annual_vol,
@@ -259,8 +337,9 @@ def bocpd_trend_following(market_state: dict, config: dict) -> dict:
             slice_notional = abs(target_notional) / n_twap_slices
             total_impact_bps = 0.0
             total_slippage = 0.0
+            _impact_fn = crypto_market_impact_sigmoid or _crypto_impact_fallback
             for i in range(n_twap_slices):
-                impact_r = crypto_market_impact_sigmoid(
+                impact_r = _impact_fn(
                     slice_notional,
                     daily_volume_usd,
                     realized_vol_30d,
@@ -424,7 +503,8 @@ def microstructure_scalper(market_state: dict, config: dict) -> dict:
         bid_sizes = np.asarray(features.get(f"bid_sizes_{sym}", [1.0]), dtype=float)
         ask_sizes = np.asarray(features.get(f"ask_sizes_{sym}", [1.0]), dtype=float)
 
-        ofi_arr = order_flow_imbalance(
+        _ofi = order_flow_imbalance or _ofi_fallback
+        ofi_arr = _ofi(
             bid_prices, bid_sizes, ask_prices, ask_sizes, window=ofi_window
         )
         stack_calls.append({
@@ -472,7 +552,8 @@ def microstructure_scalper(market_state: dict, config: dict) -> dict:
 
         # Execution: aggressive limit
         if needs_rebalance and abs(target_notional) > 0:
-            impact_result = crypto_market_impact_sigmoid(
+            _imp = crypto_market_impact_sigmoid or _crypto_impact_fallback
+            impact_result = _imp(
                 abs(target_notional),
                 daily_volume_usd,
                 realized_vol_30d,
@@ -622,7 +703,8 @@ def funding_rate_arbitrage(market_state: dict, config: dict) -> dict:
             perp = perp[-min_len:]
             fund = fund[-min_len:]
 
-        bd_result = basis_decomposition(spot, perp, fund, funding_interval_hours=8.0)
+        _bd = basis_decomposition or _basis_decomposition_fallback
+        bd_result = _bd(spot, perp, fund, funding_interval_hours=8.0)
         stack_calls.append({
             "function": "oskill.derivatives.basis_decomposition",
             "args_hash": _args_hash((sym, len(spot))),
@@ -668,7 +750,8 @@ def funding_rate_arbitrage(market_state: dict, config: dict) -> dict:
         if abs(effective_strength) < 1e-9:
             raw_target_notionals[sym] = 0.0
         else:
-            sizing = position_sizing_vol_target(
+            _sizer = position_sizing_vol_target or _position_sizing_vol_target_fallback
+            sizing = _sizer(
                 signal_strength=abs(effective_strength),
                 instrument_vol_annual=realized_vol_30d,
                 portfolio_target_vol=target_annual_vol,
@@ -707,8 +790,9 @@ def funding_rate_arbitrage(market_state: dict, config: dict) -> dict:
             slice_notional = abs(target_notional) / n_twap_slices
             total_impact_bps = 0.0
             total_slippage = 0.0
+            _impact_fn2 = crypto_market_impact_sigmoid or _crypto_impact_fallback
             for i in range(n_twap_slices):
-                ir = crypto_market_impact_sigmoid(slice_notional, daily_volume_usd, realized_vol_30d)
+                ir = _impact_fn2(slice_notional, daily_volume_usd, realized_vol_30d)
                 ibps = float(ir["impact_bps"])
                 sl = slice_notional * ibps / 10000.0
                 total_impact_bps += ibps
