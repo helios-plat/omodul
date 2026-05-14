@@ -29,3 +29,24 @@
 
 ## [0.1.0] - 2026-05-10
 ### Added — Initial release (3 elements: kelly_allocator, risk_parity, execution_cost_model)
+
+---
+
+## Release Governance Note (2026-05-14)
+
+During the Phase 10 release process, we discovered that Phases 4-10 of oprim and
+oskill had been accumulated on a single long-running feature branch
+(feat/v1.7.0-phase4) without intermediate merges to main.
+
+**omodul note**: Unlike oprim/oskill, omodul main was kept relatively current.
+However, intermediate development versions 0.7 / 0.8 / 0.9 were developed but
+not separately tagged. All work is consolidated into v1.0.0 GA release. This is
+the documented historical record; no retroactive tagging is performed.
+
+**Resolution**: fast-forward merged main to v1.0.0, pushed 5 local commits to
+origin. See `RELEASE_POLICY.md` for the corrected workflow.
+
+All future Phase releases must:
+1. Use independent feat branches (not accumulate Phases on one branch)
+2. Merge to main via PR before tagging
+3. Tag on main (never on feat branches)
