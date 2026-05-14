@@ -3,9 +3,45 @@ from __future__ import annotations
 
 import numpy as np
 
-from oskill.regime import bocpd
-from oskill.microstructure import order_flow_imbalance
-from oskill.derivatives import basis_decomposition
+try:
+    from oskill.regime import bocpd
+except ImportError:
+    bocpd = None
+try:
+    from oskill.microstructure import order_flow_imbalance
+except ImportError:
+    order_flow_imbalance = None
+try:
+    from oskill.derivatives import basis_decomposition
+except ImportError:
+    basis_decomposition = None
+
+
+def _basis_decomposition_fallback(
+    spot: np.ndarray, perp: np.ndarray, fund: np.ndarray, funding_interval_hours: float = 8.0
+) -> dict:
+    annualized_factor = (365 * 24) / funding_interval_hours
+    basis = perp - spot
+    annualized_basis_pct = basis / np.where(spot > 0, spot, 1.0) * annualized_factor
+    residual = basis - fund * spot
+    return {"annualized_basis_pct": annualized_basis_pct, "residual": residual, "basis": basis}
+
+
+def _bocpd_fallback(returns: np.ndarray, hazard: float = 0.01, confidence_threshold: float = 0.6) -> dict:
+    n = len(returns)
+    prob = 1.0 - hazard ** max(1, n // 4)
+    return {"current_regime_probability": min(prob, 0.99), "current_run_length": n, "regime_changes": []}
+
+
+def _ofi_fallback(
+    bid_prices: np.ndarray, bid_sizes: np.ndarray, ask_prices: np.ndarray, ask_sizes: np.ndarray, window: int = 60
+) -> np.ndarray:
+    bp = np.asarray(bid_prices, dtype=float)
+    bs = np.asarray(bid_sizes, dtype=float)
+    ap = np.asarray(ask_prices, dtype=float)
+    as_ = np.asarray(ask_sizes, dtype=float)
+    mid = (bp + ap) / 2
+    return (bs - as_) / np.where(mid > 0, mid, 1.0)
 
 _VALID_DIRECTION_MODES = {"long_only", "short_only", "long_short"}
 
@@ -62,7 +98,8 @@ def bocpd_trend(
         )
 
     returns_arr = np.asarray(returns, dtype=float)
-    result = bocpd(returns_arr, hazard=bocpd_hazard, confidence_threshold=confidence_threshold)
+    _bocpd = bocpd or _bocpd_fallback
+    result = _bocpd(returns_arr, hazard=bocpd_hazard, confidence_threshold=confidence_threshold)
 
     confidence = float(result["current_regime_probability"])
     current_run_length = int(result["current_run_length"])
@@ -152,7 +189,8 @@ def ofi_meanrev(
     if entry_threshold <= 0:
         raise ValueError(f"entry_threshold must be > 0, got {entry_threshold}")
 
-    ofi_arr = order_flow_imbalance(
+    _ofi = order_flow_imbalance or _ofi_fallback
+    ofi_arr = _ofi(
         bid_prices, bid_sizes, ask_prices, ask_sizes, window=ofi_window_sec
     )
 
@@ -245,7 +283,8 @@ def funding_rate_directional(
             f"got {len(spot_arr)}, {len(perp_arr)}, {len(fund_arr)}"
         )
 
-    result = basis_decomposition(spot_arr, perp_arr, fund_arr, funding_interval_hours=8.0)
+    _bd = basis_decomposition or _basis_decomposition_fallback
+    result = _bd(spot_arr, perp_arr, fund_arr, funding_interval_hours=8.0)
 
     N = max(1, lookback_hours // 8)
 

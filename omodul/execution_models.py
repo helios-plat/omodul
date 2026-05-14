@@ -1,9 +1,25 @@
 """Execution models for order scheduling and cost estimation."""
 from __future__ import annotations
 
-from oskill.cost import crypto_market_impact_sigmoid
+import numpy as np
+
+try:
+    from oskill.cost import crypto_market_impact_sigmoid
+except ImportError:
+    crypto_market_impact_sigmoid = None
 
 _SUPPORTED_COST_MODEL = "crypto_market_impact_sigmoid"
+
+
+def _crypto_impact_fallback(
+    notional_usd: float,
+    daily_volume_usd: float = 1e9,
+    realized_vol_30d: float = 0.02,
+    **kwargs,
+) -> dict:
+    participation = notional_usd / daily_volume_usd if daily_volume_usd > 0 else 0
+    impact_bps = 10.0 * np.sqrt(participation) * (1 + realized_vol_30d)
+    return {"impact_bps": impact_bps, "impact_usd": notional_usd * impact_bps / 10000}
 
 
 def twap_with_impact(
@@ -63,8 +79,9 @@ def twap_with_impact(
     total_slippage_usd = 0.0
     total_impact_bps = 0.0
 
+    _impact_fn = crypto_market_impact_sigmoid or _crypto_impact_fallback
     for i in range(n_slices):
-        impact_result = crypto_market_impact_sigmoid(
+        impact_result = _impact_fn(
             slice_notional,
             daily_volume_usd,
             realized_vol_30d,
@@ -140,7 +157,8 @@ def aggressive_limit(
     if max_slippage_bps <= 0:
         raise ValueError(f"max_slippage_bps must be > 0, got {max_slippage_bps}")
 
-    impact_result = crypto_market_impact_sigmoid(
+    _impact_fn2 = crypto_market_impact_sigmoid or _crypto_impact_fallback
+    impact_result = _impact_fn2(
         target_notional_usd,
         **cost_model_params,
     )

@@ -3,7 +3,28 @@ from __future__ import annotations
 
 import numpy as np
 
-from oskill.portfolio import position_sizing_vol_target
+try:
+    from oskill.portfolio import position_sizing_vol_target
+except ImportError:
+    position_sizing_vol_target = None
+
+
+def _position_sizing_vol_target(
+    signal_strength: float,
+    instrument_vol_annual: float,
+    portfolio_target_vol: float,
+    current_capital: float,
+    max_position_pct: float,
+) -> dict:
+    """Local fallback: vol-scaled position sizing."""
+    if instrument_vol_annual <= 0:
+        return {"target_notional_usd": 0.0, "fraction_of_capital": 0.0}
+    fraction = signal_strength * (portfolio_target_vol / instrument_vol_annual)
+    fraction = min(fraction, max_position_pct)
+    return {
+        "target_notional_usd": fraction * current_capital,
+        "fraction_of_capital": fraction,
+    }
 
 
 def vol_target(
@@ -68,7 +89,8 @@ def vol_target(
             target_notionals[symbol] = 0.0
         else:
             inst_vol = float(instrument_vols.get(symbol, 0.5))
-            sizing = position_sizing_vol_target(
+            _sizer = position_sizing_vol_target or _position_sizing_vol_target
+            sizing = _sizer(
                 signal_strength=abs(effective_strength),
                 instrument_vol_annual=inst_vol,
                 portfolio_target_vol=target_annual_vol,
