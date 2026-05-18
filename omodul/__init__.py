@@ -33,6 +33,7 @@ from omodul.strategy import (
     strategy_backtest_report,
     strategy_decay_monitor,
 )
+from omodul.llm_workflows import multi_agent_consensus
 from omodul.universe_selection import fixed_list
 
 __all__ = [
@@ -99,4 +100,6 @@ __all__ = [
     "epstein_zin_asset_pricing_workflow",
     # Group 24: Reporting (Phase 10)
     "cross_framework_benchmark_report",
+    # Group 25: LLM Workflows (Phase 3 P15)
+    "multi_agent_consensus",
 ]
