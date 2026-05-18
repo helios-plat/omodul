@@ -1,7 +1,8 @@
-"""Stratum MCP server — exposes 4 retrieval tools for Phase 1."""
+"""Stratum MCP server — exposes 6 tools (4 retrieval + 2 pin/unpin, Phase 1.5)."""
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -117,18 +118,52 @@ def _recent_changes_handler(limit: int = 20) -> list[dict[str, Any]]:
     ]
 
 
+# ── Pin / Unpin handlers (Phase 1.5) ─────────────────────────────────────────
+
+def _pin_substrate_handler(substrate_id: str) -> dict[str, Any]:
+    """Pin a substrate (is_pinned=True). Pinned substrates are boosted in search."""
+    return _set_pinned(substrate_id, pinned=True)
+
+
+def _unpin_substrate_handler(substrate_id: str) -> dict[str, Any]:
+    """Unpin a substrate (is_pinned=False)."""
+    return _set_pinned(substrate_id, pinned=False)
+
+
+def _set_pinned(substrate_id: str, pinned: bool) -> dict[str, Any]:
+    db_p = meta_db_path()
+    if not db_p.exists():
+        return {"error": "meta_db not found"}
+    try:
+        from oprim.meta_db import open_meta_db
+        now = datetime.now(timezone.utc).isoformat()
+        db = open_meta_db(db_p)
+        exists = db.fetchall("SELECT id FROM substrate WHERE id = ?", [substrate_id])
+        if not exists:
+            db.close()
+            return {"error": f"substrate {substrate_id!r} not found"}
+        db.execute(
+            "UPDATE substrate SET is_pinned = ?, pinned_at = ?, updated_at = ? WHERE id = ?",
+            [pinned, now if pinned else None, now, substrate_id],
+        )
+        db.close()
+    except Exception as e:
+        log.warning("omodul.mcp.set_pinned_error", error=str(e))
+        return {"error": str(e)}
+    return {"substrate_id": substrate_id, "is_pinned": pinned, "updated_at": now}
+
+
 # ── Server factory ────────────────────────────────────────────────────────────
 
 def create_stratum_mcp_server() -> FastMCP:
     """Create and configure the Stratum MCP server (without starting it).
 
-    Registers 4 Phase-1 tools:
-      stratum.search, stratum.fetch_substrate, stratum.list_notes, stratum.recent_changes
+    Phase 1 tools (4): search, fetch_substrate, list_notes, recent_changes
+    Phase 1.5 tools (2): pin_substrate, unpin_substrate
 
-    Not exposed (Phase 2+):
-      stratum.fetch_content, stratum.fetch_concept, stratum.fetch_graph
+    Not exposed (Phase 2+): fetch_content, fetch_concept, fetch_graph
     """
-    server = create_mcp_server("stratum", version="0.1.0")
+    server = create_mcp_server("stratum", version="0.1.5")
 
     register_tool(server, "stratum.search", _search_handler,
                   description="Hybrid BM25+vector search across Stratum substrate")
@@ -138,8 +173,12 @@ def create_stratum_mcp_server() -> FastMCP:
                   description="List recent notes from Stratum meta_db")
     register_tool(server, "stratum.recent_changes", _recent_changes_handler,
                   description="List recent changefeed events from meta_db")
+    register_tool(server, "stratum.pin_substrate", _pin_substrate_handler,
+                  description="Pin a substrate to boost it in search results")
+    register_tool(server, "stratum.unpin_substrate", _unpin_substrate_handler,
+                  description="Unpin a substrate")
 
-    log.info("omodul.mcp.server_created", tools=4)
+    log.info("omodul.mcp.server_created", tools=6)
     return server
 
 

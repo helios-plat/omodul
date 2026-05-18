@@ -12,8 +12,10 @@ from mcp.server.fastmcp import FastMCP
 from omodul.knowledge.start_mcp_server import (
     _fetch_substrate_handler,
     _list_notes_handler,
+    _pin_substrate_handler,
     _recent_changes_handler,
     _search_handler,
+    _unpin_substrate_handler,
     create_stratum_mcp_server,
     start_mcp_server,
 )
@@ -31,10 +33,10 @@ class TestCreateStratumMcpServer:
         server = create_stratum_mcp_server()
         assert server.name == "stratum"
 
-    def test_four_tools_registered(self):
+    def test_six_tools_registered(self):
         server = create_stratum_mcp_server()
         tools = server._tool_manager._tools
-        assert len(tools) == 4
+        assert len(tools) == 6
 
     def test_expected_tool_names_present(self):
         server = create_stratum_mcp_server()
@@ -43,6 +45,8 @@ class TestCreateStratumMcpServer:
         assert "stratum.fetch_substrate" in names
         assert "stratum.list_notes" in names
         assert "stratum.recent_changes" in names
+        assert "stratum.pin_substrate" in names
+        assert "stratum.unpin_substrate" in names
 
 
 class TestSearchHandler:
@@ -204,6 +208,64 @@ class TestRecentChangesHandler:
         result = _recent_changes_handler(limit=3)
         assert len(result) == 3
         assert result[0]["seq"] == 5  # newest first
+
+
+class TestPinSubstrate:
+    def test_no_db_returns_error(self, stratum_home):
+        result = _pin_substrate_handler("SUBID001")
+        assert "error" in result
+
+    def test_pin_existing_substrate(self, stratum_home):
+        from oprim.meta_db import open_meta_db
+        from oskill.knowledge._context import meta_db_path
+        now = datetime.now(timezone.utc).isoformat()
+        db = open_meta_db(meta_db_path())
+        db.migrate(_MIGRATIONS)
+        db.execute(
+            "INSERT INTO substrate (id, ulid, title, mime, source_path, file_hash, byte_size, meta_json, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+            ["PIN001", "PIN001", "Pinnable", "", "", "h001", 0, "{}", now, now],
+        )
+        db.close()
+
+        result = _pin_substrate_handler("PIN001")
+        assert result.get("is_pinned") is True
+        assert result.get("substrate_id") == "PIN001"
+
+        # Verify in DB
+        db = open_meta_db(meta_db_path())
+        rows = db.fetchall("SELECT is_pinned FROM substrate WHERE id = 'PIN001'")
+        db.close()
+        assert rows[0][0] is True
+
+    def test_pin_nonexistent_substrate_returns_error(self, stratum_home):
+        from oprim.meta_db import open_meta_db
+        from oskill.knowledge._context import meta_db_path
+        db = open_meta_db(meta_db_path())
+        db.migrate(_MIGRATIONS)
+        db.close()
+
+        result = _pin_substrate_handler("DOES_NOT_EXIST_000000000000")
+        assert "error" in result
+
+    def test_unpin_substrate(self, stratum_home):
+        from oprim.meta_db import open_meta_db
+        from oskill.knowledge._context import meta_db_path
+        now = datetime.now(timezone.utc).isoformat()
+        db = open_meta_db(meta_db_path())
+        db.migrate(_MIGRATIONS)
+        db.execute(
+            "INSERT INTO substrate (id, ulid, title, mime, source_path, file_hash, byte_size, meta_json, is_pinned, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+            ["UNPIN001", "UNPIN001", "Pinned", "", "", "h001", 0, "{}", True, now, now],
+        )
+        db.close()
+
+        result = _unpin_substrate_handler("UNPIN001")
+        assert result.get("is_pinned") is False
+
+        db = open_meta_db(meta_db_path())
+        rows = db.fetchall("SELECT is_pinned FROM substrate WHERE id = 'UNPIN001'")
+        db.close()
+        assert rows[0][0] is False
 
 
 class TestStartMcpServer:
