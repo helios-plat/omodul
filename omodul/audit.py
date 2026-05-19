@@ -7,6 +7,17 @@ from datetime import datetime, timezone
 from oprim.crypto import sha256_hash
 from oprim.serialization import canonical_json
 
+def _native(obj):
+    """Recursively coerce numpy scalars to native Python for canonical hashing."""
+    if hasattr(obj, "item") and callable(obj.item):
+        return obj.item()
+    if isinstance(obj, dict):
+        return {k: _native(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_native(v) for v in obj]
+    return obj
+
+
 VALID_EVENT_TYPES = {
     "signal_proposed", "signal_dropped",
     "order_approved", "risk_blocked",
@@ -101,7 +112,7 @@ def vcp_silver_record(
         "decision_payload": dict(decision),
     }
 
-    canonical = canonical_json(event)
+    canonical = canonical_json(_native(event))
     canonical_bytes = canonical.encode() if isinstance(canonical, str) else canonical
     if hash_prev is None:
         prev_bytes = b"\x00" * 32

@@ -308,7 +308,7 @@ def bocpd_trend_following(market_state: dict, config: dict) -> dict:
                 "function": "oskill.portfolio.position_sizing_vol_target",
                 "args_hash": _args_hash((sym, abs(effective_strength))),
             })
-            raw_target_notionals[sym] = float(sizing["target_notional_usd"]) * np.sign(effective_strength)
+            raw_target_notionals[sym] = float(float(sizing["target_notional_usd"]) * np.sign(effective_strength))
 
     # Scale down if needed
     total_gross = sum(abs(v) for v in raw_target_notionals.values())
@@ -762,7 +762,7 @@ def funding_rate_arbitrage(market_state: dict, config: dict) -> dict:
                 "function": "oskill.portfolio.position_sizing_vol_target",
                 "args_hash": _args_hash((sym, abs(effective_strength))),
             })
-            raw_target_notionals[sym] = float(sizing["target_notional_usd"]) * np.sign(effective_strength)
+            raw_target_notionals[sym] = float(float(sizing["target_notional_usd"]) * np.sign(effective_strength))
 
     # Enforce leverage cap
     total_gross = sum(abs(v) for v in raw_target_notionals.values())

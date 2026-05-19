@@ -69,9 +69,9 @@ def drawdown_circuit_breaker(
         )
 
     n = len(arr)
-    daily_loss = (arr[-1] - arr[-2]) / arr[-2]
+    daily_loss = float((arr[-1] - arr[-2]) / arr[-2])
     weekly_start_idx = max(0, n - 5)
-    weekly_loss = (arr[-1] - arr[weekly_start_idx]) / arr[weekly_start_idx]
+    weekly_loss = float((arr[-1] - arr[weekly_start_idx]) / arr[weekly_start_idx])
 
     dd_result = drawdown_curve(pd.Series(arr), input_type="equity")
     max_drawdown = float(dd_result["max_drawdown"])
