@@ -1,6 +1,6 @@
 [project]
 name = "omodul"
-version = "1.4.0"
+version = "1.5.0"
 description = "End-to-end financial analysis features built on oprim + oskill"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -21,6 +21,13 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+browser-extension = [
+    "fastapi>=0.100.0",
+    "uvicorn[standard]>=0.20.0",
+    "readability-lxml>=0.8.1",
+    "lxml>=4.9",
+    "httpx>=0.24",
+]
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
