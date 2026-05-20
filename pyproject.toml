@@ -1,6 +1,6 @@
 [project]
 name = "omodul"
-version = "1.5.0"
+version = "1.6.0"
 description = "End-to-end financial analysis features built on oprim + oskill"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -18,6 +18,8 @@ dependencies = [
     "statsmodels>=0.14",
     "pydantic>=2.0",
     "structlog>=23.0",            # structured logging in llm_workflows
+    "apscheduler>=3.10,<4.0",
+    "redis>=7.0",
 ]
 
 [project.optional-dependencies]
