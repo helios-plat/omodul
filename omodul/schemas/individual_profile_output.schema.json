@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "individual_profile_output.schema.json",
+  "title": "IndividualProfileOutput",
+  "type": "object",
+  "required": ["symbol", "profile", "cache_status", "tier_used", "generation_cost", "trail_id"],
+  "properties": {
+    "symbol": {"type": "string"},
+    "profile": {
+      "type": "object",
+      "required": ["thesis", "strengths", "weaknesses", "key_metrics", "comparison_peers", "risk_factors"],
+      "properties": {
+        "thesis": {"type": "string"},
+        "strengths": {"type": "array", "items": {"type": "string"}},
+        "weaknesses": {"type": "array", "items": {"type": "string"}},
+        "key_metrics": {"type": "object"},
+        "comparison_peers": {"type": "array", "items": {"type": "string"}},
+        "risk_factors": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "cache_status": {"type": "string", "enum": ["hit", "miss", "bust"]},
+    "tier_used": {"type": "string"},
+    "generation_cost": {"type": "number"},
+    "trail_id": {"type": "string"}
+  }
+}

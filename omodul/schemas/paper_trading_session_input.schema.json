@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "paper_trading_session_input.schema.json",
+  "title": "PaperTradingSessionInput",
+  "type": "object",
+  "required": ["account_state", "orders", "ohlcv", "market_rules", "timestamp"],
+  "properties": {
+    "account_state": {
+      "type": "object",
+      "required": ["cash", "positions"],
+      "properties": {
+        "cash": {"type": "number"},
+        "positions": {"type": "array", "items": {"type": "object"}},
+        "history": {"type": "array", "items": {"type": "object"}}
+      }
+    },
+    "orders": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["symbol", "side", "quantity"],
+        "properties": {
+          "order_id": {"type": "string"},
+          "symbol": {"type": "string"},
+          "side": {"type": "string", "enum": ["buy", "sell"]},
+          "quantity": {"type": "number", "minimum": 0},
+          "order_type": {"type": "string", "enum": ["market", "limit"]},
+          "price": {"type": ["number", "null"]}
+        }
+      }
+    },
+    "ohlcv": {"type": "object"},
+    "market_rules": {"type": "object"},
+    "timestamp": {"type": "string", "format": "date-time"}
+  }
+}

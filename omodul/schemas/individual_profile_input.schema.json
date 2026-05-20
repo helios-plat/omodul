@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "individual_profile_input.schema.json",
+  "title": "IndividualProfileInput",
+  "type": "object",
+  "required": ["symbol", "facts", "user_context", "industry_context"],
+  "properties": {
+    "symbol": {"type": "string"},
+    "facts": {"type": "object"},
+    "user_context": {"type": "object"},
+    "industry_context": {"type": "object"},
+    "tier": {"type": "string", "enum": ["fast", "deep"], "default": "fast"}
+  }
+}

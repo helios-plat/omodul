@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "user_system_backtest_output.schema.json",
+  "title": "UserSystemBacktestOutput",
+  "type": "object",
+  "required": ["config_used", "trades", "equity_curve", "metrics", "regime_breakdown", "sensitivity_analysis"],
+  "properties": {
+    "config_used": {"type": "object"},
+    "trades": {"type": "array", "items": {"type": "object"}},
+    "equity_curve": {"type": "array"},
+    "metrics": {"type": "object"},
+    "regime_breakdown": {"type": "object"},
+    "sensitivity_analysis": {"type": "object"}
+  }
+}

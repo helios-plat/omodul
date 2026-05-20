@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "user_system_backtest_input.schema.json",
+  "title": "UserSystemBacktestInput",
+  "type": "object",
+  "required": ["system_config", "ohlcv_history", "regime_history", "market_rules"],
+  "properties": {
+    "system_config": {
+      "type": "object",
+      "required": ["initial_capital"],
+      "properties": {
+        "initial_capital": {"type": "number", "minimum": 0},
+        "position_size_by_regime": {"type": "object"},
+        "max_positions": {"type": "integer", "minimum": 1},
+        "default_size_fraction": {"type": "number", "minimum": 0, "maximum": 1},
+        "entry_rules": {"type": "object"},
+        "exit_rules": {"type": "object"}
+      }
+    },
+    "ohlcv_history": {"type": "object"},
+    "regime_history": {"type": "array", "items": {"type": "object"}},
+    "market_rules": {"type": "object"},
+    "period_years": {"type": "integer", "minimum": 1, "default": 5}
+  }
+}

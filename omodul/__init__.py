@@ -4,7 +4,7 @@ from omodul._version import __version__
 from omodul.alpha_signals import bocpd_trend, funding_rate_directional, ofi_meanrev
 from omodul.asset_pricing.ez_workflow import epstein_zin_asset_pricing_workflow
 from omodul.audit import vcp_silver_record
-from omodul.behavior import shadow_account_simulator, trade_journal_analyzer
+# behavior imports consolidated below (Sprint 0)
 
 # Phase 10: New workflow elements
 from omodul.behavioral.portfolio_workflow import behavioral_portfolio_workflow
@@ -25,13 +25,23 @@ from omodul.risk import scenario_stress_test, tail_risk_analyzer
 from omodul.risk.systemic_dashboard import systemic_risk_dashboard
 from omodul.risk_models import drawdown_circuit_breaker
 from omodul.robust.decision_workflow import robust_decision_workflow
-from omodul.signals import alert_calibration_engine, thesis_invalidation_monitor
+from omodul.signals import alert_calibration_engine, buy_sell_analysis, thesis_invalidation_monitor
 from omodul.similarity import event_cascade_clusterer, smart_peer_finder
 from omodul.strategies import bocpd_trend_following, funding_rate_arbitrage, microstructure_scalper
 from omodul.strategy import (
+    daily_plan_generate,
     factor_attribution_report,
     strategy_backtest_report,
     strategy_decay_monitor,
+)
+from omodul.simulation.paper_trading_session import paper_trading_session
+from omodul.backtest.user_system_backtest import user_system_backtest
+from omodul.profile.individual_profile_workflow import individual_profile_workflow
+from omodul.behavior import (
+    monthly_trade_review,
+    shadow_account_simulator,
+    trade_journal_analyzer,
+    training_task_recommend,
 )
 from omodul.llm_workflows import multi_agent_consensus
 from omodul.universe_selection import fixed_list
@@ -102,4 +112,12 @@ __all__ = [
     "cross_framework_benchmark_report",
     # Group 25: LLM Workflows (Phase 3 P15)
     "multi_agent_consensus",
+    # Sprint 0: New omodul elements
+    "monthly_trade_review",
+    "training_task_recommend",
+    "daily_plan_generate",
+    "individual_profile_workflow",
+    "paper_trading_session",
+    "user_system_backtest",
+    "buy_sell_analysis",
 ]

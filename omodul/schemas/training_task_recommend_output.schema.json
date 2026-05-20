@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "training_task_recommend_output.schema.json",
+  "title": "TrainingTaskRecommendOutput",
+  "type": "object",
+  "required": ["recommended_tasks", "weakness_identified", "llm_reasoning"],
+  "properties": {
+    "recommended_tasks": {
+      "type": "array",
+      "items": {"type": "object"}
+    },
+    "weakness_identified": {"type": "array", "items": {"type": "string"}},
+    "llm_reasoning": {"type": "string"}
+  }
+}

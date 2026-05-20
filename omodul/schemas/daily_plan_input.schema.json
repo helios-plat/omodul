@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "daily_plan_input.schema.json",
+  "title": "DailyPlanInput",
+  "type": "object",
+  "required": ["regime_state", "themes", "scored_events", "rotation_signals", "watchlist", "holdings"],
+  "properties": {
+    "regime_state": {
+      "type": "object",
+      "required": ["current_state"],
+      "properties": {
+        "current_state": {"type": "string"},
+        "confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0}
+      }
+    },
+    "themes": {"type": "array", "items": {"type": "object"}},
+    "scored_events": {"type": "array", "items": {"type": "object"}},
+    "rotation_signals": {"type": "object"},
+    "watchlist": {"type": "array", "items": {"type": "object"}},
+    "holdings": {"type": "array", "items": {"type": "object"}}
+  }
+}

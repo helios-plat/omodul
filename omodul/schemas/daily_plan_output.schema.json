@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "daily_plan_output.schema.json",
+  "title": "DailyPlanOutput",
+  "type": "object",
+  "required": ["trade_date", "regime_summary", "candidate_stocks", "holdings_review", "key_themes_today", "llm_full_response", "trail_id"],
+  "properties": {
+    "trade_date": {"type": "string", "format": "date"},
+    "regime_summary": {"type": "object"},
+    "candidate_stocks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["symbol", "rationale", "entry_condition", "size_suggestion", "stop_loss", "risk_level"],
+        "properties": {
+          "symbol": {"type": "string"},
+          "rationale": {"type": "string"},
+          "entry_condition": {"type": "object"},
+          "size_suggestion": {"type": "number"},
+          "stop_loss": {"type": "number"},
+          "risk_level": {"type": "string"}
+        }
+      }
+    },
+    "holdings_review": {"type": "array", "items": {"type": "object"}},
+    "key_themes_today": {"type": "array", "items": {"type": "string"}},
+    "llm_full_response": {"type": "string"},
+    "trail_id": {"type": "string", "format": "uuid"}
+  }
+}

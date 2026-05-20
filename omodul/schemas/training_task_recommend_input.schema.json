@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "training_task_recommend_input.schema.json",
+  "title": "TrainingTaskRecommendInput",
+  "type": "object",
+  "required": ["user_behavior_summary", "task_taxonomy"],
+  "properties": {
+    "user_behavior_summary": {"type": "object"},
+    "journal_summary": {"type": "object"},
+    "task_taxonomy": {
+      "type": "object",
+      "description": "Available training tasks by category"
+    }
+  }
+}

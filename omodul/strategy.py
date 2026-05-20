@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from datetime import date
+from typing import Callable, Literal, Optional
 
 import numpy as np
 import pandas as pd
@@ -22,6 +23,8 @@ def strategy_backtest_report(
     n_bootstrap: int = 1000,
     annualization_factor: float = 252.0,
     report_format: Literal["dict", "markdown"] = "dict",
+    signal_detectors: Optional[list[Callable]] = None,
+    regime_grouping: Optional[Callable[[date], str]] = None,
 ) -> dict | str:
     """Complete strategy backtest report.
 
@@ -109,6 +112,38 @@ def strategy_backtest_report(
     if n < 60:
         warnings_list.append(f"Short history ({n} periods): results may be unreliable")
 
+    # Sprint 0: signal_detectors and regime_grouping extension
+    signal_events: list = []
+    if signal_detectors:
+        for detector in signal_detectors:
+            try:
+                events = detector(ret)
+                if events:
+                    signal_events.extend(events)
+            except Exception:
+                pass
+
+    regime_grouping_breakdown: dict | None = None
+    if regime_grouping is not None:
+        grouped: dict[str, list[float]] = {}
+        for dt, r_val in zip(ret.index, ret.values):
+            try:
+                grp = regime_grouping(dt if isinstance(dt, date) else dt.date())
+            except Exception:
+                grp = "unknown"
+            if grp not in grouped:
+                grouped[grp] = []
+            grouped[grp].append(float(r_val))
+        regime_grouping_breakdown = {
+            grp: {
+                "n": len(vals),
+                "mean_return": float(np.mean(vals)) if vals else 0.0,
+                "sharpe": float(oprim.sharpe_ratio(pd.Series(vals), annualization_factor=int(annualization_factor)))
+                if len(vals) >= 2 else 0.0,
+            }
+            for grp, vals in grouped.items()
+        }
+
     result = {
         "summary": summary,
         "robust_sharpe": robust_sharpe,
@@ -118,6 +153,8 @@ def strategy_backtest_report(
         "regime_breakdown": regime_breakdown,
         "factor_attribution": factor_attr,
         "warnings": warnings_list,
+        "signal_events": signal_events,
+        "regime_grouping_breakdown": regime_grouping_breakdown,
     }
 
     if report_format == "markdown":

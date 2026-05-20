@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "paper_trading_session_output.schema.json",
+  "title": "PaperTradingSessionOutput",
+  "type": "object",
+  "required": ["executed_trades", "rejected_orders", "new_account_state", "pnl_delta"],
+  "properties": {
+    "executed_trades": {
+      "type": "array",
+      "items": {"type": "object"}
+    },
+    "rejected_orders": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["reason"],
+        "properties": {
+          "reason": {"type": "string"}
+        }
+      }
+    },
+    "new_account_state": {
+      "type": "object",
+      "required": ["cash", "positions", "history"]
+    },
+    "pnl_delta": {"type": "number"}
+  }
+}

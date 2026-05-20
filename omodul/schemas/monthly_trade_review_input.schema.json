@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "monthly_trade_review_input.schema.json",
+  "title": "MonthlyTradeReviewInput",
+  "type": "object",
+  "required": ["trades", "period"],
+  "properties": {
+    "trades": {
+      "type": "array",
+      "description": "List of trade records",
+      "items": {
+        "type": "object",
+        "required": ["symbol", "side", "pnl"],
+        "properties": {
+          "symbol": {"type": "string"},
+          "side": {"type": "string", "enum": ["buy", "sell"]},
+          "pnl": {"type": "number"},
+          "entry_date": {"type": "string", "format": "date"},
+          "exit_date": {"type": "string", "format": "date"}
+        }
+      }
+    },
+    "period": {
+      "type": "string",
+      "description": "Review period, e.g. '2024-01'"
+    }
+  }
+}

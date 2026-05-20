@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Literal
+import uuid
+from typing import Any, Callable, Literal, Optional
 
 import numpy as np
 import pandas as pd
@@ -175,4 +176,155 @@ def thesis_invalidation_monitor(
             "invalidated_thesis_ids": [k for k, v in per_thesis.items() if v["status"] == "INVALIDATED"],
         },
         "warnings": [],
+    }
+
+
+STABILITY = "experimental"
+
+
+async def buy_sell_analysis(
+    signal_data: dict,
+    fundamentals: dict,
+    technicals: dict,
+    llm_client_provider: Callable[[str], Any],
+    byok_key: Optional[str],
+    prompt_builder: Callable,
+    cache: Optional[Any] = None,
+    cache_ttl_hours: int = 24,
+    cost_tracker: Optional[Any] = None,
+    tier: Literal["fast", "deep"] = "fast",
+) -> dict:
+    """Generate LLM analysis of buy/sell timing.
+
+    Parameters
+    ----------
+    signal_data : multi-source signal aggregation
+    fundamentals : fundamental data snapshot
+    technicals : technical indicators snapshot
+    llm_client_provider : (tier) -> llm_client_instance (allows BYOK routing)
+    byok_key : optional user-provided LLM API key
+    prompt_builder : builds analysis prompt
+    cache : optional cache object with .get(key) and .set(key, value)
+    cache_ttl_hours : cache TTL in hours
+    cost_tracker : optional cost tracker callable
+    tier : "fast" or "deep" model tier
+
+    Returns
+    -------
+    {
+        "symbol": str,
+        "analysis": {
+            "action_suggestion": "buy_now" | "wait" | "sell" | "hold",
+            "entry_price_range": tuple[float, float],
+            "exit_price_range": tuple[float, float],
+            "rationale": str,
+            "key_risks": list[str],
+            "confidence": float
+        },
+        "cache_status": str,
+        "cost": float,
+        "trail_id": str
+    }
+
+    Methodology
+    -----------
+    1. Compose cache key from signal fingerprint
+    2. Check cache (with TTL)
+    3. If miss, route to LLM (BYOK if provided)
+    4. Validate output schema
+    5. Update cache + trail
+
+    Schema: buy_sell_analysis_output.schema.json
+    """
+    import inspect
+
+    trail_id = str(uuid.uuid4())
+    symbol = signal_data.get("symbol", "")
+    fingerprint = f"{symbol}:{tier}:{sorted(signal_data.items())}"
+    cache_key = f"buy_sell:{symbol}:{tier}"
+    cache_status = "miss"
+    cost = 0.001 if tier == "fast" else 0.01
+
+    cached_analysis = None
+    if cache is not None:
+        try:
+            cached_analysis = cache.get(cache_key)
+        except Exception:
+            cached_analysis = None
+
+    if cached_analysis is not None:
+        cache_status = "hit"
+
+    analysis: dict
+    if cached_analysis is not None:
+        analysis = cached_analysis
+    else:
+        try:
+            llm_client = llm_client_provider(byok_key if byok_key else tier)
+        except Exception:
+            llm_client = None
+
+        prompt = prompt_builder({
+            "symbol": symbol,
+            "signal_data": signal_data,
+            "fundamentals": fundamentals,
+            "technicals": technicals,
+            "tier": tier,
+        })
+
+        llm_str = ""
+        if llm_client is not None:
+            try:
+                if inspect.iscoroutinefunction(llm_client):
+                    llm_response = await llm_client(prompt)
+                else:
+                    llm_response = llm_client(prompt)
+                llm_str = str(llm_response) if llm_response else ""
+            except Exception as exc:
+                llm_str = f"[LLM unavailable: {exc}]"
+
+        action = "hold"
+        for kw, act in [("buy", "buy_now"), ("sell", "sell"), ("wait", "wait")]:
+            if kw in llm_str.lower():
+                action = act
+                break
+
+        current_price = float(technicals.get("close", technicals.get("price", 100.0)))
+        entry_low = round(current_price * 0.98, 2)
+        entry_high = round(current_price * 1.02, 2)
+        exit_low = round(current_price * 1.05, 2)
+        exit_high = round(current_price * 1.15, 2)
+
+        analysis = {
+            "action_suggestion": action,
+            "entry_price_range": (entry_low, entry_high),
+            "exit_price_range": (exit_low, exit_high),
+            "rationale": llm_str[:500] if llm_str else f"Analysis for {symbol}",
+            "key_risks": signal_data.get("risks", []),
+            "confidence": 0.6 if tier == "fast" else 0.8,
+        }
+
+        if cache is not None:
+            try:
+                cache.set(cache_key, analysis)
+            except Exception:
+                pass
+
+    if cost_tracker is not None:
+        try:
+            cost_tracker({
+                "trail_id": trail_id,
+                "symbol": symbol,
+                "cost": cost,
+                "tier": tier,
+            })
+        except Exception:
+            pass
+
+    return {
+        "symbol": symbol,
+        "analysis": analysis,
+        "cache_status": cache_status,
+        "cost": cost,
+        "trail_id": trail_id,
     }

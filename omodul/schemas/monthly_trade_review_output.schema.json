@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "monthly_trade_review_output.schema.json",
+  "title": "MonthlyTradeReviewOutput",
+  "type": "object",
+  "required": ["period", "summary_statistics", "behavior_diagnostics", "discipline_summary", "llm_narrative", "key_insights", "recommended_focus_areas"],
+  "properties": {
+    "period": {"type": "string"},
+    "summary_statistics": {"type": "object"},
+    "behavior_diagnostics": {"type": "object"},
+    "discipline_summary": {"type": "object"},
+    "llm_narrative": {"type": "string"},
+    "key_insights": {"type": "array", "items": {"type": "string"}},
+    "recommended_focus_areas": {"type": "array", "items": {"type": "string"}}
+  }
+}

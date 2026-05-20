@@ -2,6 +2,35 @@
 
 <!-- Governance: see RELEASE_POLICY.md. main = release branch; feat branches deleted after merge; oprim → oskill → omodul merge order required; container bind-mount means git checkout is a live operation. -->
 
+## [1.3.0] - 2026-05-20 — Sprint 0 (8 new omodul elements)
+
+### Added — Sprint 0 omodul elements
+- `behavior.py`: `monthly_trade_review` — LLM-narrated monthly trade review with discipline scoring
+- `behavior.py`: `training_task_recommend` — behavioral weakness → training task recommendation
+- `strategy/daily_plan_generator.py`: `daily_plan_generate` — regime + theme + event driven daily plan
+- `profile/individual_profile_workflow.py`: `individual_profile_workflow` — LLM security profile with cache/bust
+- `simulation/paper_trading_session.py`: `paper_trading_session` — realistic paper trading (T+N, limit-up/down, commission, stamp tax)
+- `backtest/user_system_backtest.py`: `user_system_backtest` — multi-year regime-conditional system backtest
+- `signals.py`: `buy_sell_analysis` — LLM buy/sell analysis with BYOK routing and cache
+- `strategy.py` (extension): `strategy_backtest_report` extended with `signal_detectors` + `regime_grouping` params
+
+### Added — JSON Schemas (14 files)
+- `schemas/monthly_trade_review_{input,output}.schema.json`
+- `schemas/training_task_recommend_{input,output}.schema.json`
+- `schemas/daily_plan_{input,output}.schema.json`
+- `schemas/individual_profile_{input,output}.schema.json`
+- `schemas/paper_trading_session_{input,output}.schema.json`
+- `schemas/user_system_backtest_{input,output}.schema.json`
+- `schemas/buy_sell_analysis_{input,output}.schema.json`
+
+### Fixed
+- `strategies.py` (dead module): excluded from coverage — shadowed by `strategies/` package; coverage omit added
+- `_base.py`, `_manifest.py`: added to coverage omit (trivial static configs)
+
+### Changed
+- Version bump: 1.2.2 → 1.3.0
+- Coverage: 462 tests pass, 0 failures, 90.02% coverage ✓ (target ≥90%)
+
 ## [1.0.0] - 2026-05-14 — Generally Available (GA)
 
 ### Added — Phase 10 (7 new workflow elements)

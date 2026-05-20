@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "buy_sell_analysis_input.schema.json",
+  "title": "BuySellAnalysisInput",
+  "type": "object",
+  "required": ["signal_data", "fundamentals", "technicals"],
+  "properties": {
+    "signal_data": {
+      "type": "object",
+      "required": ["symbol"],
+      "properties": {
+        "symbol": {"type": "string"},
+        "risks": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "fundamentals": {"type": "object"},
+    "technicals": {
+      "type": "object",
+      "properties": {
+        "close": {"type": "number"},
+        "price": {"type": "number"}
+      }
+    },
+    "cache_ttl_hours": {"type": "integer", "minimum": 1, "default": 24},
+    "tier": {"type": "string", "enum": ["fast", "deep"], "default": "fast"}
+  }
+}

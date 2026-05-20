@@ -115,3 +115,91 @@ class TestFactorAttributionReport:
     def test_short_returns_raises(self):
         with pytest.raises(ValueError, match="at least 30"):
             factor_attribution_report(pd.Series([0.01] * 10), {"X": pd.DataFrame({"F": [0.01] * 10})})
+
+
+# ──────────────────────────────────────────────
+# Sprint 0: strategy_backtest_report extensions
+# ──────────────────────────────────────────────
+
+class TestStrategyBacktestReportSprint0:
+    def _ret(self, n=120):
+        rng = np.random.default_rng(42)
+        return pd.Series(rng.normal(0.001, 0.02, n))
+
+    def test_signal_detectors_extension(self):
+        events_found = []
+
+        def detector(returns):
+            events_found.append(len(returns))
+            return [{"date": returns.index[0] if hasattr(returns.index[0], 'date') else 0,
+                     "type": "signal"}]
+
+        result = strategy_backtest_report(
+            self._ret(), signal_detectors=[detector], n_bootstrap=50
+        )
+        assert "signal_events" in result
+        assert len(result["signal_events"]) == 1
+
+    def test_regime_grouping_breakdown(self):
+        from datetime import date
+        ret = self._ret()
+        ret.index = pd.date_range("2023-01-01", periods=len(ret), freq="B")
+
+        def grouping(d):
+            return "bull" if d.month <= 6 else "bear"
+
+        result = strategy_backtest_report(
+            ret,
+            regime_grouping=grouping,
+            n_bootstrap=50,
+        )
+        assert "regime_grouping_breakdown" in result
+        assert result["regime_grouping_breakdown"] is not None
+        assert "bull" in result["regime_grouping_breakdown"] or "bear" in result["regime_grouping_breakdown"]
+
+    def test_regime_grouping_breakdown_contents(self):
+        from datetime import date
+        ret = self._ret(200)
+        dates = pd.date_range("2023-01-01", periods=200, freq="B")
+        ret.index = dates
+
+        def grouping(d):
+            return "A"
+
+        result = strategy_backtest_report(ret, regime_grouping=grouping, n_bootstrap=50)
+        grp = result["regime_grouping_breakdown"]["A"]
+        assert "n" in grp
+        assert "mean_return" in grp
+        assert "sharpe" in grp
+
+    def test_signal_detector_exception_graceful(self):
+        def bad_detector(returns):
+            raise RuntimeError("broken")
+
+        result = strategy_backtest_report(
+            self._ret(), signal_detectors=[bad_detector], n_bootstrap=50
+        )
+        assert result["signal_events"] == []
+
+    def test_regime_grouping_exception_graceful(self):
+        def bad_grouping(d):
+            raise ValueError("bad date")
+
+        ret = self._ret()
+        ret.index = pd.date_range("2023-01-01", periods=len(ret), freq="B")
+        result = strategy_backtest_report(ret, regime_grouping=bad_grouping, n_bootstrap=50)
+        assert "unknown" in result["regime_grouping_breakdown"]
+
+    @pytest.mark.academic_reference
+    def test_academic_reference_regime_grouping(self):
+        """Regime-conditional performance follows Hamilton (1989) Markov switching
+        regime-aware attribution (Ang & Bekaert 2004)."""
+        ret = self._ret(200)
+        ret.index = pd.date_range("2023-01-01", periods=200, freq="B")
+        result = strategy_backtest_report(
+            ret,
+            regime_grouping=lambda d: "high" if d.month % 2 == 0 else "low",
+            n_bootstrap=50,
+        )
+        assert result["regime_grouping_breakdown"] is not None
+        assert len(result["regime_grouping_breakdown"]) == 2

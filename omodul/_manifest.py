@@ -1,7 +1,7 @@
 """omodul manifest — element registry."""
 from __future__ import annotations
 
-VERSION = "1.0.0"
+VERSION = "1.3.0"
 
 ELEMENTS = {
     # Phase 1-4: Core business workflows
@@ -71,13 +71,21 @@ ELEMENTS = {
     "state_dependent_market_making_strategy": "omodul.microstructure.state_mm_strategy",
     "epstein_zin_asset_pricing_workflow": "omodul.asset_pricing.ez_workflow",
     "cross_framework_benchmark_report": "omodul.reporting.cross_framework_benchmark",
+    # Sprint 0: New elements
+    "monthly_trade_review": "omodul.behavior",
+    "training_task_recommend": "omodul.behavior",
+    "daily_plan_generate": "omodul.strategy.daily_plan_generator",
+    "individual_profile_workflow": "omodul.profile.individual_profile_workflow",
+    "paper_trading_session": "omodul.simulation.paper_trading_session",
+    "user_system_backtest": "omodul.backtest.user_system_backtest",
+    "buy_sell_analysis": "omodul.signals",
 }
 
 CATEGORIES = {
-    "behavior": ["trade_journal_analyzer", "shadow_account_simulator"],
+    "behavior": ["trade_journal_analyzer", "shadow_account_simulator", "monthly_trade_review", "training_task_recommend"],
     "regime": ["regime_replay_search", "regime_change_detector", "regime_conditional_dashboard_data"],
     "strategy": ["strategy_backtest_report", "strategy_decay_monitor", "factor_attribution_report"],
-    "signals": ["alert_calibration_engine", "thesis_invalidation_monitor"],
+    "signals": ["alert_calibration_engine", "thesis_invalidation_monitor", "buy_sell_analysis"],
     "risk": ["scenario_stress_test", "tail_risk_analyzer", "drawdown_circuit_breaker"],
     "data_quality": ["panel_data_quality_check", "cross_source_consistency_check"],
     "similarity": ["smart_peer_finder", "event_cascade_clusterer"],
@@ -104,4 +112,8 @@ CATEGORIES = {
     "microstructure": ["state_dependent_market_making_strategy"],
     "asset_pricing": ["epstein_zin_asset_pricing_workflow"],
     "reporting": ["cross_framework_benchmark_report"],
+    "profile": ["individual_profile_workflow"],
+    "simulation": ["paper_trading_session"],
+    "backtest_user": ["user_system_backtest"],
+    "daily_plan": ["daily_plan_generate"],
 }

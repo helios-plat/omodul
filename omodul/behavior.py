@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Callable, Literal
+from typing import Any, Callable, Literal, Optional
 
 import numpy as np
 import pandas as pd
@@ -299,4 +299,171 @@ def shadow_account_simulator(
         "regime_breakdown": regime_breakdown,
         "actual_equity_curve": actual_eq,
         "shadow_equity_curve": shadow_eq,
+    }
+
+
+# ── Sprint 0 additions (v1.3.0) ──────────────────────────────────────────────
+
+STABILITY_NEW = "experimental"
+
+
+def monthly_trade_review(
+    trades: list[dict],
+    period: tuple[int, int],
+    llm_client: Callable,
+    prompt_builder: Callable[[dict, dict], str],
+    discipline_evaluator: Optional[Callable] = None,
+) -> dict:
+    """Generate a monthly trade review with statistics and LLM-narrated insights.
+
+    Parameters
+    ----------
+    trades : list of closed trades in the period (dicts with pnl_field)
+    period : (year, month) tuple, e.g. (2026, 5)
+    llm_client : sync or async callable for LLM (called synchronously here)
+    prompt_builder : (trade_stats, period_dict) -> prompt string
+    discipline_evaluator : optional callable(trade) -> float (discipline score)
+
+    Returns
+    -------
+    {
+        "period": "YYYY-MM",
+        "summary_statistics": dict,
+        "behavior_diagnostics": dict | None,
+        "discipline_summary": dict | None,
+        "llm_narrative": str,
+        "key_insights": list[str],
+        "recommended_focus_areas": list[str]
+    }
+
+    Uses: oskill.performance.trade_pnl_statistics
+    """
+    import oskill
+
+    year, month = period
+    period_str = f"{year:04d}-{month:02d}"
+
+    summary_statistics = oskill.trade_pnl_statistics(trades)
+
+    behavior_diagnostics: dict | None = None
+
+    discipline_summary: dict | None = None
+    if discipline_evaluator is not None and trades:
+        scores = []
+        for t in trades:
+            try:
+                s = discipline_evaluator(t)
+                scores.append(float(s))
+            except Exception:
+                pass
+        if scores:
+            discipline_summary = {
+                "avg_discipline_score": sum(scores) / len(scores),
+                "n_evaluated": len(scores),
+                "min_score": min(scores),
+                "max_score": max(scores),
+            }
+
+    period_dict = {"year": year, "month": month, "period_str": period_str}
+    prompt = prompt_builder(summary_statistics, period_dict)
+
+    try:
+        llm_response = llm_client(prompt)
+    except Exception as exc:
+        llm_response = f"[LLM unavailable: {exc}]"
+
+    llm_narrative = str(llm_response) if llm_response else ""
+
+    key_insights: list[str] = []
+    recommended_focus_areas: list[str] = []
+
+    win_rate = summary_statistics.get("win_rate", 0.0)
+    avg_pnl = summary_statistics.get("avg_pnl", 0.0)
+
+    if win_rate < 0.4:
+        recommended_focus_areas.append("Improve entry precision (win_rate below 40%)")
+    if avg_pnl < 0:
+        recommended_focus_areas.append("Review loss management (avg PnL negative)")
+    if summary_statistics.get("n_trades", 0) == 0:
+        key_insights.append("No trades in this period")
+
+    return {
+        "period": period_str,
+        "summary_statistics": summary_statistics,
+        "behavior_diagnostics": behavior_diagnostics,
+        "discipline_summary": discipline_summary,
+        "llm_narrative": llm_narrative,
+        "key_insights": key_insights,
+        "recommended_focus_areas": recommended_focus_areas,
+    }
+
+
+def training_task_recommend(
+    user_behavior_summary: dict,
+    journal_summary: dict,
+    llm_client: Callable,
+    prompt_builder: Callable,
+    task_taxonomy: list[dict],
+) -> dict:
+    """Recommend training tasks based on user behavior weaknesses.
+
+    Parameters
+    ----------
+    user_behavior_summary : from omodul.trade_journal_analyzer (behavior_metrics field)
+    journal_summary : aggregated journal stats (e.g. win_rate, avg_pnl)
+    llm_client : sync callable for LLM
+    prompt_builder : builds prompt from summaries
+    task_taxonomy : caller-provided list of available task dicts
+                   (each: {"task_type": str, "description": str, "targets": list[str]})
+
+    Returns
+    -------
+    {
+        "recommended_tasks": [{"task_type": str, "rationale": str, "expected_outcome": str}, ...],
+        "weakness_identified": list[str],
+        "llm_reasoning": str
+    }
+
+    Uses: omodul.trade_journal_analyzer output
+    """
+    weakness_identified: list[str] = []
+
+    win_rate = journal_summary.get("win_rate", 1.0)
+    avg_pnl = journal_summary.get("avg_pnl", 0.0)
+    disposition_score = user_behavior_summary.get("disposition_effect_ratio", 0.0)
+
+    if win_rate < 0.45:
+        weakness_identified.append("low_win_rate")
+    if avg_pnl < 0:
+        weakness_identified.append("negative_avg_pnl")
+    if disposition_score > 0.6:
+        weakness_identified.append("disposition_effect")
+
+    recommended_tasks: list[dict] = []
+    for task in task_taxonomy:
+        targets = task.get("targets", [])
+        matched = any(w in targets for w in weakness_identified)
+        if matched:
+            recommended_tasks.append({
+                "task_type": task.get("task_type", ""),
+                "rationale": f"Targets: {', '.join(targets)}",
+                "expected_outcome": task.get("description", ""),
+            })
+
+    summary_dict = {
+        "weaknesses": weakness_identified,
+        "journal_summary": journal_summary,
+        "user_behavior_summary": user_behavior_summary,
+    }
+    prompt = prompt_builder(summary_dict)
+
+    try:
+        llm_response = llm_client(prompt)
+    except Exception as exc:
+        llm_response = f"[LLM unavailable: {exc}]"
+
+    return {
+        "recommended_tasks": recommended_tasks,
+        "weakness_identified": weakness_identified,
+        "llm_reasoning": str(llm_response) if llm_response else "",
     }
