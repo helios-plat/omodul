@@ -12,9 +12,11 @@ from mcp.server.fastmcp import FastMCP
 from omodul.knowledge.start_mcp_server import (
     _fetch_substrate_handler,
     _list_notes_handler,
+    _list_views_handler,
     _pin_substrate_handler,
     _recent_changes_handler,
     _search_handler,
+    _set_default_view_handler,
     _unpin_substrate_handler,
     create_stratum_mcp_server,
     start_mcp_server,
@@ -33,10 +35,10 @@ class TestCreateStratumMcpServer:
         server = create_stratum_mcp_server()
         assert server.name == "stratum"
 
-    def test_six_tools_registered(self):
+    def test_eight_tools_registered(self):
         server = create_stratum_mcp_server()
         tools = server._tool_manager._tools
-        assert len(tools) == 6
+        assert len(tools) == 8
 
     def test_expected_tool_names_present(self):
         server = create_stratum_mcp_server()
@@ -47,6 +49,8 @@ class TestCreateStratumMcpServer:
         assert "stratum.recent_changes" in names
         assert "stratum.pin_substrate" in names
         assert "stratum.unpin_substrate" in names
+        assert "stratum.list_views" in names
+        assert "stratum.set_default_view" in names
 
 
 class TestSearchHandler:
@@ -275,3 +279,125 @@ class TestStartMcpServer:
             mock_create.return_value = mock_server
             start_mcp_server(host="127.0.0.1", port=9999)
         mock_server.run.assert_called_once()
+
+
+class TestListViewsHandler:
+    def test_returns_views_list(self, stratum_home):
+        from oprim.meta_db import open_meta_db
+        from oskill.knowledge._context import meta_db_path
+        now = datetime.now(timezone.utc).isoformat()
+        db = open_meta_db(meta_db_path())
+        db.migrate(_MIGRATIONS)
+        db.execute(
+            "INSERT INTO views (id, user_id, name, description, default_filter, default_llm, "
+            "default_system_prompt, icon, is_default, is_builtin, created_at, updated_at) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+            ["VW001", "u1", "通用", None, "{}", None, None, None, True, True, now, now],
+        )
+        db.close()
+
+        result = _list_views_handler("u1")
+        assert "views" in result
+        assert len(result["views"]) == 1
+        assert result["views"][0]["name"] == "通用"
+        assert result["views"][0]["is_default"] is True
+
+    def test_no_views_returns_empty_list(self, stratum_home):
+        from oprim.meta_db import open_meta_db
+        from oskill.knowledge._context import meta_db_path
+        db = open_meta_db(meta_db_path())
+        db.migrate(_MIGRATIONS)
+        db.close()
+
+        result = _list_views_handler("u_nobody")
+        assert result == {"views": []}
+
+    def test_error_returns_error_dict(self, stratum_home):
+        with patch("omodul.knowledge.views.crud.open_meta_db", side_effect=RuntimeError("db fail")):
+            result = _list_views_handler("u1")
+        assert "error" in result
+
+    def test_lists_only_own_user_views(self, stratum_home):
+        from oprim.meta_db import open_meta_db
+        from oskill.knowledge._context import meta_db_path
+        now = datetime.now(timezone.utc).isoformat()
+        db = open_meta_db(meta_db_path())
+        db.migrate(_MIGRATIONS)
+        db.execute(
+            "INSERT INTO views (id, user_id, name, description, default_filter, default_llm, "
+            "default_system_prompt, icon, is_default, is_builtin, created_at, updated_at) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+            ["VW_A", "u_alice", "Alice View", None, "{}", None, None, None, False, False, now, now],
+        )
+        db.execute(
+            "INSERT INTO views (id, user_id, name, description, default_filter, default_llm, "
+            "default_system_prompt, icon, is_default, is_builtin, created_at, updated_at) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+            ["VW_B", "u_bob", "Bob View", None, "{}", None, None, None, False, False, now, now],
+        )
+        db.close()
+
+        result = _list_views_handler("u_alice")
+        assert len(result["views"]) == 1
+        assert result["views"][0]["id"] == "VW_A"
+
+
+class TestSetDefaultViewHandler:
+    def test_set_default_success(self, stratum_home):
+        from oprim.meta_db import open_meta_db
+        from oskill.knowledge._context import meta_db_path
+        now = datetime.now(timezone.utc).isoformat()
+        db = open_meta_db(meta_db_path())
+        db.migrate(_MIGRATIONS)
+        db.execute(
+            "INSERT INTO views (id, user_id, name, description, default_filter, default_llm, "
+            "default_system_prompt, icon, is_default, is_builtin, created_at, updated_at) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+            ["VW_DEF", "u2", "量化金融", None, "{}", None, None, None, False, True, now, now],
+        )
+        db.close()
+
+        result = _set_default_view_handler("u2", "VW_DEF")
+        assert result["success"] is True
+        assert result["view_id"] == "VW_DEF"
+        assert result["name"] == "量化金融"
+
+    def test_set_default_unknown_view_returns_error(self, stratum_home):
+        from oprim.meta_db import open_meta_db
+        from oskill.knowledge._context import meta_db_path
+        db = open_meta_db(meta_db_path())
+        db.migrate(_MIGRATIONS)
+        db.close()
+
+        result = _set_default_view_handler("u2", "NONEXISTENT_VIEW_ID")
+        assert "error" in result
+
+    def test_set_default_switches_previous_default(self, stratum_home):
+        from oprim.meta_db import open_meta_db
+        from oskill.knowledge._context import meta_db_path
+        now = datetime.now(timezone.utc).isoformat()
+        db = open_meta_db(meta_db_path())
+        db.migrate(_MIGRATIONS)
+        db.execute(
+            "INSERT INTO views (id, user_id, name, description, default_filter, default_llm, "
+            "default_system_prompt, icon, is_default, is_builtin, created_at, updated_at) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+            ["VW_OLD", "u3", "Old Default", None, "{}", None, None, None, True, False, now, now],
+        )
+        db.execute(
+            "INSERT INTO views (id, user_id, name, description, default_filter, default_llm, "
+            "default_system_prompt, icon, is_default, is_builtin, created_at, updated_at) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+            ["VW_NEW", "u3", "New Default", None, "{}", None, None, None, False, False, now, now],
+        )
+        db.close()
+
+        result = _set_default_view_handler("u3", "VW_NEW")
+        assert result["success"] is True
+
+        db = open_meta_db(meta_db_path())
+        rows_old = db.fetchall("SELECT is_default FROM views WHERE id = 'VW_OLD'")
+        rows_new = db.fetchall("SELECT is_default FROM views WHERE id = 'VW_NEW'")
+        db.close()
+        assert rows_old[0][0] is False
+        assert rows_new[0][0] is True

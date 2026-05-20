@@ -1,4 +1,4 @@
-"""Stratum MCP server — exposes 6 tools (4 retrieval + 2 pin/unpin, Phase 1.5)."""
+"""Stratum MCP server — exposes 8 tools (4 retrieval + 2 pin/unpin + 2 views, Phase 13)."""
 from __future__ import annotations
 
 import json
@@ -153,6 +153,33 @@ def _set_pinned(substrate_id: str, pinned: bool) -> dict[str, Any]:
     return {"substrate_id": substrate_id, "is_pinned": pinned, "updated_at": now}
 
 
+# ── Views handlers (Phase 13) ─────────────────────────────────────────────────
+
+def _list_views_handler(user_id: str) -> dict[str, Any]:
+    """List all views for a user."""
+    try:
+        from omodul.knowledge.views import list_views
+        views = list_views(user_id)
+        return {"views": views}
+    except Exception as e:
+        log.warning("omodul.mcp.list_views_error", error=str(e))
+        return {"error": str(e)}
+
+
+def _set_default_view_handler(user_id: str, view_id: str) -> dict[str, Any]:
+    """Set a view as the default for a user."""
+    try:
+        from omodul.knowledge.views import set_default, get_view
+        view = get_view(view_id)
+        if view is None:
+            return {"error": f"view {view_id!r} not found"}
+        set_default(user_id, view_id)
+        return {"success": True, "view_id": view_id, "name": view.get("name")}
+    except Exception as e:
+        log.warning("omodul.mcp.set_default_view_error", error=str(e))
+        return {"error": str(e)}
+
+
 # ── Server factory ────────────────────────────────────────────────────────────
 
 def create_stratum_mcp_server() -> FastMCP:
@@ -160,10 +187,11 @@ def create_stratum_mcp_server() -> FastMCP:
 
     Phase 1 tools (4): search, fetch_substrate, list_notes, recent_changes
     Phase 1.5 tools (2): pin_substrate, unpin_substrate
+    Phase 13 tools (2): list_views, set_default_view
 
     Not exposed (Phase 2+): fetch_content, fetch_concept, fetch_graph
     """
-    server = create_mcp_server("stratum", version="0.1.5")
+    server = create_mcp_server("stratum", version="0.1.6")
 
     register_tool(server, "stratum.search", _search_handler,
                   description="Hybrid BM25+vector search across Stratum substrate")
@@ -177,8 +205,12 @@ def create_stratum_mcp_server() -> FastMCP:
                   description="Pin a substrate to boost it in search results")
     register_tool(server, "stratum.unpin_substrate", _unpin_substrate_handler,
                   description="Unpin a substrate")
+    register_tool(server, "stratum.list_views", _list_views_handler,
+                  description="List all views for a user")
+    register_tool(server, "stratum.set_default_view", _set_default_view_handler,
+                  description="Set a view as the default for a user")
 
-    log.info("omodul.mcp.server_created", tools=6)
+    log.info("omodul.mcp.server_created", tools=8)
     return server
 
 
