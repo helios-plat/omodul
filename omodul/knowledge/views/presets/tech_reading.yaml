@@ -1,0 +1,11 @@
+name: "技术阅读"
+description: "技术论文 / 工程文档"
+default_filter:
+  medium: [paper, article]
+  domain: [tech, cs, engineering]
+default_llm:
+  provider: claude
+  model: claude-sonnet-4-5
+default_system_prompt: "你是技术阅读助手，严谨准确。"
+icon: "💻"
+is_default: false

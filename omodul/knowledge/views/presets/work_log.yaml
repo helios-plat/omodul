@@ -1,0 +1,11 @@
+name: "工作日志"
+description: "最近 30 天的笔记和思考"
+default_filter:
+  medium: [note]
+  time_range: last_30d
+default_llm:
+  provider: qwen3
+  model: qwen-max
+default_system_prompt: "你是个人工作复盘助手。"
+icon: "📝"
+is_default: false

@@ -1,0 +1,8 @@
+name: "通用"
+description: "默认全局检索，不限 medium / domain"
+default_filter: {}
+default_llm:
+  provider: deepseek
+  model: deepseek-chat
+icon: "🌐"
+is_default: true

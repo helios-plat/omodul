@@ -1,0 +1,11 @@
+name: "中文文学"
+description: "适合阅读中文文学作品和文学评论"
+default_filter:
+  medium: [book, article]
+  language: [zh, zh-CN]
+default_llm:
+  provider: claude
+  model: claude-sonnet-4-5
+default_system_prompt: "你是文学评论助手，善于品鉴中文文学。"
+icon: "📖"
+is_default: false

@@ -1,0 +1,11 @@
+name: "量化金融"
+description: "量化交易 + 金融研究"
+default_filter:
+  medium: [paper, article, book]
+  domain: [quant, finance, trading]
+default_llm:
+  provider: deepseek
+  model: deepseek-chat
+default_system_prompt: "你是量化研究助手，精通统计 / 金融数学 / 交易策略。"
+icon: "📊"
+is_default: false
