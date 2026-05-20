@@ -81,6 +81,7 @@ class DailyDigestAgent(Agent):
             citations.append(
                 Citation(
                     substrate_id=sub["id"],
+                    title=sub.get("title", ""),
                     deep_link=f"stratum://substrate/{sub['id']}",
                 )
             )
@@ -127,9 +128,9 @@ class DailyDigestAgent(Agent):
             from oskill.knowledge._context import meta_db_path
             db = open_meta_db(meta_db_path())
             rows = db.fetchall(
-                "SELECT id, title, created_at FROM substrates "
-                "WHERE user_id = ? AND created_at >= ? ORDER BY created_at DESC LIMIT 50",
-                [user_id, since.isoformat()],
+                "SELECT id, title, created_at FROM substrate "
+                "WHERE created_at >= ? ORDER BY created_at DESC LIMIT 50",
+                [since.isoformat()],
             )
             return [{"id": r[0], "title": r[1] or "", "created_at": r[2]} for r in rows]
         except Exception:

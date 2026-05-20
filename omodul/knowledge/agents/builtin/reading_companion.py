@@ -34,8 +34,7 @@ class ReadingCompanionAgent(Agent):
         t0 = time.monotonic()
         results = await hybrid_search(
             query=question,
-            user_id=context.user_id,
-            limit=5,
+            top_k=5,
             mode="augmented",
             return_citations=True,
         )
@@ -51,7 +50,7 @@ class ReadingCompanionAgent(Agent):
 
         # 2. Build context for LLM
         substrate_ctx = "\n\n".join(
-            f"[{r.substrate_id}] {getattr(r, 'title', '')} \n{getattr(r, 'snippet', '')}"
+            f"[{r.id}] {getattr(r, 'title', '')} \n{getattr(r, 'highlight', '')}"
             for r in results
         )
         prompt = (
@@ -87,19 +86,20 @@ class ReadingCompanionAgent(Agent):
             )
         )
 
-        # 4. Citations
+        # 4. Citations (SearchResult.id is the substrate_id; .citation is dict or None)
         for r in results:
             cit = getattr(r, "citation", None)
-            if cit:
+            if isinstance(cit, dict):
                 citations.append(
                     Citation(
-                        substrate_id=cit.substrate_id,
-                        fragment_id=getattr(cit, "fragment_id", None),
-                        deep_link=getattr(cit, "deep_link", None),
+                        substrate_id=cit.get("substrate_id", r.id),
+                        title=r.title,
+                        fragment_id=cit.get("fragment_id"),
+                        deep_link=cit.get("deep_link"),
                     )
                 )
             else:
-                citations.append(Citation(substrate_id=r.substrate_id))
+                citations.append(Citation(substrate_id=r.id, title=r.title))
 
         return AgentResult(
             success=True,

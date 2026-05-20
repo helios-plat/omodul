@@ -40,13 +40,13 @@ class TestKnowledgeCuratorAgent:
         assert result.output["files_found"] == 0
 
     @pytest.mark.asyncio
-    async def test_file_classify_fail_counts_as_failed(self, tmp_path):
+    async def test_ingest_fail_counts_as_failed(self, tmp_path):
         import omodul.knowledge.agents.builtin.knowledge_curator as _mod
         from omodul.knowledge.agents.builtin.knowledge_curator import KnowledgeCuratorAgent
         (tmp_path / "test.md").write_text("hello")
         agent = KnowledgeCuratorAgent()
         ctx = _ctx()
-        with patch.object(_mod, "classify_inbox_file", side_effect=RuntimeError("parse error")):
+        with patch.object(_mod, "ingest_substrate", new=AsyncMock(side_effect=RuntimeError("parse error"))):
             result = await agent.run({"inbox_dir": str(tmp_path)}, ctx)
         assert result.output["failed"] == 1
 
@@ -58,19 +58,31 @@ class TestKnowledgeCuratorAgent:
         agent = KnowledgeCuratorAgent()
         ctx = _ctx()
 
-        mock_classification = MagicMock(medium="markdown_note")
-        mock_substrate = MagicMock(substrate_id="SUB001")
+        mock_result = MagicMock(substrate_id="SUB001", medium="markdown_note", duplicate_of=None)
 
-        with (
-            patch.object(_mod, "classify_inbox_file", return_value=mock_classification),
-            patch.object(_mod, "detect_duplicate_substrate", new=AsyncMock(return_value=None)),
-            patch.object(_mod, "ingest_substrate", new=AsyncMock(return_value=mock_substrate)),
-        ):
+        with patch.object(_mod, "ingest_substrate", new=AsyncMock(return_value=mock_result)):
             result = await agent.run({"inbox_dir": str(tmp_path)}, ctx)
 
         assert result.success
         assert result.output["ingested"] == 1
-        assert len(result.trace) >= 2
+        assert len(result.trace) >= 1
+
+    @pytest.mark.asyncio
+    async def test_duplicate_counts_as_skipped(self, tmp_path):
+        import omodul.knowledge.agents.builtin.knowledge_curator as _mod
+        from omodul.knowledge.agents.builtin.knowledge_curator import KnowledgeCuratorAgent
+        (tmp_path / "dup.md").write_text("# Duplicate")
+        agent = KnowledgeCuratorAgent()
+        ctx = _ctx()
+
+        mock_result = MagicMock(substrate_id="SUB001", medium="markdown_note", duplicate_of="SUB001")
+
+        with patch.object(_mod, "ingest_substrate", new=AsyncMock(return_value=mock_result)):
+            result = await agent.run({"inbox_dir": str(tmp_path)}, ctx)
+
+        assert result.success
+        assert result.output["skipped"] == 1
+        assert result.output["ingested"] == 0
 
 
 # ---- DailyDigestAgent ----
@@ -132,7 +144,7 @@ class TestReadingCompanionAgent:
         agent = ReadingCompanionAgent()
         ctx = _ctx()
 
-        fake_hit = MagicMock(substrate_id="S002", title="Doc B", snippet="content", citation=None)
+        fake_hit = MagicMock(id="S002", title="Doc B", highlight="content", citation=None)
         fake_resp = LLMResponse(
             text="答案在此。[S002]", model="test", input_tokens=20, output_tokens=8, cost_usd=0.002
         )
@@ -171,7 +183,7 @@ class TestTranslationWorkerAgent:
 
         with (
             patch.object(agent, "_find_candidates", return_value=["S001", "S002"]),
-            patch.object(_mod, "translate_substrate", new=AsyncMock(return_value={"derivative_id": "D001", "total_cost_usd": 0.05})),
+            patch.object(_mod, "translate_substrate", new=AsyncMock(return_value=MagicMock(derivative_id="D001", cost_usd=0.05, chunks_translated=3))),
         ):
             result = await agent.run({"max_substrates": 5}, ctx)
 

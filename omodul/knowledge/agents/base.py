@@ -11,6 +11,7 @@ from .errors import AgentToolNotAllowedError
 @dataclass
 class Citation:
     substrate_id: str
+    title: str = ""
     fragment_id: str | None = None
     anchor: dict | None = None
     deep_link: str | None = None

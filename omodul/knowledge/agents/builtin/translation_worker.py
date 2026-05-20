@@ -47,17 +47,17 @@ class TranslationWorkerAgent(Agent):
                 result = await translate_substrate(
                     substrate_id=sub_id,
                     target_lang=target_lang,
-                    quality="balanced",
                     embed_translation=True,
                 )
-                derivative_id = result.get("derivative_id", "")
-                cost = float(result.get("total_cost_usd", 0.0))
+                derivative_id = result.derivative_id
+                cost = result.cost_usd
                 trace.append(
                     AgentStep(
                         step_num=len(trace) + 1,
                         tool_name="translate_substrate",
                         tool_input={"substrate_id": sub_id, "target_lang": target_lang},
-                        tool_output={"derivative_id": derivative_id, "cost_usd": cost},
+                        tool_output={"derivative_id": derivative_id, "cost_usd": cost,
+                                     "chunks": result.chunks_translated},
                         duration_ms=int((time.monotonic() - t0) * 1000),
                     )
                 )
@@ -96,17 +96,15 @@ class TranslationWorkerAgent(Agent):
             db = open_meta_db(meta_db_path())
             rows = db.fetchall(
                 """
-                SELECT s.id FROM substrates s
-                WHERE s.user_id = ?
-                  AND NOT EXISTS (
-                    SELECT 1 FROM derivatives d
+                SELECT s.id FROM substrate s
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM derivative d
                     WHERE d.substrate_id = s.id
-                      AND d.kind = 'translation'
-                      AND d.meta_json LIKE '%zh-CN%'
-                  )
+                      AND d.kind LIKE 'translation%zh%'
+                )
                 LIMIT ?
                 """,
-                [user_id, limit],
+                [limit],
             )
             return [r[0] for r in rows]
         except Exception:
