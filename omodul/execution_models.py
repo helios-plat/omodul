@@ -1,7 +1,10 @@
 """Execution models for order scheduling and cost estimation."""
 from __future__ import annotations
 
+import logging
 import numpy as np
+
+log = logging.getLogger(__name__)
 
 try:
     from oskill.cost import crypto_market_impact_sigmoid
@@ -9,6 +12,12 @@ except ImportError:
     crypto_market_impact_sigmoid = None
 
 _SUPPORTED_COST_MODEL = "crypto_market_impact_sigmoid"
+
+_impact_fn_name = (
+    "crypto_market_impact_sigmoid" if crypto_market_impact_sigmoid is not None
+    else "_crypto_impact_fallback"
+)
+log.info("impact_model_active: %s", _impact_fn_name)
 
 
 def _crypto_impact_fallback(
