@@ -467,3 +467,7 @@ def training_task_recommend(
         "weakness_identified": weakness_identified,
         "llm_reasoning": str(llm_response) if llm_response else "",
     }
+
+
+monthly_trade_review.STABILITY = "experimental"
+training_task_recommend.STABILITY = "experimental"
