@@ -39,6 +39,14 @@ BUILTIN_JOB_SPECS = [
         "agent_params": {"max_substrates": 5},
         "enabled": False,  # user must explicitly enable
     },
+    {
+        "name": "nightly_audio_gen",
+        "agent_name": "audio_generator",
+        "cron_expression": "0 3 * * *",
+        "timezone": "Asia/Shanghai",
+        "agent_params": {"max_substrates": 3, "voice": "default", "speed": 1.0},
+        "enabled": False,  # user must explicitly enable
+    },
 ]
 
 
