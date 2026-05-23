@@ -1,0 +1,11 @@
+name: "项目"
+description: "正在推进、有终点的事 (PARA Projects)"
+default_filter:
+  medium: [markdown_note]
+  domain: [project]
+default_llm:
+  provider: deepseek
+  model: deepseek-chat
+default_system_prompt: "你是项目管理助手，关注进度和待办。"
+icon: "🎯"
+is_default: false

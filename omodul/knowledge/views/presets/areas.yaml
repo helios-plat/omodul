@@ -1,0 +1,10 @@
+name: "领域"
+description: "长期负责、无终点 (PARA Areas)"
+default_filter:
+  medium: [markdown_note]
+  domain: [area]
+default_llm:
+  provider: deepseek
+  model: deepseek-chat
+icon: "🌳"
+is_default: false

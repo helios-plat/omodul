@@ -1,4 +1,4 @@
-"""Preset view loader — installs the 5 builtin views (idempotent)."""
+"""Preset view loader — installs builtin views (idempotent)."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -11,7 +11,7 @@ PRESETS_DIR = Path(__file__).parent / "presets"
 
 
 def install_builtin_views(user_id: str) -> list[dict]:
-    """Install the 5 preset views for *user_id* (idempotent).
+    """Install preset views for *user_id* (idempotent).
 
     Returns a list of newly created view dicts (empty if all already exist).
     """
