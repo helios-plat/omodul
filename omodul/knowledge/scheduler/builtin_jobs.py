@@ -40,12 +40,21 @@ BUILTIN_JOB_SPECS = [
         "enabled": False,  # user must explicitly enable
     },
     {
-        "name": "nightly_audio_gen",
-        "agent_name": "audio_generator",
-        "cron_expression": "0 3 * * *",
+        "name": "weekly_review",
+        "agent_name": "daily_digest",
+        "cron_expression": "0 9 * * 0",
         "timezone": "Asia/Shanghai",
-        "agent_params": {"max_substrates": 3, "voice": "default", "speed": 1.0},
-        "enabled": False,  # user must explicitly enable
+        "agent_params": {"time_range": "last_7_days", "title_prefix": "周回顾"},
+        "enabled": False,
+    },
+    {
+        "name": "monthly_review",
+        "agent_name": "daily_digest",
+        "cron_expression": "0 9 1 * *",
+        "timezone": "Asia/Shanghai",
+        "agent_params": {"time_range": "last_30_days", "title_prefix": "月回顾"},
+        "enabled": False,
+        "max_runtime_seconds": 3600,
     },
 ]
 

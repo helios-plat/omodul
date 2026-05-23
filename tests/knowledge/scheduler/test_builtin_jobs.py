@@ -51,12 +51,14 @@ class TestInstallBuiltinJobs:
     def test_install_creates_all_four_jobs(self, tmp_path):
         store = _make_store(tmp_path)
         created = install_builtin_jobs("wiki", store)
-        assert len(created) == 4
+        assert len(created) == 6
         names = {j["name"] for j in created}
         assert "daily_inbox_process" in names
         assert "daily_digest" in names
         assert "weekly_lint" in names
         assert "nightly_translation" in names
+        assert "weekly_review" in names
+        assert "monthly_review" in names
 
     def test_install_is_idempotent(self, tmp_path):
         store = _make_store(tmp_path)

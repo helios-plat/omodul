@@ -9,6 +9,12 @@ from oprim.llm import llm_call
 from omodul.knowledge.agents.base import Agent, AgentContext, AgentResult, AgentStep, Citation
 from omodul.knowledge.agents.registry import register_agent
 
+_TIME_RANGE_HOURS = {
+    "last_24_hours": 24,
+    "last_7_days": 24 * 7,
+    "last_30_days": 24 * 30,
+}
+
 
 @register_agent
 class DailyDigestAgent(Agent):
@@ -27,8 +33,13 @@ class DailyDigestAgent(Agent):
         total_output = 0
         total_cost = 0.0
 
-        # 1. List substrates added in last 24h
-        since = datetime.utcnow() - timedelta(hours=24)
+        # Parse params (backward compat: defaults to 24h / "今日")
+        time_range = params.get("time_range", "last_24_hours")
+        title_prefix = params.get("title_prefix", "Daily Digest")
+        hours = _TIME_RANGE_HOURS.get(time_range, 24)
+
+        # 1. List substrates added in time range
+        since = datetime.utcnow() - timedelta(hours=hours)
         t0 = time.monotonic()
         new_subs = self._list_recent_substrates(context.user_id, since)
         trace.append(
@@ -44,13 +55,13 @@ class DailyDigestAgent(Agent):
         if not new_subs:
             return AgentResult(
                 success=True,
-                output={"new_substrates": 0, "digest": "No new substrates in the last 24h."},
+                output={"new_substrates": 0, "digest": f"No new substrates in {time_range}.", "time_range": time_range},
                 trace=trace,
                 citations=[],
             )
 
         # 2. LLM summary
-        prompt = self._build_digest_prompt(new_subs)
+        prompt = self._build_digest_prompt(new_subs, title_prefix)
         t0 = time.monotonic()
         try:
             resp = llm_call(
@@ -94,7 +105,7 @@ class DailyDigestAgent(Agent):
             if dispatcher:
                 await dispatcher.push(
                     user_id=context.user_id,
-                    title=f"Daily Digest — {len(new_subs)} new substrates",
+                    title=f"{title_prefix} — {len(new_subs)} new substrates",
                     body=digest_text[:500],
                     deep_link="stratum://digest/today",
                 )
@@ -113,7 +124,7 @@ class DailyDigestAgent(Agent):
 
         return AgentResult(
             success=True,
-            output={"new_substrates": len(new_subs), "digest": digest_text},
+            output={"new_substrates": len(new_subs), "digest": digest_text, "time_range": time_range, "title": title_prefix},
             trace=trace,
             citations=citations,
             total_input_tokens=total_input,
@@ -146,11 +157,11 @@ class DailyDigestAgent(Agent):
             return None
 
     @staticmethod
-    def _build_digest_prompt(substrates: list[dict]) -> str:
+    def _build_digest_prompt(substrates: list[dict], title_prefix: str = "今日") -> str:
         items = "\n".join(
             f"- {s.get('title') or '(无标题)'}" for s in substrates
         )
         return (
-            "请用中文总结今日新增到知识库的内容，突出主题，不超过200字。\n\n"
+            f"请用中文总结{title_prefix}新增到知识库的内容，突出主题，不超过200字。\n\n"
             f"新增内容:\n{items}\n"
         )
