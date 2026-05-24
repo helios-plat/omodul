@@ -4,6 +4,11 @@
 
 ## [1.11.0] - 2026-05-24
 
+### Changed — Phase 11B Wave 6 — TTS Deferral
+
+- `AudioGeneratorAgent` — Returns `status=failed` with deferral message instead of attempting execution.
+- `BUILTIN_JOB_SPECS` — Added `nightly_audio_gen` (disabled by default).
+
 ### Added — Hevi Batch 4 — Generative Video Pipeline
 
 - `generative_video_pipeline(config, input_data, output_dir, on_step)` — End-to-end video generation pipeline with v0.8 §5.2 4-pillar support.
@@ -20,6 +25,11 @@
 
 ## [1.10.0] - 2026-05-24
 
+### Changed — Phase 11B Wave 6 — TTS Deferral
+
+- `AudioGeneratorAgent` — Returns `status=failed` with deferral message instead of attempting execution.
+- `BUILTIN_JOB_SPECS` — Added `nightly_audio_gen` (disabled by default).
+
 ### Added — BATCH 19 — High-level Platform Features
 
 #### Deployment & Ops
@@ -33,6 +43,11 @@
 
 ## [1.3.0] - 2026-05-20 — Sprint 0 (8 new omodul elements)
 
+### Changed — Phase 11B Wave 6 — TTS Deferral
+
+- `AudioGeneratorAgent` — Returns `status=failed` with deferral message instead of attempting execution.
+- `BUILTIN_JOB_SPECS` — Added `nightly_audio_gen` (disabled by default).
+
 ### Added — Sprint 0 omodul elements
 - `behavior.py`: `monthly_trade_review` — LLM-narrated monthly trade review with discipline scoring
 - `behavior.py`: `training_task_recommend` — behavioral weakness → training task recommendation
@@ -42,6 +57,11 @@
 - `backtest/user_system_backtest.py`: `user_system_backtest` — multi-year regime-conditional system backtest
 - `signals.py`: `buy_sell_analysis` — LLM buy/sell analysis with BYOK routing and cache
 - `strategy.py` (extension): `strategy_backtest_report` extended with `signal_detectors` + `regime_grouping` params
+
+### Changed — Phase 11B Wave 6 — TTS Deferral
+
+- `AudioGeneratorAgent` — Returns `status=failed` with deferral message instead of attempting execution.
+- `BUILTIN_JOB_SPECS` — Added `nightly_audio_gen` (disabled by default).
 
 ### Added — JSON Schemas (14 files)
 - `schemas/monthly_trade_review_{input,output}.schema.json`
@@ -61,6 +81,11 @@
 - Coverage: 462 tests pass, 0 failures, 90.02% coverage ✓ (target ≥90%)
 
 ## [1.0.0] - 2026-05-14 — Generally Available (GA)
+
+### Changed — Phase 11B Wave 6 — TTS Deferral
+
+- `AudioGeneratorAgent` — Returns `status=failed` with deferral message instead of attempting execution.
+- `BUILTIN_JOB_SPECS` — Added `nightly_audio_gen` (disabled by default).
 
 ### Added — Phase 10 (7 new workflow elements)
 - `behavioral/portfolio_workflow.py`: `behavioral_portfolio_workflow` — CPT + ambiguity aversion decision pipeline
@@ -82,10 +107,20 @@
 - Dependency: oprim >=2.0.0,<3.0.0, oskill >=2.0.0,<3.0.0
 
 ## [0.2.0] - 2026-05-12
+### Changed — Phase 11B Wave 6 — TTS Deferral
+
+- `AudioGeneratorAgent` — Returns `status=failed` with deferral message instead of attempting execution.
+- `BUILTIN_JOB_SPECS` — Added `nightly_audio_gen` (disabled by default).
+
 ### Added — Phase 2 (13 elements)
 - audit, data_norm, universe, alpha, portfolio, risk, execution, strategies modules
 
 ## [0.1.0] - 2026-05-10
+### Changed — Phase 11B Wave 6 — TTS Deferral
+
+- `AudioGeneratorAgent` — Returns `status=failed` with deferral message instead of attempting execution.
+- `BUILTIN_JOB_SPECS` — Added `nightly_audio_gen` (disabled by default).
+
 ### Added — Initial release (3 elements: kelly_allocator, risk_parity, execution_cost_model)
 
 ---
