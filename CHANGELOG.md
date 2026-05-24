@@ -2,6 +2,22 @@
 
 <!-- Governance: see RELEASE_POLICY.md. main = release branch; feat branches deleted after merge; oprim → oskill → omodul merge order required; container bind-mount means git checkout is a live operation. -->
 
+## [1.11.0] - 2026-05-24
+
+### Added — Hevi Batch 4 — Generative Video Pipeline
+
+- `generative_video_pipeline(config, input_data, output_dir, on_step)` — End-to-end video generation pipeline with v0.8 §5.2 4-pillar support.
+  - **fingerprint**: SHA-256 based on topic, main_line, providers, target_duration_s, language, template_id, portrait_path, bgm_path.
+  - **decision_trail**: Per-stage step recording with layer/callable/inputs/outputs/timing.
+  - **report**: Markdown 7-section report with custom findings serialization.
+  - **cost**: CostTracker integration for LLM/image/TTS cost accumulation.
+- `GenerativeVideoConfig(BaseConfig)` — Pipeline configuration with `_fingerprint_fields` whitelist.
+- `GenerativeVideoInput` — Per-execution variable paths (portrait_path, bgm_path).
+- `GenerativeVideoFindings` — Output model (video_path, duration, size, scenes/shots count).
+- `compute_fingerprint_for(config, input_data)` — Public fingerprint function for service-layer deduplication.
+
+---
+
 ## [1.10.0] - 2026-05-24
 
 ### Added — BATCH 19 — High-level Platform Features
