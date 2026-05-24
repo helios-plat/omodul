@@ -1,6 +1,15 @@
 from typing import Any
 from .appstore_deploy import appstore_deploy, compute_fingerprint_for as compute_fingerprint_for_appstore_deploy
 from .cross_project_health_aggregate import cross_project_health_aggregate, compute_fingerprint_for as compute_fingerprint_for_cross_project_health_aggregate
+from .weekly_review_workflow import (
+    weekly_review_workflow,
+    compute_fingerprint_for as compute_fingerprint_for_weekly_review_workflow,
+    WeeklyReviewConfig,
+    WeeklyReviewInput,
+    WeeklyReviewFindings,
+    ActivityItem,
+    ActivityGroup,
+)
 from .install_self_hosted_app import install_self_hosted_app, compute_fingerprint_for_install_self_hosted_app
 from .upgrade_self_hosted_app import upgrade_self_hosted_app, compute_fingerprint_for_upgrade_self_hosted_app
 from .backup_app_data import backup_app_data, compute_fingerprint_for_backup_app_data
@@ -16,6 +25,7 @@ def compute_fingerprint_for(omodul_name: str, config: Any, input_data: Any) -> s
     routers = {
         "appstore_deploy": compute_fingerprint_for_appstore_deploy,
         "cross_project_health_aggregate": compute_fingerprint_for_cross_project_health_aggregate,
+        "weekly_review_workflow": compute_fingerprint_for_weekly_review_workflow,
         "install_self_hosted_app": compute_fingerprint_for_install_self_hosted_app,
         "upgrade_self_hosted_app": compute_fingerprint_for_upgrade_self_hosted_app,
         "backup_app_data": compute_fingerprint_for_backup_app_data,
@@ -34,6 +44,12 @@ def compute_fingerprint_for(omodul_name: str, config: Any, input_data: Any) -> s
 __all__ = [
     "appstore_deploy",
     "cross_project_health_aggregate",
+    "weekly_review_workflow",
+    "WeeklyReviewConfig",
+    "WeeklyReviewInput",
+    "WeeklyReviewFindings",
+    "ActivityItem",
+    "ActivityGroup",
     "install_self_hosted_app",
     "upgrade_self_hosted_app",
     "backup_app_data",
