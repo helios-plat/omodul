@@ -4,6 +4,20 @@
 
 ## [2.0.0] - 2026-05-25 — MAJOR
 
+### Added — P6-B6 — Audience Data Workflow
+
+- `omodul.audience_data_workflow` — Audience data collection + sentiment analysis pipeline.
+  - 4 pillars: fingerprint, decision_trail, report, cost.
+  - 6 stages: fetch_stats → fetch_comments → sentiment_analyze → feedback_extract → learnings → report.
+  - `AudienceDataConfig` (platform/video_ids/analysis_depth/max_comments_per_video).
+  - `AudienceDataInput` (oauth_token/cookies).
+  - `AudienceDataFindings` (views/comments/sentiment/feedback/learnings).
+  - `compute_fingerprint_for(config, input_data)` exposed.
+
+---
+
+## [2.0.0] - 2026-05-25 — MAJOR
+
 ### Changed — P6-B5 — generative_video_pipeline v2.0.0
 
 **BREAKING**: Fingerprint algorithm changed (new fields in hash → all existing fingerprints invalidated).

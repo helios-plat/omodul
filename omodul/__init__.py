@@ -72,3 +72,12 @@ from .macro_daily_report_workflow import (
     compute_fingerprint_for as compute_fingerprint_for_macro_daily_report,
     MacroDailyReportConfig,
 )
+
+# P6-B6
+from .audience_data_workflow import (
+    audience_data_workflow,
+    compute_fingerprint_for as compute_fingerprint_for_audience_data,
+    AudienceDataConfig,
+    AudienceDataInput,
+    AudienceDataFindings,
+)
