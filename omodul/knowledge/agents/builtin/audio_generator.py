@@ -27,82 +27,16 @@ class AudioGeneratorAgent(Agent):
     timeout_seconds = 3600
 
     async def run(self, params: dict, context: AgentContext) -> AgentResult:
-        max_substrates: int = params.get("max_substrates", 5)
-        voice: str = params.get("voice", "default")
-        speed: float = float(params.get("speed", 1.0))
-
-        substrate_ids = _find_audio_candidates(context.user_id, max_substrates)
-        trace: list[AgentStep] = []
-        generated = 0
-        skipped = 0
-        failed = 0
-
-        for substrate_id in substrate_ids:
-            t0 = time.monotonic()
-            try:
-                result = await generate_audio_narration(
-                    substrate_id=substrate_id,
-                    voice=voice,
-                    speed=speed,
-                )
-                elapsed = int((time.monotonic() - t0) * 1000)
-                generated += 1
-                trace.append(
-                    AgentStep(
-                        step_num=len(trace) + 1,
-                        tool_name="oskill.knowledge.generate_audio_narration",
-                        tool_input={"substrate_id": substrate_id, "voice": voice},
-                        tool_output={
-                            "asset_id": result.audio_asset_id,
-                            "audio_path": result.audio_path,
-                            "duration_seconds": result.duration_seconds,
-                            "chunk_count": result.chunk_count,
-                        },
-                        duration_ms=elapsed,
-                    )
-                )
-            except ValueError:
-                # No text content — skip silently
-                skipped += 1
-                trace.append(
-                    AgentStep(
-                        step_num=len(trace) + 1,
-                        tool_name="oskill.knowledge.generate_audio_narration",
-                        tool_input={"substrate_id": substrate_id},
-                        tool_output={"skipped": True, "reason": "no_text_content"},
-                        duration_ms=int((time.monotonic() - t0) * 1000),
-                    )
-                )
-            except Exception as exc:
-                failed += 1
-                trace.append(
-                    AgentStep(
-                        step_num=len(trace) + 1,
-                        tool_name="oskill.knowledge.generate_audio_narration",
-                        tool_input={"substrate_id": substrate_id},
-                        error=str(exc),
-                        duration_ms=int((time.monotonic() - t0) * 1000),
-                    )
-                )
-
         return AgentResult(
-            success=(failed == 0),
+            success=False,
             output={
-                "candidates_found": len(substrate_ids),
-                "generated": generated,
-                "skipped": skipped,
-                "failed": failed,
+                "status": "failed",
+                "error": "TTS unavailable v1.0: F5-TTS upstream image broken, v1.1+ evaluate"
             },
-            trace=trace,
+            trace=[],
             citations=[],
-            cost_usd=0.0,
+            cost_usd=0.0
         )
-
-
-def _find_audio_candidates(user_id: str, limit: int) -> list[str]:
-    """Return substrate IDs that are pinned or tagged 'audio', without existing audio_assets."""
-    try:
-        from oprim.meta_db import open_meta_db
         from oskill.knowledge._context import meta_db_path
 
         db_path = meta_db_path()
