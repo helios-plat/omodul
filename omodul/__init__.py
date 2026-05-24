@@ -60,3 +60,15 @@ __all__ = [
     "generate_incident_postmortem",
     "compute_fingerprint_for",
 ]
+
+# Sprint 13 — C1 + C2
+from .policy_sector_classify_workflow import (
+    policy_sector_classify_workflow,
+    compute_fingerprint_for as compute_fingerprint_for_policy_sector_classify,
+    PolicySectorClassifyConfig,
+)
+from .macro_daily_report_workflow import (
+    macro_daily_report_workflow,
+    compute_fingerprint_for as compute_fingerprint_for_macro_daily_report,
+    MacroDailyReportConfig,
+)
