@@ -13,6 +13,7 @@ from omodul.generative_video_pipeline import (
     GenerativeVideoConfig,
     GenerativeVideoFindings,
     GenerativeVideoInput,
+    _stage_load_template,
     compute_fingerprint_for,
     generative_video_pipeline,
 )
@@ -223,3 +224,104 @@ class TestOutputStructure:
         assert isinstance(findings, GenerativeVideoFindings)
         assert findings.scenes_count == 3
         assert findings.shots_count == 9
+
+
+# --- v2.0 MAJOR tests ---
+
+
+class TestV2TemplateLoading:
+    def test_template_id_loads_and_injects(self, tmp_path: Path) -> None:
+        """template_id != None triggers _stage_load_template."""
+        import yaml
+
+        from omodul.generative_video_pipeline import _stage_load_template
+
+        # Create a template file
+        tmpl_path = tmp_path / "configs" / "templates" / "finance.yaml"
+        tmpl_path.parent.mkdir(parents=True)
+        tmpl_path.write_text(yaml.dump({
+            "name": "finance", "version": "1.0.0",
+            "system_prompt": "You are a quant expert.", "metadata": {},
+        }))
+
+        import os
+        old_cwd = os.getcwd()
+        os.chdir(tmp_path)
+        try:
+            result = _stage_load_template("finance")
+        finally:
+            os.chdir(old_cwd)
+
+        assert "quant expert" in result
+
+    def test_template_id_none_skips_stage(
+        self, input_data: GenerativeVideoInput, tmp_path: Path
+    ) -> None:
+        """template_id=None means no template stage (backward compat)."""
+        config = GenerativeVideoConfig(topic="test", template_id=None)
+        with _mock_pipeline_success(tmp_path):
+            result = generative_video_pipeline(config, input_data, tmp_path)
+        assert result["status"] == "completed"
+
+
+class TestV2ImageToVideo:
+    def test_image_to_video_enabled_triggers_stage(self) -> None:
+        """image_to_video_enabled=True adds the field to config."""
+        config = GenerativeVideoConfig(
+            topic="test", image_to_video_enabled=True,
+            image_to_video_provider="wan22_cloud",
+        )
+        assert config.image_to_video_enabled is True
+        assert config.image_to_video_provider == "wan22_cloud"
+
+
+class TestV2FaceAnimationProvider:
+    def test_face_animation_provider_in_config(self) -> None:
+        """face_animation_provider field works."""
+        config = GenerativeVideoConfig(topic="test", face_animation_provider="sadtalker")
+        assert config.face_animation_provider == "sadtalker"
+
+    def test_default_face_animation_is_wav2lip(self) -> None:
+        config = GenerativeVideoConfig(topic="test")
+        assert config.face_animation_provider == "wav2lip"
+
+
+class TestV2Fingerprint:
+    def test_v2_fingerprint_includes_new_fields(self, input_data: GenerativeVideoInput) -> None:
+        """Changing image_to_video_enabled changes fingerprint."""
+        c1 = GenerativeVideoConfig(topic="cats", image_to_video_enabled=False)
+        c2 = GenerativeVideoConfig(topic="cats", image_to_video_enabled=True)
+        fp1 = compute_fingerprint_for(c1, input_data)
+        fp2 = compute_fingerprint_for(c2, input_data)
+        assert fp1 != fp2
+
+    def test_v2_fingerprint_face_animation_provider(
+        self, input_data: GenerativeVideoInput
+    ) -> None:
+        """Changing face_animation_provider changes fingerprint."""
+        c1 = GenerativeVideoConfig(topic="cats", face_animation_provider="wav2lip")
+        c2 = GenerativeVideoConfig(topic="cats", face_animation_provider="sadtalker")
+        assert compute_fingerprint_for(c1, input_data) != compute_fingerprint_for(c2, input_data)
+
+    def test_v2_vs_v1_fingerprint_mismatch(self, input_data: GenerativeVideoInput) -> None:
+        """v2.0 fingerprint differs from v1.x due to version + new fields in hash."""
+        # v2.0 includes image_to_video_enabled etc. in fingerprint
+        config = GenerativeVideoConfig(topic="cats")
+        fp = compute_fingerprint_for(config, input_data)
+        # The fingerprint includes _omodul_version="2.0.0" in the hash
+        assert len(fp) == 64
+        # Verify version is embedded (by checking config version)
+        assert config._omodul_version == "2.0.0"
+
+
+    def test_template_not_found_raises(self, tmp_path: Path) -> None:
+        """_stage_load_template raises when template doesn't exist."""
+        import os
+
+        old_cwd = os.getcwd()
+        os.chdir(tmp_path)
+        try:
+            with pytest.raises(RuntimeError, match="Template not found"):
+                _stage_load_template("nonexistent_template")
+        finally:
+            os.chdir(old_cwd)

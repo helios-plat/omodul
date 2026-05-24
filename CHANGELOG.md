@@ -2,6 +2,31 @@
 
 <!-- Governance: see RELEASE_POLICY.md. main = release branch; feat branches deleted after merge; oprim → oskill → omodul merge order required; container bind-mount means git checkout is a live operation. -->
 
+## [2.0.0] - 2026-05-25 — MAJOR
+
+### Changed — P6-B5 — generative_video_pipeline v2.0.0
+
+**BREAKING**: Fingerprint algorithm changed (new fields in hash → all existing fingerprints invalidated).
+
+- `_omodul_version` bumped to `"2.0.0"`.
+- `_fingerprint_fields` expanded: `+image_to_video_enabled`, `+image_to_video_provider`, `+face_animation_provider`.
+- Avatar assembly now uses `config.face_animation_provider` (was hardcoded `providers["avatar"]`).
+
+### Added
+
+- `GenerativeVideoConfig.image_to_video_enabled: bool = False` — Enable image→video animation stage.
+- `GenerativeVideoConfig.image_to_video_provider: str = "wan22_local"` — Provider for i2v.
+- `GenerativeVideoConfig.face_animation_provider: str = "wav2lip"` — Provider for face animation.
+- `_stage_load_template(template_id)` — Load obase.template and inject system_prompt.
+- `_stage_image_to_video(...)` — Animate frames via oskill.image_to_video_workflow.
+
+### Backward Compatibility
+
+- All new config fields have defaults → existing callers unaffected.
+- Only fingerprint hash changes (MAJOR semver justification).
+
+---
+
 ## [1.11.0] - 2026-05-24
 
 ### Changed — Phase 11B Wave 6 — TTS Deferral
