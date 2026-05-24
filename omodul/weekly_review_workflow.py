@@ -64,6 +64,24 @@ def weekly_review_workflow(
     *,
     on_step: Callable[[dict[str, Any]], None] | None = None,
 ) -> dict[str, Any]:
+    """端到端周回顾工作流.
+
+    主流程:
+    1. _stage_llm_review: 使用 LLM 总结本周活动并分类
+    2. _write_markdown_report: 生成 7 段式 Markdown 报告
+
+    Example:
+        ```python
+        config = WeeklyReviewConfig(time_window_days=7)
+        input_data = WeeklyReviewInput(
+            activities=[ActivityItem(activity_id="1", activity_type="s", title="t", timestamp_utc="...")],
+            window_start_utc=datetime.now(),
+            window_end_utc=datetime.now()
+        )
+        res = weekly_review_workflow(config, input_data, Path("./out"))
+        assert res["status"] == "completed"
+        ```
+    """
     started_at = datetime.now(UTC)
     cost_tracker = CostTracker()
     trail_steps: list[dict[str, Any]] = []

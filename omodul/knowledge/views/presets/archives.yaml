@@ -1,9 +1,0 @@
-name: "归档"
-description: "已结束 / 不活跃 (PARA Archives)"
-default_filter:
-  domain: [archived]
-default_llm:
-  provider: deepseek
-  model: deepseek-chat
-icon: "📦"
-is_default: false
