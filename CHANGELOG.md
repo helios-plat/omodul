@@ -2,6 +2,19 @@
 
 <!-- Governance: see RELEASE_POLICY.md. main = release branch; feat branches deleted after merge; oprim → oskill → omodul merge order required; container bind-mount means git checkout is a live operation. -->
 
+## [1.10.0] - 2026-05-24
+
+### Added — BATCH 19 — High-level Platform Features
+
+#### Deployment & Ops
+- `appstore_deploy.py`: `appstore_deploy` — End-to-end AppStore template deployment. Supports catalog lookup, compose rendering, image pulling, and health wait.
+- `cross_project_health_aggregate.py`: `cross_project_health_aggregate` — Aggregated health status across multiple projects based on Docker labels. Parallel health probing with project-level status matrix.
+
+### Changed
+- Version bump: 1.9.0 → 1.10.0
+- Added `py.typed` for PEP 561 compliance.
+- Fingerprint stability verified for both new moduls.
+
 ## [1.3.0] - 2026-05-20 — Sprint 0 (8 new omodul elements)
 
 ### Added — Sprint 0 omodul elements
