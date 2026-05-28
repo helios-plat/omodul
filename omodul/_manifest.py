@@ -1,4 +1,5 @@
 """omodul manifest — element registry."""
+
 from __future__ import annotations
 
 VERSION = "1.3.0"
@@ -82,25 +83,47 @@ ELEMENTS = {
 }
 
 CATEGORIES = {
-    "behavior": ["trade_journal_analyzer", "shadow_account_simulator", "monthly_trade_review", "training_task_recommend"],
-    "regime": ["regime_replay_search", "regime_change_detector", "regime_conditional_dashboard_data"],
+    "behavior": [
+        "trade_journal_analyzer",
+        "shadow_account_simulator",
+        "monthly_trade_review",
+        "training_task_recommend",
+    ],
+    "regime": [
+        "regime_replay_search",
+        "regime_change_detector",
+        "regime_conditional_dashboard_data",
+    ],
     "strategy": ["strategy_backtest_report", "strategy_decay_monitor", "factor_attribution_report"],
     "signals": ["alert_calibration_engine", "thesis_invalidation_monitor", "buy_sell_analysis"],
     "risk": ["scenario_stress_test", "tail_risk_analyzer", "drawdown_circuit_breaker"],
     "data_quality": ["panel_data_quality_check", "cross_source_consistency_check"],
     "similarity": ["smart_peer_finder", "event_cascade_clusterer"],
-    "portfolio": ["kelly_allocator", "risk_parity", "execution_cost_model",
-                  "vol_target", "high_dim_portfolio_workflow"],
+    "portfolio": [
+        "kelly_allocator",
+        "risk_parity",
+        "execution_cost_model",
+        "vol_target",
+        "high_dim_portfolio_workflow",
+    ],
     "alpha_signals": ["bocpd_trend", "ofi_meanrev", "funding_rate_directional"],
     "execution": ["twap_with_impact", "aggressive_limit"],
     "strategies": ["bocpd_trend_following", "microstructure_scalper", "funding_rate_arbitrage"],
     "audit": ["vcp_silver_record"],
     "data_normalization": ["okx_to_nautilus"],
     "universe_selection": ["fixed_list"],
-    "bayesian_analysis": ["estimate_alpha_posterior", "compare_strategies_bayesian", "combine_alpha_posteriors"],
+    "bayesian_analysis": [
+        "estimate_alpha_posterior",
+        "compare_strategies_bayesian",
+        "combine_alpha_posteriors",
+    ],
     "validation": ["backtest_overfitting_report", "haircut_sharpe_report"],
-    "statistical_modeling": ["pairs_trading_workflow", "regime_volatility_report",
-                             "stationarity_diagnostics", "autocorrelation_diagnostics"],
+    "statistical_modeling": [
+        "pairs_trading_workflow",
+        "regime_volatility_report",
+        "stationarity_diagnostics",
+        "autocorrelation_diagnostics",
+    ],
     "factor_analysis": ["factor_attribution_workflow", "factor_combination", "factor_diagnostics"],
     "conformal": ["conformal_signal_uncertainty"],
     "distributional_rl": ["distributional_rl_strategy"],
@@ -117,5 +140,11 @@ CATEGORIES = {
     "backtest_user": ["user_system_backtest"],
     "daily_plan": ["daily_plan_generate"],
     # --- Helios Wave 01: Crypto omoduls (3) ---
-    "crypto_fusion": ["fusion_score_workflow", "market_summary_workflow", "timeframes_compute_workflow"],
+    "crypto_fusion": [
+        "fusion_score_workflow",
+        "market_summary_workflow",
+        "timeframes_compute_workflow",
+    ],
+    # --- Tide v4 extraction: B3-B5 (3 omoduls) ---
+    "tide_v4_scoring": ["symbol_dim_score", "regime_inference", "candidate_pool"],
 }

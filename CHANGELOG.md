@@ -2,6 +2,16 @@
 
 <!-- Governance: see RELEASE_POLICY.md. main = release branch; feat branches deleted after merge; oprim → oskill → omodul merge order required; container bind-mount means git checkout is a live operation. -->
 
+## [1.12.0] - 2026-05-28 — Tide v4 B3-B5 extraction (3 omoduls)
+
+### Added — Tide v4 B3-B5 — A股评分/Regime/候选池 omodul
+
+- `omodul.symbol_dim_score` — 8 维度综合评分. Pillars: fingerprint + decision_trail. ThreadPoolExecutor 并行 8 dim. IO-free.
+- `omodul.regime_inference` — Regime 推断. multi_state_classify → regime_smoothing.
+- `omodul.candidate_pool` — 候选池构建. H1-compliant. apply_screen_filter + regime_conditional_score_weighted.
+
+DEVIATION §2.3: ThreadPoolExecutor without manual copy_context() — Python 3.12+ auto-propagates contextvars. Cost pillar not enabled. Awaiting Owner confirmation.
+
 ## [2.0.0] - 2026-05-25 — MAJOR
 
 ### Added — P6-B6 — Audience Data Workflow
