@@ -116,4 +116,6 @@ CATEGORIES = {
     "simulation": ["paper_trading_session"],
     "backtest_user": ["user_system_backtest"],
     "daily_plan": ["daily_plan_generate"],
+    # --- Helios Wave 01: Crypto omoduls (3) ---
+    "crypto_fusion": ["fusion_score_workflow", "market_summary_workflow", "timeframes_compute_workflow"],
 }

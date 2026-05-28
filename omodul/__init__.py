@@ -81,3 +81,20 @@ from .audience_data_workflow import (
     AudienceDataInput,
     AudienceDataFindings,
 )
+
+# --- Helios Wave 01: Crypto omoduls (3) ---
+from .fusion_score_workflow import (
+    fusion_score_workflow,
+    compute_fingerprint_for as compute_fingerprint_for_fusion_score,
+    FusionScoreConfig,
+)
+from .market_summary_workflow import (
+    market_summary_workflow,
+    compute_fingerprint_for as compute_fingerprint_for_market_summary,
+    MarketSummaryConfig,
+)
+from .timeframes_compute_workflow import (
+    timeframes_compute_workflow,
+    compute_fingerprint_for as compute_fingerprint_for_timeframes,
+    TimeframesConfig,
+)
