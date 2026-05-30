@@ -56,6 +56,11 @@ def compute_fingerprint_for(omodul_name: str, config: Any, input_data: Any) -> s
         "symbol_dim_score": compute_fingerprint_for_symbol_dim_score,
         "regime_inference": compute_fingerprint_for_regime_inference,
         "candidate_pool": compute_fingerprint_for_candidate_pool,
+        "macro_daily_report": compute_fingerprint_for_macro_daily_report_b11,
+        "lhb_institution_vs_hotmoney_panel": compute_fingerprint_for_lhb_panel,
+        "plan_card_render": compute_fingerprint_for_plan_card,
+        "discipline_banner_toast_data": compute_fingerprint_for_discipline_banner,
+        "monthly_review_cron_orchestrator": compute_fingerprint_for_monthly_review,
     }
 
     if omodul_name not in routers:
@@ -141,4 +146,41 @@ from omodul.candidate_pool import (
     CandidatePoolConfig,
     CandidatePoolInput,
     compute_fingerprint_for as compute_fingerprint_for_candidate_pool,
+)
+
+# --- Tide v4 step2: B11 (5 omoduls) ---
+from omodul.macro_daily_report import (
+    macro_daily_report,
+    MacroDailyReportConfig as MacroDailyReportConfigB11,
+    MacroDailyReportInput,
+    MacroDailyReportFindings,
+    compute_fingerprint_for as compute_fingerprint_for_macro_daily_report_b11,
+)
+from omodul.lhb_institution_vs_hotmoney_panel import (
+    lhb_institution_vs_hotmoney_panel,
+    LhbPanelConfig,
+    LhbPanelInput,
+    LhbPanelFindings,
+    compute_fingerprint_for as compute_fingerprint_for_lhb_panel,
+)
+from omodul.plan_card_render import (
+    plan_card_render,
+    PlanCardConfig,
+    PlanCardInput,
+    PlanCardFindings,
+    compute_fingerprint_for as compute_fingerprint_for_plan_card,
+)
+from omodul.discipline_banner_toast_data import (
+    discipline_banner_toast_data,
+    DisciplineBannerConfig,
+    DisciplineBannerInput,
+    DisciplineBannerFindings,
+    compute_fingerprint_for as compute_fingerprint_for_discipline_banner,
+)
+from omodul.monthly_review_cron_orchestrator import (
+    monthly_review_cron_orchestrator,
+    MonthlyReviewConfig,
+    MonthlyReviewInput,
+    MonthlyReviewFindings,
+    compute_fingerprint_for as compute_fingerprint_for_monthly_review,
 )

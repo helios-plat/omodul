@@ -2,6 +2,17 @@
 
 <!-- Governance: see RELEASE_POLICY.md. main = release branch; feat branches deleted after merge; oprim → oskill → omodul merge order required; container bind-mount means git checkout is a live operation. -->
 
+## [1.13.0] - 2026-05-30 — Tide v4 step2 B11 (5 omoduls)
+
+### Added — Tide v4 B11 — 宏观日报/龙虎榜/计划卡片/纪律看板/月度复盘
+
+- `omodul.macro_daily_report` — 宏观日报生成. Pillars: fingerprint+decision_trail+report+cost. 组合: macro_surprise_compute+macro_cycle_engine_v2+policy_sector_attribution+LLM. ThreadPoolExecutor 并发 async B10 oskill 调用.
+- `omodul.lhb_institution_vs_hotmoney_panel` — 龙虎榜机构 vs 游资面板. Pillars: fingerprint+decision_trail. 组合: seat_winrate_aggregator+unknown_seats_audit_loop+fetch_sector_returns.
+- `omodul.plan_card_render` — 计划卡片渲染. Pillars: fingerprint+decision_trail. 组合: candidate_universe_builder_v3+similar_context_injector. ProviderRegistry LLM 注入.
+- `omodul.discipline_banner_toast_data` — 纪律看板/Toast 数据. Pillars: fingerprint+decision_trail. 组合: discipline_vs_violation_winrate_compute+stop_loss_compliance_check. banner_severity 三级判断.
+- `omodul.monthly_review_cron_orchestrator` — 月度复盘 Cron 编排. Pillars: fingerprint+decision_trail+report+cost. 组合: discipline_vs_violation_winrate_compute+monthly_review_jinja2_render+LLM.
+- 68 tests / 0 B11 mypy errors / 5 compute_fingerprint_for公开 API + 路由注册.
+
 ## [1.12.0] - 2026-05-28 — Tide v4 B3-B5 extraction (3 omoduls)
 
 ### Added — Tide v4 B3-B5 — A股评分/Regime/候选池 omodul
