@@ -184,3 +184,8 @@ from omodul.monthly_review_cron_orchestrator import (
     MonthlyReviewFindings,
     compute_fingerprint_for as compute_fingerprint_for_monthly_review,
 )
+from omodul.behavior import monthly_trade_review
+from omodul.simulation.paper_trading_session import paper_trading_session
+from omodul.profile.individual_profile_workflow import individual_profile_workflow
+from omodul.signals import buy_sell_analysis
+from omodul.strategy.daily_plan_generator import daily_plan_generate

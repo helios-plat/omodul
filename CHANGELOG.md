@@ -2,6 +2,14 @@
 
 <!-- Governance: see RELEASE_POLICY.md. main = release branch; feat branches deleted after merge; oprim → oskill → omodul merge order required; container bind-mount means git checkout is a live operation. -->
 
+## [1.13.1] - 2026-05-31 — fix: top-level re-export for 5 elements
+
+### Fixed
+
+- `omodul.__init__` re-export `monthly_trade_review` (was ImportError in conftest — S4-2 blocker)
+- `omodul.__init__` re-export `paper_trading_session`, `individual_profile_workflow`, `buy_sell_analysis`, `daily_plan_generate`
+- `pyproject.toml` version synced to `_version.py` (was stale at 1.12.0)
+
 ## [1.13.0] - 2026-05-30 — Tide v4 step2 B11 (5 omoduls)
 
 ### Added — Tide v4 B11 — 宏观日报/龙虎榜/计划卡片/纪律看板/月度复盘
