@@ -87,6 +87,17 @@ __all__ = [
     "propose_action_plan",
     "generate_incident_postmortem",
     "compute_fingerprint_for",
+    # v1.13.1
+    "monthly_trade_review",
+    "paper_trading_session",
+    "individual_profile_workflow",
+    "buy_sell_analysis",
+    "daily_plan_generate",
+    # v1.13.2
+    "alert_calibration_engine",
+    "training_task_recommend",
+    "user_system_backtest",
+    "panel_data_quality_check",
 ]
 
 # Sprint 13 — C1 + C2
@@ -184,8 +195,10 @@ from omodul.monthly_review_cron_orchestrator import (
     MonthlyReviewFindings,
     compute_fingerprint_for as compute_fingerprint_for_monthly_review,
 )
-from omodul.behavior import monthly_trade_review
+from omodul.behavior import monthly_trade_review, training_task_recommend
 from omodul.simulation.paper_trading_session import paper_trading_session
 from omodul.profile.individual_profile_workflow import individual_profile_workflow
-from omodul.signals import buy_sell_analysis
+from omodul.signals import alert_calibration_engine, buy_sell_analysis
 from omodul.strategy.daily_plan_generator import daily_plan_generate
+from omodul.backtest.user_system_backtest import user_system_backtest
+from omodul.data_quality import panel_data_quality_check

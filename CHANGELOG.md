@@ -2,6 +2,16 @@
 
 <!-- Governance: see RELEASE_POLICY.md. main = release branch; feat branches deleted after merge; oprim → oskill → omodul merge order required; container bind-mount means git checkout is a live operation. -->
 
+## [1.13.2] - 2026-05-31 — fix: top-level re-export for 4 elements
+
+### Fixed
+
+- `omodul.__init__` re-export `alert_calibration_engine` (from `omodul.signals`)
+- `omodul.__init__` re-export `training_task_recommend` (from `omodul.behavior`)
+- `omodul.__init__` re-export `user_system_backtest` (from `omodul.backtest.user_system_backtest`)
+- `omodul.__init__` re-export `panel_data_quality_check` (from `omodul.data_quality`)
+- `__all__`補完: v1.13.1 の5要素 + v1.13.2 の4要素を `__all__` に追加
+
 ## [1.13.1] - 2026-05-31 — fix: top-level re-export for 5 elements
 
 ### Fixed
