@@ -61,6 +61,13 @@ def compute_fingerprint_for(omodul_name: str, config: Any, input_data: Any) -> s
         "plan_card_render": compute_fingerprint_for_plan_card,
         "discipline_banner_toast_data": compute_fingerprint_for_discipline_banner,
         "monthly_review_cron_orchestrator": compute_fingerprint_for_monthly_review,
+        "send_welcome_email": compute_fingerprint_for_send_welcome_email,
+        "verify_email_workflow": compute_fingerprint_for_verify_email,
+        "process_inbox_substrate": compute_fingerprint_for_process_inbox,
+        "daily_digest_workflow": compute_fingerprint_for_daily_digest,
+        "notification_dispatch_workflow": compute_fingerprint_for_notification_dispatch,
+        "export_user_data_csv": compute_fingerprint_for_export_user_data,
+        "sync_user_preferences": compute_fingerprint_for_sync_prefs,
     }
 
     if omodul_name not in routers:
@@ -98,6 +105,39 @@ __all__ = [
     "training_task_recommend",
     "user_system_backtest",
     "panel_data_quality_check",
+    # Stratum B3 (v1.14.0)
+    "send_welcome_email",
+    "WelcomeEmailConfig",
+    "WelcomeEmailInput",
+    "WelcomeEmailFindings",
+    "reset_password_workflow",
+    "ResetPasswordConfig",
+    "ResetPasswordInput",
+    "ResetPasswordFindings",
+    "verify_email_workflow",
+    "VerifyEmailConfig",
+    "VerifyEmailInput",
+    "VerifyEmailFindings",
+    "process_inbox_substrate",
+    "InboxConfig",
+    "InboxInput",
+    "InboxFindings",
+    "daily_digest_workflow",
+    "DailyDigestConfig",
+    "DailyDigestInput",
+    "DailyDigestFindings",
+    "notification_dispatch_workflow",
+    "NotifDispatchConfig",
+    "NotifDispatchInput",
+    "NotifDispatchFindings",
+    "export_user_data_csv",
+    "ExportUserDataConfig",
+    "ExportUserDataInput",
+    "ExportUserDataFindings",
+    "sync_user_preferences",
+    "SyncPrefsConfig",
+    "SyncPrefsInput",
+    "SyncPrefsFindings",
 ]
 
 # Sprint 13 — C1 + C2
@@ -202,3 +242,60 @@ from omodul.signals import alert_calibration_engine, buy_sell_analysis
 from omodul.strategy.daily_plan_generator import daily_plan_generate
 from omodul.backtest.user_system_backtest import user_system_backtest
 from omodul.data_quality import panel_data_quality_check
+
+# --- Stratum B3 — 8 omodul (v1.14.0) ---
+from omodul.send_welcome_email import (
+    WelcomeEmailConfig,
+    WelcomeEmailFindings,
+    WelcomeEmailInput,
+    compute_fingerprint_for as compute_fingerprint_for_send_welcome_email,
+    send_welcome_email,
+)
+from omodul.reset_password_workflow import (
+    ResetPasswordConfig,
+    ResetPasswordFindings,
+    ResetPasswordInput,
+    reset_password_workflow,
+)
+from omodul.verify_email_workflow import (
+    VerifyEmailConfig,
+    VerifyEmailFindings,
+    VerifyEmailInput,
+    compute_fingerprint_for as compute_fingerprint_for_verify_email,
+    verify_email_workflow,
+)
+from omodul.process_inbox_substrate import (
+    InboxConfig,
+    InboxFindings,
+    InboxInput,
+    compute_fingerprint_for as compute_fingerprint_for_process_inbox,
+    process_inbox_substrate,
+)
+from omodul.daily_digest_workflow import (
+    DailyDigestConfig,
+    DailyDigestFindings,
+    DailyDigestInput,
+    compute_fingerprint_for as compute_fingerprint_for_daily_digest,
+    daily_digest_workflow,
+)
+from omodul.notification_dispatch_workflow import (
+    NotifDispatchConfig,
+    NotifDispatchFindings,
+    NotifDispatchInput,
+    compute_fingerprint_for as compute_fingerprint_for_notification_dispatch,
+    notification_dispatch_workflow,
+)
+from omodul.export_user_data_csv import (
+    ExportUserDataConfig,
+    ExportUserDataFindings,
+    ExportUserDataInput,
+    compute_fingerprint_for as compute_fingerprint_for_export_user_data,
+    export_user_data_csv,
+)
+from omodul.sync_user_preferences import (
+    SyncPrefsConfig,
+    SyncPrefsFindings,
+    SyncPrefsInput,
+    compute_fingerprint_for as compute_fingerprint_for_sync_prefs,
+    sync_user_preferences,
+)

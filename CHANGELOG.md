@@ -2,6 +2,32 @@
 
 <!-- Governance: see RELEASE_POLICY.md. main = release branch; feat branches deleted after merge; oprim → oskill → omodul merge order required; container bind-mount means git checkout is a live operation. -->
 
+## [1.14.0] - 2026-06-01 — Stratum Batch 3: 8 omodul (P0 + P1 subset)
+
+### Added — Stratum B3
+
+**P0 core workflows (5)**
+- `process_inbox_substrate` — File → parse → classify → ingest → derive; fullest pillars (fp+trail+report)
+- `daily_digest_workflow` — hybrid_search → llm_summarize → generate_derivative digest note
+- `send_welcome_email` — Welcome email via template_render + push_email; fingerprint only
+- `reset_password_workflow` — Secure token + DB write + email; decision_trail only (security audit)
+- `verify_email_workflow` — Two-phase OTP send/verify; fingerprint only
+
+**P1 light workflows (3)**
+- `notification_dispatch_workflow` — Multi-channel notification via template_render + push_email
+- `export_user_data_csv` — db_query → csv_writer; fingerprint + report
+- `sync_user_preferences` — db_read → resolve_conflict (oskill) → db_write; fingerprint
+
+### Notes
+- All 8 omodul: standard signature (config, input_data, output_dir) → dict
+- All 8: never raise (status="failed" on error)
+- All 8: _enabled_pillars explicitly declared
+- H1-modul compliant: no sibling omodul calls
+- P1 remaining (15 omodul) + P2 (7 omodul) deferred to v1.15.0
+- 65 new tests total (24 + 19 + 22)
+
+---
+
 ## [1.13.2] - 2026-05-31 — fix: top-level re-export for 4 elements
 
 ### Fixed
