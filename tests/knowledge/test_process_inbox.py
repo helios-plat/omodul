@@ -1,4 +1,5 @@
 """Tests for omodul.knowledge.process_inbox."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -8,13 +9,16 @@ import pytest
 
 from omodul.knowledge.process_inbox import ProcessInboxResult, _move_to_archive, process_inbox
 from oskill.knowledge.classify_inbox_file import ClassifyResult
-from oskill.knowledge.ingest_substrate import IngestResult
+from oskill.ingest_substrate import IngestResult
 
 
 def _make_classify(layer="extension", medium="markdown_note", confidence=0.95):
     return ClassifyResult(
-        medium=medium, confidence=confidence, layer=layer,
-        reason="test", candidates=[(medium, confidence)],
+        medium=medium,
+        confidence=confidence,
+        layer=layer,
+        reason="test",
+        candidates=[(medium, confidence)],
     )
 
 
@@ -74,8 +78,13 @@ class TestProcessInbox:
         target = inbox / simple_md.name
         target.write_text(simple_md.read_text())
 
-        with patch("omodul.knowledge.process_inbox.classify_inbox_file", return_value=_make_classify()):
-            with patch("omodul.knowledge.process_inbox.ingest_substrate", new=AsyncMock(return_value=_make_ingest())):
+        with patch(
+            "omodul.knowledge.process_inbox.classify_inbox_file", return_value=_make_classify()
+        ):
+            with patch(
+                "omodul.knowledge.process_inbox.ingest_substrate",
+                new=AsyncMock(return_value=_make_ingest()),
+            ):
                 result = await process_inbox(inbox, archive_after_process=False)
 
         assert len(result.processed) == 1
@@ -88,8 +97,13 @@ class TestProcessInbox:
         target = inbox / simple_md.name
         target.write_text(simple_md.read_text())
 
-        with patch("omodul.knowledge.process_inbox.classify_inbox_file", return_value=_make_classify()):
-            with patch("omodul.knowledge.process_inbox.ingest_substrate", new=AsyncMock(return_value=_make_ingest())):
+        with patch(
+            "omodul.knowledge.process_inbox.classify_inbox_file", return_value=_make_classify()
+        ):
+            with patch(
+                "omodul.knowledge.process_inbox.ingest_substrate",
+                new=AsyncMock(return_value=_make_ingest()),
+            ):
                 result = await process_inbox(inbox, archive_after_process=True)
 
         assert len(result.processed) == 1
@@ -102,8 +116,13 @@ class TestProcessInbox:
         target = inbox / simple_md.name
         target.write_text(simple_md.read_text())
 
-        with patch("omodul.knowledge.process_inbox.classify_inbox_file", return_value=_make_classify()):
-            with patch("omodul.knowledge.process_inbox.ingest_substrate", new=AsyncMock(return_value=_make_ingest())):
+        with patch(
+            "omodul.knowledge.process_inbox.classify_inbox_file", return_value=_make_classify()
+        ):
+            with patch(
+                "omodul.knowledge.process_inbox.ingest_substrate",
+                new=AsyncMock(return_value=_make_ingest()),
+            ):
                 await process_inbox(inbox, archive_after_process=False)
 
         assert target.exists()
@@ -119,8 +138,13 @@ class TestProcessInbox:
                 raise RuntimeError("classify error")
             return _make_classify()
 
-        with patch("omodul.knowledge.process_inbox.classify_inbox_file", side_effect=classify_side_effect):
-            with patch("omodul.knowledge.process_inbox.ingest_substrate", new=AsyncMock(return_value=_make_ingest())):
+        with patch(
+            "omodul.knowledge.process_inbox.classify_inbox_file", side_effect=classify_side_effect
+        ):
+            with patch(
+                "omodul.knowledge.process_inbox.ingest_substrate",
+                new=AsyncMock(return_value=_make_ingest()),
+            ):
                 result = await process_inbox(inbox, archive_after_process=False)
 
         assert len(result.processed) == 1
@@ -133,9 +157,13 @@ class TestProcessInbox:
         target = inbox / simple_md.name
         target.write_text(simple_md.read_text())
 
-        with patch("omodul.knowledge.process_inbox.classify_inbox_file",
-                   return_value=_make_classify(layer="needs_review", medium=None, confidence=0.2)):
-            with patch("omodul.knowledge.process_inbox.ingest_substrate", new=AsyncMock()) as mock_ingest:
+        with patch(
+            "omodul.knowledge.process_inbox.classify_inbox_file",
+            return_value=_make_classify(layer="needs_review", medium=None, confidence=0.2),
+        ):
+            with patch(
+                "omodul.knowledge.process_inbox.ingest_substrate", new=AsyncMock()
+            ) as mock_ingest:
                 result = await process_inbox(inbox, archive_after_process=False)
 
         assert result.processed == []
@@ -148,8 +176,10 @@ class TestProcessInbox:
         target = inbox / simple_md.name
         target.write_text(simple_md.read_text())
 
-        with patch("omodul.knowledge.process_inbox.classify_inbox_file",
-                   return_value=_make_classify(layer="needs_review", medium=None, confidence=0.2)):
+        with patch(
+            "omodul.knowledge.process_inbox.classify_inbox_file",
+            return_value=_make_classify(layer="needs_review", medium=None, confidence=0.2),
+        ):
             with patch("omodul.knowledge.process_inbox.ingest_substrate", new=AsyncMock()):
                 result = await process_inbox(inbox, archive_after_process=True)
 
@@ -158,9 +188,13 @@ class TestProcessInbox:
         assert (inbox / "_archive" / simple_md.name).exists()
 
     async def test_two_files_both_processed(self, inbox_with_files):
-        with patch("omodul.knowledge.process_inbox.classify_inbox_file", return_value=_make_classify()):
-            with patch("omodul.knowledge.process_inbox.ingest_substrate",
-                       new=AsyncMock(side_effect=[_make_ingest("ID1"), _make_ingest("ID2")])):
+        with patch(
+            "omodul.knowledge.process_inbox.classify_inbox_file", return_value=_make_classify()
+        ):
+            with patch(
+                "omodul.knowledge.process_inbox.ingest_substrate",
+                new=AsyncMock(side_effect=[_make_ingest("ID1"), _make_ingest("ID2")]),
+            ):
                 result = await process_inbox(inbox_with_files, archive_after_process=False)
 
         assert len(result.processed) == 2
@@ -171,9 +205,13 @@ class TestProcessInbox:
         inbox.mkdir()
         (inbox / simple_md.name).write_text(simple_md.read_text())
 
-        with patch("omodul.knowledge.process_inbox.classify_inbox_file", return_value=_make_classify()):
-            with patch("omodul.knowledge.process_inbox.ingest_substrate",
-                       new=AsyncMock(side_effect=RuntimeError("ingest failed"))):
+        with patch(
+            "omodul.knowledge.process_inbox.classify_inbox_file", return_value=_make_classify()
+        ):
+            with patch(
+                "omodul.knowledge.process_inbox.ingest_substrate",
+                new=AsyncMock(side_effect=RuntimeError("ingest failed")),
+            ):
                 result = await process_inbox(inbox, archive_after_process=False)
 
         assert result.processed == []

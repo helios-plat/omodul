@@ -1,4 +1,5 @@
 """Tests for builtin_jobs + Notifier."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -16,11 +17,15 @@ from omodul.knowledge.scheduler.notifier import Notifier
 def _make_store(tmp_path: Path):
     from oprim.meta_db import MetaDB
     from omodul.knowledge.scheduler.job_store import JobStore
+
     db_path = tmp_path / "test.duckdb"
     db = MetaDB(db_path)
     migrations_dir = (
         Path(__file__).parent.parent.parent.parent.parent.parent
-        / "oprim" / "oprim" / "meta_db" / "migrations"
+        / "oprim"
+        / "oprim"
+        / "meta_db"
+        / "migrations"
     )
     if migrations_dir.exists():
         db.migrate(migrations_dir)
@@ -51,7 +56,7 @@ class TestInstallBuiltinJobs:
     def test_install_creates_all_four_jobs(self, tmp_path):
         store = _make_store(tmp_path)
         created = install_builtin_jobs("wiki", store)
-        assert len(created) == 6
+        assert len(created) == 7
         names = {j["name"] for j in created}
         assert "daily_inbox_process" in names
         assert "daily_digest" in names
@@ -75,11 +80,10 @@ class TestInstallBuiltinJobs:
 
     def test_builtin_specs_have_valid_cron(self, tmp_path):
         from apscheduler.triggers.cron import CronTrigger
+
         for spec in BUILTIN_JOB_SPECS:
             # Should not raise
-            trigger = CronTrigger.from_crontab(
-                spec["cron_expression"], timezone=spec["timezone"]
-            )
+            trigger = CronTrigger.from_crontab(spec["cron_expression"], timezone=spec["timezone"])
             assert trigger is not None
 
 

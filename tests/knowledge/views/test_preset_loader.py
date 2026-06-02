@@ -1,4 +1,5 @@
 """Tests for omodul.knowledge.views.preset_loader."""
+
 from __future__ import annotations
 
 import pytest
@@ -7,13 +8,13 @@ from omodul.knowledge.views.crud import list_views
 from omodul.knowledge.views.preset_loader import install_builtin_views
 
 _USER = "preset_user"
-_EXPECTED_NAMES = {"通用", "中文文学", "量化金融", "技术阅读", "工作日志", "项目", "领域", "资源", "归档"}
+_EXPECTED_NAMES = {"通用", "中文文学", "量化金融", "技术阅读", "工作日志"}
 
 
 class TestInstallBuiltinViews:
     def test_installs_five_views(self):
         installed = install_builtin_views(_USER)
-        assert len(installed) == 9
+        assert len(installed) == 5
         assert {v["name"] for v in installed} == _EXPECTED_NAMES
 
     def test_idempotent_on_second_call(self):
@@ -24,7 +25,7 @@ class TestInstallBuiltinViews:
     def test_views_persisted_to_db(self):
         install_builtin_views(_USER)
         views = list_views(_USER)
-        assert len(views) == 9
+        assert len(views) == 5
         assert {v["name"] for v in views} == _EXPECTED_NAMES
 
     def test_default_view_is_tongyong(self):
@@ -61,7 +62,8 @@ class TestInstallBuiltinViews:
     def test_partial_install_is_idempotent(self):
         """If only some views exist, install only missing ones."""
         from omodul.knowledge.views.crud import create_view
+
         create_view(_USER, {"name": "通用", "is_default": True})
         installed = install_builtin_views(_USER)
-        assert len(installed) == 8
+        assert len(installed) == 4
         assert all(v["name"] != "通用" for v in installed)

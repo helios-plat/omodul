@@ -1,9 +1,10 @@
 """TranslationWorkerAgent — batch translate English substrates lacking zh-CN derivative."""
+
 from __future__ import annotations
 
 import time
 
-from oskill.knowledge import translate_substrate
+from oskill.translate_substrate import translate_substrate
 
 from omodul.knowledge.agents.base import Agent, AgentContext, AgentResult, AgentStep, Citation
 from omodul.knowledge.agents.registry import register_agent
@@ -56,8 +57,11 @@ class TranslationWorkerAgent(Agent):
                         step_num=len(trace) + 1,
                         tool_name="translate_substrate",
                         tool_input={"substrate_id": sub_id, "target_lang": target_lang},
-                        tool_output={"derivative_id": derivative_id, "cost_usd": cost,
-                                     "chunks": result.chunks_translated},
+                        tool_output={
+                            "derivative_id": derivative_id,
+                            "cost_usd": cost,
+                            "chunks": result.chunks_translated,
+                        },
                         duration_ms=int((time.monotonic() - t0) * 1000),
                     )
                 )
@@ -93,6 +97,7 @@ class TranslationWorkerAgent(Agent):
         try:
             from oprim.meta_db import open_meta_db
             from oskill.knowledge._context import meta_db_path
+
             db = open_meta_db(meta_db_path())
             rows = db.fetchall(
                 """

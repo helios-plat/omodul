@@ -1,4 +1,5 @@
 """Tests for omodul.knowledge.browser_extension."""
+
 from __future__ import annotations
 
 import json
@@ -15,6 +16,7 @@ from omodul.knowledge.browser_extension.server import app
 
 # ── Fixtures ─────────────────────────────────────────────────────────────────
 
+
 @pytest.fixture
 def token(tmp_path, monkeypatch):
     monkeypatch.setattr(
@@ -30,6 +32,7 @@ def client():
 
 
 # ── Auth tests ────────────────────────────────────────────────────────────────
+
 
 class TestAuth:
     def test_init_token_creates_file(self, tmp_path, monkeypatch):
@@ -83,6 +86,7 @@ class TestAuth:
 
 # ── URL normalize tests ───────────────────────────────────────────────────────
 
+
 class TestNormalizeUrl:
     def test_strips_utm_params(self):
         url = "https://example.com/post?utm_source=twitter&utm_medium=social"
@@ -116,6 +120,7 @@ class TestNormalizeUrl:
 
 # ── Page capture tests ────────────────────────────────────────────────────────
 
+
 class TestPageCapture:
     def test_extracts_text_from_html(self):
         html = "<html><body><h1>Hello</h1><p>World content here</p></body></html>"
@@ -135,6 +140,7 @@ class TestPageCapture:
 
 
 # ── HTTP endpoint tests ───────────────────────────────────────────────────────
+
 
 class TestHealthEndpoint:
     def test_health_returns_ok(self, client):
@@ -215,7 +221,9 @@ class TestIngestEndpoint:
 
         mock_ingest = AsyncMock(return_value="new_substrate_abc")
         with (
-            patch("omodul.knowledge.browser_extension.server.check_url_existing", return_value=None),
+            patch(
+                "omodul.knowledge.browser_extension.server.check_url_existing", return_value=None
+            ),
             patch("omodul.knowledge.browser_extension.server._run_ingest", mock_ingest),
             patch("omodul.knowledge.browser_extension.server.mark_url_ingested"),
         ):
@@ -245,7 +253,9 @@ class TestIngestEndpoint:
 
         mock_ingest = AsyncMock(return_value="sel_substrate")
         with (
-            patch("omodul.knowledge.browser_extension.server.check_url_existing", return_value=None),
+            patch(
+                "omodul.knowledge.browser_extension.server.check_url_existing", return_value=None
+            ),
             patch("omodul.knowledge.browser_extension.server._run_ingest", mock_ingest),
             patch("omodul.knowledge.browser_extension.server.mark_url_ingested"),
         ):
@@ -287,7 +297,8 @@ class TestSidebarSearchEndpoint:
         )
         token = init_token()
 
-        from oskill.knowledge.hybrid_search import SearchResult
+        from oskill.hybrid_search import SearchResult
+
         mock_results = [
             SearchResult(
                 type="substrate",

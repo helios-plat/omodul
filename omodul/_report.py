@@ -26,7 +26,9 @@ def write_markdown_report(
         _section_header(omodul_name, fingerprint, status),
         _section_executive_summary(findings, status),
         _section_configuration(config),
-        custom_findings_section(findings) if custom_findings_section else _section_findings_default(findings),
+        custom_findings_section(findings)
+        if custom_findings_section
+        else _section_findings_default(findings),
         _section_decision_trail_summary(decision_trail),
         _section_cost_breakdown(cost_tracker),
         _section_reproducibility(omodul_name, config, fingerprint),
@@ -41,13 +43,17 @@ def _section_header(omodul_name: str, fingerprint: str, status: str) -> str:
 
 
 def _section_executive_summary(findings: Any, status: str) -> str:
-    summary = "Analysis completed successfully." if status == "completed" else "Analysis failed or was interrupted."
+    summary = (
+        "Analysis completed successfully."
+        if status == "completed"
+        else "Analysis failed or was interrupted."
+    )
     return f"## 1. Executive Summary\n\n{summary}"
 
 
 def _section_configuration(config: Any) -> str:
     config_data = config.model_dump() if hasattr(config, "model_dump") else str(config)
-    config_json = json.dumps(config_data, indent=2, ensure_ascii=False)
+    config_json = json.dumps(config_data, indent=2, ensure_ascii=False, default=str)
     return f"## 2. Configuration\n\n```json\n{config_json}\n```"
 
 
@@ -61,7 +67,9 @@ def _section_findings_default(findings: Any) -> str:
 
 def _section_decision_trail_summary(decision_trail: dict[str, Any]) -> str:
     steps = decision_trail.get("steps", [])
-    summary_lines = [f"- Step {s['step_no']}: {s['layer']}.{s['callable']} ({s['status']})" for s in steps]
+    summary_lines = [
+        f"- Step {s['step_no']}: {s['layer']}.{s['callable']} ({s['status']})" for s in steps
+    ]
     summary = "\n".join(summary_lines)
     return f"## 4. Decision Trail Summary\n\nTotal steps: {len(steps)}\n\n{summary}"
 

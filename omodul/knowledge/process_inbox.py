@@ -1,4 +1,5 @@
 """Inbox batch-processing pipeline — scan inbox dir and ingest all files."""
+
 from __future__ import annotations
 
 import time
@@ -8,13 +9,13 @@ from pathlib import Path
 from oprim._logging import log
 
 from oskill.knowledge.classify_inbox_file import ClassifyResult, classify_inbox_file
-from oskill.knowledge.ingest_substrate import IngestResult, ingest_substrate
+from oskill.ingest_substrate import IngestResult, ingest_substrate
 
 
 @dataclass
 class ProcessInboxResult:
     processed: list[IngestResult] = field(default_factory=list)
-    failed: list[dict] = field(default_factory=list)       # {"path": ..., "error": ...}
+    failed: list[dict] = field(default_factory=list)  # {"path": ..., "error": ...}
     needs_review: list[dict] = field(default_factory=list)  # {"path": ..., "candidates": [...]}
 
 
@@ -37,10 +38,12 @@ async def process_inbox(
         try:
             classify_result: ClassifyResult = classify_inbox_file(file_path)
             if classify_result.layer == "needs_review":
-                result.needs_review.append({
-                    "path": str(file_path),
-                    "candidates": classify_result.candidates,
-                })
+                result.needs_review.append(
+                    {
+                        "path": str(file_path),
+                        "candidates": classify_result.candidates,
+                    }
+                )
                 if archive_after_process:
                     _move_to_archive(file_path, archive_dir)
                 continue

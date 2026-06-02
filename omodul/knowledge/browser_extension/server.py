@@ -1,4 +1,5 @@
 """Stratum Browser Extension FastAPI server."""
+
 from __future__ import annotations
 
 import os
@@ -16,8 +17,8 @@ from oprim._logging import log
 from oprim.errors import StratumError
 from oprim.meta_db import open_meta_db
 from oskill.knowledge._context import meta_db_path
-from oskill.knowledge.hybrid_search import hybrid_search
-from oskill.knowledge.ingest_substrate import ingest_substrate
+from oskill.hybrid_search import hybrid_search
+from oskill.ingest_substrate import ingest_substrate
 
 from .auth import AuthError, verify_token
 from .page_capture import extract_main_content
@@ -51,6 +52,7 @@ async def _stratum_error_handler(request: Request, exc: StratumError):
 
 # ── Request / Response models ────────────────────────────────────────────────
 
+
 class IngestRequest(BaseModel):
     url: str
     title: str
@@ -76,6 +78,7 @@ class SidebarSearchRequest(BaseModel):
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
+
 def _slugify(text: str) -> str:
     text = re.sub(r"[^\w\s-]", "", text.lower())
     return re.sub(r"[\s-]+", "_", text).strip("_")[:60] or "webpage"
@@ -85,8 +88,11 @@ async def _run_ingest(title: str, content: str, url: str, tags: list[str]) -> st
     """Write content to a temp HTML file, run ingest_substrate, return substrate_id."""
     slug = _slugify(title)
     with tempfile.NamedTemporaryFile(
-        mode="w", suffix=".html", prefix=f"{slug}_",
-        delete=False, encoding="utf-8",
+        mode="w",
+        suffix=".html",
+        prefix=f"{slug}_",
+        delete=False,
+        encoding="utf-8",
     ) as tf:
         tmp_path = tf.name
         tf.write(f"<html><head><title>{title}</title></head><body>{content}</body></html>")
@@ -110,6 +116,7 @@ async def _run_ingest(title: str, content: str, url: str, tags: list[str]) -> st
 
 
 # ── Routes ───────────────────────────────────────────────────────────────────
+
 
 @app.get("/api/v1/browser-extension/health")
 async def health():
