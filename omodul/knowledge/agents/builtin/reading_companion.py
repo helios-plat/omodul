@@ -31,10 +31,12 @@ class ReadingCompanionAgent(Agent):
         total_output = 0
         total_cost = 0.0
 
-        # 1. Hybrid search
+        # 1. Hybrid search — corpus_id required by hybrid_search; derive from user_id
+        corpus_id = params.get("corpus_id") or f"user_{context.user_id}"
         t0 = time.monotonic()
         results = await hybrid_search(
             query=question,
+            corpus_id=corpus_id,
             top_k=5,
             mode="augmented",
             return_citations=True,
