@@ -133,14 +133,20 @@ def paper_trading_session(
             fill_price = open_price
 
         trade_amount = fill_price * quantity
-        fee = oprim.commission(
-            trade_amount, commission_rules["rate"], commission_rules.get("min_fee", 0.0)
+        fee = oprim.compute_commission(
+            trade_amount=trade_amount,
+            rate=commission_rules["rate"],
+            min_fee=commission_rules.get("min_fee", 0.0),
         )
         tax_dir = stamp_tax_rules.get("direction", "sell")
         if (side == "buy" and tax_dir in ("buy", "both")) or (
             side == "sell" and tax_dir in ("sell", "both")
         ):
-            tax = oprim.stamp_tax(trade_amount, stamp_tax_rules["rate"], tax_dir)
+            tax = oprim.compute_stamp_tax(
+                trade_amount=trade_amount,
+                rate=stamp_tax_rules["rate"],
+                direction=tax_dir,
+            )
         else:
             tax = 0.0
         total_fees = fee + tax

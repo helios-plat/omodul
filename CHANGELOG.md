@@ -2,6 +2,15 @@
 
 <!-- Governance: see RELEASE_POLICY.md. main = release branch; feat branches deleted after merge; oprim → oskill → omodul merge order required; container bind-mount means git checkout is a live operation. -->
 
+## [1.14.2] - 2026-06-02 — fix: compute_commission/compute_stamp_tax ghost names + full oprim call audit
+
+### Fixed
+
+- `omodul/simulation/paper_trading_session.py`: renamed 2 ghost oprim calls + converted to keyword-only
+  - `oprim.commission(pos, pos, pos)` → `oprim.compute_commission(trade_amount=..., rate=..., min_fee=...)` (name not in oprim __all__ + `*`-enforced)
+  - `oprim.stamp_tax(pos, pos, pos)` → `oprim.compute_stamp_tax(trade_amount=..., rate=..., direction=...)` (name not in oprim __all__ + `*`-enforced)
+- Full audit: 0 additional ghost names; 0 other `*`-enforced functions called positionally
+
 ## [1.14.1] - 2026-06-02 — fix: positional → keyword args for oprim keyword-only functions
 
 ### Fixed
