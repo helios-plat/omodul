@@ -60,10 +60,7 @@ def paper_trading_session(
     Standard paper trading simulator pattern.
     """
     cash = float(account_state.get("cash", 0.0))
-    positions: dict[str, dict] = {
-        p["symbol"]: dict(p)
-        for p in account_state.get("positions", [])
-    }
+    positions: dict[str, dict] = {p["symbol"]: dict(p) for p in account_state.get("positions", [])}
     history = list(account_state.get("history", []))
 
     t_plus_n = market_rules.get("t_plus_n", 1)
@@ -99,19 +96,25 @@ def paper_trading_session(
         prev_close = float(bar.get("prev_close", close_price))
 
         if side == "buy":
-            if prev_close > 0 and oprim.detect_daily_limit_up(close_price, prev_close, limit_pct):
+            if prev_close > 0 and oprim.detect_daily_limit_up(
+                close_price=close_price, prev_close=prev_close, limit_pct=limit_pct
+            ):
                 rejected_orders.append({**order, "reason": "limit_up_block_buy"})
                 continue
 
         if side == "sell":
-            if prev_close > 0 and oprim.detect_daily_limit_down(close_price, prev_close, limit_pct):
+            if prev_close > 0 and oprim.detect_daily_limit_down(
+                close_price=close_price, prev_close=prev_close, limit_pct=limit_pct
+            ):
                 rejected_orders.append({**order, "reason": "limit_down_block_sell"})
                 continue
 
             if symbol in positions:
                 pos = positions[symbol]
                 entry_date = pos.get("entry_date")
-                if entry_date is not None and oprim.t_plus_n_blocked(entry_date, current_date, t_plus_n):
+                if entry_date is not None and oprim.t_plus_n_blocked(
+                    entry_date=entry_date, current_date=current_date, t_plus_n=t_plus_n
+                ):
                     rejected_orders.append({**order, "reason": f"t_plus_{t_plus_n}_blocked"})
                     continue
 
@@ -130,9 +133,13 @@ def paper_trading_session(
             fill_price = open_price
 
         trade_amount = fill_price * quantity
-        fee = oprim.commission(trade_amount, commission_rules["rate"], commission_rules.get("min_fee", 0.0))
+        fee = oprim.commission(
+            trade_amount, commission_rules["rate"], commission_rules.get("min_fee", 0.0)
+        )
         tax_dir = stamp_tax_rules.get("direction", "sell")
-        if (side == "buy" and tax_dir in ("buy", "both")) or (side == "sell" and tax_dir in ("sell", "both")):
+        if (side == "buy" and tax_dir in ("buy", "both")) or (
+            side == "sell" and tax_dir in ("sell", "both")
+        ):
             tax = oprim.stamp_tax(trade_amount, stamp_tax_rules["rate"], tax_dir)
         else:
             tax = 0.0

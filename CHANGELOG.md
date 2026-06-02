@@ -2,6 +2,15 @@
 
 <!-- Governance: see RELEASE_POLICY.md. main = release branch; feat branches deleted after merge; oprim → oskill → omodul merge order required; container bind-mount means git checkout is a live operation. -->
 
+## [1.14.1] - 2026-06-02 — fix: positional → keyword args for oprim keyword-only functions
+
+### Fixed
+
+- `omodul/simulation/paper_trading_session.py`: converted 3 positional calls to keyword-only
+  - `oprim.detect_daily_limit_up(close_price=..., prev_close=..., limit_pct=...)` (oprim 2.22.0 keyword-only)
+  - `oprim.detect_daily_limit_down(close_price=..., prev_close=..., limit_pct=...)` (oprim 2.22.0 keyword-only)
+  - `oprim.t_plus_n_blocked(entry_date=..., current_date=..., t_plus_n=...)` (oprim 2.22.0 keyword-only)
+
 ## [1.14.0] - 2026-06-01 — Stratum Batch 3: 8 omodul (P0 + P1 subset)
 
 ### Added — Stratum B3
