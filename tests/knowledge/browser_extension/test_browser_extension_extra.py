@@ -1,4 +1,5 @@
 """Additional coverage tests for browser_extension module."""
+
 from __future__ import annotations
 
 import os
@@ -19,6 +20,7 @@ from fastapi.testclient import TestClient
 
 
 # ── Page capture fallback paths ───────────────────────────────────────────────
+
 
 class TestPageCaptureFallbacks:
     def test_readability_failure_falls_back_to_lxml(self, monkeypatch):
@@ -61,6 +63,7 @@ class TestPageCaptureFallbacks:
 
 
 # ── URL dedup with mocked DB ───────────────────────────────────────────────────
+
 
 class TestUrlDedupWithDb:
     def test_check_url_existing_returns_none_for_new_url(self, monkeypatch):
@@ -112,10 +115,11 @@ class TestUrlDedupWithDb:
 
 # ── _run_ingest function ──────────────────────────────────────────────────────
 
+
 class TestRunIngest:
     @pytest.mark.asyncio
     async def test_run_ingest_writes_temp_file_and_calls_ingest(self):
-        from oskill.knowledge.ingest_substrate import IngestResult
+        from oskill.ingest_substrate import IngestResult
 
         mock_result = IngestResult(substrate_id="ingest_sub_xyz", medium="web_page")
         mock_ingest = AsyncMock(return_value=mock_result)
@@ -139,9 +143,10 @@ class TestRunIngest:
 
     @pytest.mark.asyncio
     async def test_run_ingest_cleans_up_temp_file_on_success(self):
-        from oskill.knowledge.ingest_substrate import IngestResult
+        from oskill.ingest_substrate import IngestResult
 
         captured_path: list[str] = []
+
         async def mock_ingest(path, source):
             captured_path.append(str(path))
             assert Path(str(path)).exists()
@@ -162,13 +167,16 @@ class TestRunIngest:
             raise RuntimeError("ingest failed")
 
         with pytest.raises(RuntimeError, match="ingest failed"):
-            with patch("omodul.knowledge.browser_extension.server.ingest_substrate", failing_ingest):
+            with patch(
+                "omodul.knowledge.browser_extension.server.ingest_substrate", failing_ingest
+            ):
                 await _run_ingest("Title", "content", "https://example.com", [])
 
         assert not Path(captured_path[0]).exists()
 
 
 # ── _create_note function ─────────────────────────────────────────────────────
+
 
 class TestCreateNote:
     @pytest.mark.asyncio
@@ -177,7 +185,10 @@ class TestCreateNote:
 
         with (
             patch("omodul.knowledge.browser_extension.server.open_meta_db", return_value=mock_db),
-            patch("omodul.knowledge.browser_extension.server.meta_db_path", return_value=Path("/tmp/fake.duckdb")),
+            patch(
+                "omodul.knowledge.browser_extension.server.meta_db_path",
+                return_value=Path("/tmp/fake.duckdb"),
+            ),
         ):
             note_id = await _create_note("sub_001", "Page Title", "Note content here")
 
@@ -192,6 +203,7 @@ class TestCreateNote:
 
 # ── Ingest with note creation ─────────────────────────────────────────────────
 
+
 class TestIngestWithNote:
     def test_ingest_with_note_returns_note_id(self, tmp_path, monkeypatch):
         path = tmp_path / "token.txt"
@@ -205,7 +217,9 @@ class TestIngestWithNote:
         mock_ingest = AsyncMock(return_value="note_substrate")
         mock_note = AsyncMock(return_value="created_note_id")
         with (
-            patch("omodul.knowledge.browser_extension.server.check_url_existing", return_value=None),
+            patch(
+                "omodul.knowledge.browser_extension.server.check_url_existing", return_value=None
+            ),
             patch("omodul.knowledge.browser_extension.server._run_ingest", mock_ingest),
             patch("omodul.knowledge.browser_extension.server.mark_url_ingested"),
             patch("omodul.knowledge.browser_extension.server._create_note", mock_note),
@@ -230,6 +244,7 @@ class TestIngestWithNote:
 
 # ── Sidebar search with selected_text ────────────────────────────────────────
 
+
 class TestSidebarWithSelectedText:
     def test_sidebar_includes_selected_text_in_query(self, tmp_path, monkeypatch):
         path = tmp_path / "token.txt"
@@ -240,7 +255,8 @@ class TestSidebarWithSelectedText:
         token = init_token()
         client = TestClient(app, raise_server_exceptions=False)
 
-        from oskill.knowledge.hybrid_search import SearchResult
+        from oskill.hybrid_search import SearchResult
+
         captured_queries: list[str] = []
 
         async def mock_search(query, **kwargs):

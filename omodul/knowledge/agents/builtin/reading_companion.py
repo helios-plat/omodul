@@ -1,10 +1,11 @@
 """ReadingCompanionAgent — conversational Q&A grounded in user substrate library."""
+
 from __future__ import annotations
 
 import time
 
 from oprim.llm import llm_call
-from oskill.knowledge import hybrid_search
+from oskill.hybrid_search import hybrid_search
 
 from omodul.knowledge.agents.base import Agent, AgentContext, AgentResult, AgentStep, Citation
 from omodul.knowledge.agents.registry import register_agent
@@ -50,8 +51,7 @@ class ReadingCompanionAgent(Agent):
 
         # 2. Build context for LLM
         substrate_ctx = "\n\n".join(
-            f"[{r.id}] {getattr(r, 'title', '')} \n{getattr(r, 'highlight', '')}"
-            for r in results
+            f"[{r.id}] {getattr(r, 'title', '')} \n{getattr(r, 'highlight', '')}" for r in results
         )
         prompt = (
             f"根据用户知识库内容回答问题。每个观点引用来源（用 [substrate_id] 标记）。\n\n"

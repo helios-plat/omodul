@@ -1,10 +1,11 @@
 """KnowledgeCuratorAgent — process inbox files: ingest (classify + dedup + index)."""
+
 from __future__ import annotations
 
 import time
 from pathlib import Path
 
-from oskill.knowledge import ingest_substrate
+from oskill.ingest_substrate import ingest_substrate
 
 from omodul.knowledge.agents.base import Agent, AgentContext, AgentResult, AgentStep
 from omodul.knowledge.agents.registry import register_agent
@@ -54,7 +55,10 @@ class KnowledgeCuratorAgent(Agent):
                             step_num=len(trace) + 1,
                             tool_name="ingest_substrate",
                             tool_input={"file": str(file_path)},
-                            tool_output={"substrate_id": result.substrate_id, "medium": result.medium},
+                            tool_output={
+                                "substrate_id": result.substrate_id,
+                                "medium": result.medium,
+                            },
                             duration_ms=elapsed,
                         )
                     )

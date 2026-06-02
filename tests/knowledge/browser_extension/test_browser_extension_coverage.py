@@ -1,4 +1,5 @@
 """Edge case coverage tests to push above 90%."""
+
 from __future__ import annotations
 
 import os
@@ -16,12 +17,15 @@ from fastapi.testclient import TestClient
 
 # ── page_capture: fallback path with no title → returns plain text (line 28) ──
 
+
 class TestPageCapturePlainTextFallback:
     def test_fallback_no_title_returns_plain_text(self):
         """Hit line 28: lxml fallback returns text without title prefix."""
         bad_doc = MagicMock()
         bad_doc.summary.side_effect = RuntimeError("readability error")
-        with patch("omodul.knowledge.browser_extension.page_capture.Document", return_value=bad_doc):
+        with patch(
+            "omodul.knowledge.browser_extension.page_capture.Document", return_value=bad_doc
+        ):
             html = "<html><body><p>Plain text content</p></body></html>"
             result = extract_main_content(html, title="")  # no title → line 28 path
         assert "Plain text content" in result
@@ -33,7 +37,9 @@ class TestPageCapturePlainTextFallback:
         mock_doc.summary.return_value = "<p>Content only</p>"
         mock_doc.title.return_value = ""  # empty title from readability
         with (
-            patch("omodul.knowledge.browser_extension.page_capture.Document", return_value=mock_doc),
+            patch(
+                "omodul.knowledge.browser_extension.page_capture.Document", return_value=mock_doc
+            ),
         ):
             result = extract_main_content("<html><body><p>Content only</p></body></html>", title="")
         # Should return plain text without # prefix
@@ -42,18 +48,22 @@ class TestPageCapturePlainTextFallback:
 
 # ── server: OSError in unlink (lines 108-109) ─────────────────────────────────
 
+
 class TestRunIngestOsError:
     @pytest.mark.asyncio
     async def test_osunlink_failure_does_not_propagate(self):
         """Hit lines 108-109: OSError during tmp file cleanup is silently ignored."""
-        from oskill.knowledge.ingest_substrate import IngestResult
+        from oskill.ingest_substrate import IngestResult
 
         mock_result = IngestResult(substrate_id="oserr_sub", medium="web_page")
         mock_ingest = AsyncMock(return_value=mock_result)
 
         with (
             patch("omodul.knowledge.browser_extension.server.ingest_substrate", mock_ingest),
-            patch("omodul.knowledge.browser_extension.server.os.unlink", side_effect=OSError("file busy")),
+            patch(
+                "omodul.knowledge.browser_extension.server.os.unlink",
+                side_effect=OSError("file busy"),
+            ),
         ):
             substrate_id = await _run_ingest("Title", "Content", "https://example.com", [])
 
@@ -61,6 +71,7 @@ class TestRunIngestOsError:
 
 
 # ── server: note creation failure is logged but ingest still succeeds ─────────
+
 
 class TestIngestNoteCreationFailure:
     def test_note_creation_failure_does_not_fail_ingest(self, tmp_path, monkeypatch):
@@ -77,7 +88,9 @@ class TestIngestNoteCreationFailure:
         mock_note = AsyncMock(side_effect=RuntimeError("DB full"))
 
         with (
-            patch("omodul.knowledge.browser_extension.server.check_url_existing", return_value=None),
+            patch(
+                "omodul.knowledge.browser_extension.server.check_url_existing", return_value=None
+            ),
             patch("omodul.knowledge.browser_extension.server._run_ingest", mock_ingest),
             patch("omodul.knowledge.browser_extension.server.mark_url_ingested"),
             patch("omodul.knowledge.browser_extension.server._create_note", mock_note),
@@ -102,6 +115,7 @@ class TestIngestNoteCreationFailure:
 
 # ── __main__.py: init subcommand ──────────────────────────────────────────────
 
+
 class TestMainModule:
     def test_init_command_prints_token(self, tmp_path, monkeypatch, capsys):
         monkeypatch.setattr(
@@ -111,6 +125,7 @@ class TestMainModule:
         monkeypatch.setattr(sys, "argv", ["browser_extension", "init"])
 
         from omodul.knowledge.browser_extension.__main__ import main
+
         main()
 
         captured = capsys.readouterr()
@@ -122,5 +137,6 @@ class TestMainModule:
         # uvicorn is imported locally inside main(), patch at the module level
         with patch("uvicorn.run") as mock_run:
             from omodul.knowledge.browser_extension.__main__ import main
+
             main()
         mock_run.assert_called_once()

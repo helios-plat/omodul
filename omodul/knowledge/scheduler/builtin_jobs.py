@@ -2,6 +2,7 @@
 
 Call `install_builtin_jobs(user_id, job_store)` on first run to seed the jobs.
 """
+
 from __future__ import annotations
 
 from .job_store import JobStore
@@ -51,6 +52,11 @@ BUILTIN_JOB_SPECS = [
         "name": "monthly_review",
         "agent_name": "daily_digest",
         "cron_expression": "0 9 1 * *",
+        "timezone": "Asia/Shanghai",
+        "agent_params": {"time_range": "last_30_days", "title_prefix": "月回顾"},
+        "enabled": False,
+        "max_runtime_seconds": 3600,
+    },
     {
         "name": "nightly_audio_gen",
         "agent_name": "audio_generator",
@@ -58,11 +64,6 @@ BUILTIN_JOB_SPECS = [
         "timezone": "Asia/Shanghai",
         "agent_params": {"max_substrates": 5},
         "enabled": False,
-    },
-        "timezone": "Asia/Shanghai",
-        "agent_params": {"time_range": "last_30_days", "title_prefix": "月回顾"},
-        "enabled": False,
-        "max_runtime_seconds": 3600,
     },
 ]
 

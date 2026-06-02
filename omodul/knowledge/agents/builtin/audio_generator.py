@@ -1,4 +1,5 @@
 """AudioGeneratorAgent — batch TTS narration for pinned substrates."""
+
 from __future__ import annotations
 
 import time
@@ -31,33 +32,9 @@ class AudioGeneratorAgent(Agent):
             success=False,
             output={
                 "status": "failed",
-                "error": "TTS unavailable v1.0: F5-TTS upstream image broken, v1.1+ evaluate"
+                "error": "TTS unavailable v1.0: F5-TTS upstream image broken, v1.1+ evaluate",
             },
             trace=[],
             citations=[],
-            cost_usd=0.0
+            cost_usd=0.0,
         )
-        from oskill.knowledge._context import meta_db_path
-
-        db_path = meta_db_path()
-        if not db_path.exists():
-            return []
-
-        db = open_meta_db(db_path)
-        # Pinned substrates that don't yet have an audio_asset
-        rows = db.fetchall(
-            """
-            SELECT s.id FROM substrate s
-            LEFT JOIN audio_assets aa ON aa.substrate_id = s.id
-            WHERE s.is_pinned = TRUE
-              AND aa.id IS NULL
-              AND (s.mime LIKE 'text/%' OR s.mime IS NULL)
-            ORDER BY s.created_at DESC
-            LIMIT ?
-            """,
-            [limit],
-        )
-        db.close()
-        return [r[0] for r in rows]
-    except Exception:
-        return []
