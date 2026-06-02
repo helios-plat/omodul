@@ -299,3 +299,6 @@ from omodul.sync_user_preferences import (
     compute_fingerprint_for as compute_fingerprint_for_sync_prefs,
     sync_user_preferences,
 )
+
+# v1.15.0 — builtin agents re-export (避免 export 漏症再发)
+from omodul.knowledge.agents.builtin import IllustrationAgent

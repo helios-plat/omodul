@@ -1,6 +1,8 @@
 """Stratum builtin agents — auto-imported to register them."""
+
 from omodul.knowledge.agents.builtin.audio_generator import AudioGeneratorAgent
 from omodul.knowledge.agents.builtin.daily_digest import DailyDigestAgent
+from omodul.knowledge.agents.builtin.illustration_agent import IllustrationAgent
 from omodul.knowledge.agents.builtin.knowledge_curator import KnowledgeCuratorAgent
 from omodul.knowledge.agents.builtin.lint_bot import LintBotAgent
 from omodul.knowledge.agents.builtin.reading_companion import ReadingCompanionAgent
@@ -13,4 +15,5 @@ __all__ = [
     "TranslationWorkerAgent",
     "LintBotAgent",
     "AudioGeneratorAgent",
+    "IllustrationAgent",
 ]

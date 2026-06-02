@@ -2,6 +2,14 @@
 
 <!-- Governance: see RELEASE_POLICY.md. main = release branch; feat branches deleted after merge; oprim → oskill → omodul merge order required; container bind-mount means git checkout is a live operation. -->
 
+## [1.15.0] - 2026-06-03 — feat: illustration_agent builtin (Stratum v0.6 §17.1)
+
+### Added
+
+- `omodul/knowledge/agents/builtin/illustration_agent.py` — `IllustrationAgent` builtin agent: substrate → 1-3 illustration derivatives via `oprim.image_generate` (wanxiang provider). Steps: fetch/generate substrate summary → LLM image prompt → `oprim.image_generate` → write derivative record. Mirrors `audio_generator` pattern.
+- `omodul/__init__.py`: top-level re-export of `IllustrationAgent` (避免 export 漏症)
+- 13 tests, all passing
+
 ## [1.14.2] - 2026-06-02 — fix: compute_commission/compute_stamp_tax ghost names + full oprim call audit
 
 ### Fixed
