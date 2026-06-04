@@ -2,6 +2,41 @@
 
 <!-- Governance: see RELEASE_POLICY.md. main = release branch; feat branches deleted after merge; oprim → oskill → omodul merge order required; container bind-mount means git checkout is a live operation. -->
 
+## [1.19.0] — 2026-06-04
+
+### Added (AII-3O Batch 5b — P5 verification + learning + governance)
+- `verify_knowledge` / `VerifyKnowledgeConfig` — A20 defeasible grade upgrade/downgrade via cmi_verify (causal), backtest_stat (quantitative), or manual verdict; grade capped at "high" from auto-verify
+- `learning_distill` / `LearningDistillConfig` — distill Episode → solution_strategy KU via llm_distill_strategy + ku_gate_validate gate; A19 unverified by default; quarantine path on invalid KU
+- `governance_adjudicate` / `GovernanceAdjudicateConfig` — L0-L4 tiered adjudication: L0 auto-approved, L1-L2 needs_review, L3-L4 escalate; coherence_compute + ku_gate_validate evidence validation
+
+## [1.18.0] — 2026-06-04
+
+### Added (AII-3O Batch 5a — P4 GraphRAG)
+- `graphrag_query` / `GraphRAGQueryConfig` — GraphRAG-style knowledge retrieval combining oprim.vector_encode (semantic similarity) + oprim.entity_graph_search (graph expansion) + epistemic grade filtering; decision_trail pillar
+
+## [1.17.0] — 2026-06-04
+
+### Added (AII-3O Batch 4b)
+- `register_ku` / `RegisterKuConfig` — register a KU per HOS-001 three-face schema; fingerprint + decision_trail pillars
+- `store_memory` / `StoreMemoryConfig` — store query/case/solution_strategy memory as KUs; fingerprint + decision_trail pillars
+- `reuse_strategy` / `ReuseStrategyConfig` — k=1 similarity match to stored strategies + A22 epistemic grade check; decision_trail pillar
+
+## [1.16.0] — 2026-06-04
+
+### Added (AII-3O Batch 2 — omodul migration)
+- `register_entity` / `RegisterEntityConfig` — entity registration with fingerprint + decision_trail
+- `append_episode` / `AppendEpisodeConfig` — episodic memory entry with orphan guard
+- `knowledge_reflux` / `KnowledgeRefluxConfig` (`run_reflux`) — deterministic knowledge graph completeness check (dangling refs, contradictions, inverse relations, supersede propagation, required fields)
+- `cognitive_diagnosis` / `CognitiveDiagnosisConfig` (`run_diagnosis`) — DINA + EM diagnostic core (ADR-A23 compliant: descriptive+diagnostic only, no psychological labels)
+
+## [1.15.1] — 2026-06-04
+
+### Added
+- `BaseConfig` exported from `omodul` top-level (was defined in `_base_config.py` but not exported)
+
+### Fixed
+- Downstream consumers can now `from omodul import BaseConfig` without internal imports
+
 ## [1.15.0] - 2026-06-03 — feat: illustration_agent builtin (Stratum v0.6 §17.1)
 
 ### Added

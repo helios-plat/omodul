@@ -1,4 +1,7 @@
 from typing import Any
+
+from ._base_config import BaseConfig
+from .append_episode import AppendEpisodeConfig, append_episode
 from .appstore_deploy import (
     appstore_deploy,
     compute_fingerprint_for as compute_fingerprint_for_appstore_deploy,
@@ -36,6 +39,30 @@ from .generate_incident_postmortem import (
     generate_incident_postmortem,
     compute_fingerprint_for_generate_incident_postmortem,
 )
+from .register_entity import (
+    RegisterEntityConfig,
+    compute_fingerprint_for as compute_fingerprint_for_register_entity,
+    register_entity,
+)
+from .knowledge_reflux import KnowledgeRefluxConfig, run_reflux
+from .cognitive_diagnosis import CognitiveDiagnosisConfig, run_diagnosis
+
+# --- AII 3O Batch 4b (v1.17.0) ---
+from .register_ku import (
+    RegisterKuConfig,
+    compute_fingerprint_for as compute_fingerprint_for_register_ku,
+    register_ku,
+)
+from .store_memory import StoreMemoryConfig, store_memory
+from .reuse_strategy import ReuseStrategyConfig, reuse_strategy
+
+# --- AII 3O Batch 5a — P4 GraphRAG (omodul 1.18.0) ---
+from .graphrag_query import GraphRAGQueryConfig, graphrag_query
+
+# --- AII 3O Batch 5b — P5 verification + learning + governance (omodul 1.19.0) ---
+from .verify_knowledge import VerifyKnowledgeConfig, verify_knowledge
+from .learning_distill import LearningDistillConfig, learning_distill
+from .governance_adjudicate import GovernanceAdjudicateConfig, governance_adjudicate
 
 
 # 统一的 compute_fingerprint_for(omodul_name, config, input_data) 路由
@@ -68,6 +95,8 @@ def compute_fingerprint_for(omodul_name: str, config: Any, input_data: Any) -> s
         "notification_dispatch_workflow": compute_fingerprint_for_notification_dispatch,
         "export_user_data_csv": compute_fingerprint_for_export_user_data,
         "sync_user_preferences": compute_fingerprint_for_sync_prefs,
+        "register_entity": compute_fingerprint_for_register_entity,
+        "register_ku": compute_fingerprint_for_register_ku,
     }
 
     if omodul_name not in routers:
@@ -77,6 +106,7 @@ def compute_fingerprint_for(omodul_name: str, config: Any, input_data: Any) -> s
 
 
 __all__ = [
+    "BaseConfig",
     "appstore_deploy",
     "cross_project_health_aggregate",
     "weekly_review_workflow",
@@ -93,7 +123,32 @@ __all__ = [
     "diagnose_root_cause",
     "propose_action_plan",
     "generate_incident_postmortem",
+    "register_entity",
+    "RegisterEntityConfig",
+    "append_episode",
+    "AppendEpisodeConfig",
+    "run_reflux",
+    "KnowledgeRefluxConfig",
+    "run_diagnosis",
+    "CognitiveDiagnosisConfig",
     "compute_fingerprint_for",
+    # AII 3O Batch 4b (v1.17.0)
+    "register_ku",
+    "RegisterKuConfig",
+    "store_memory",
+    "StoreMemoryConfig",
+    "reuse_strategy",
+    "ReuseStrategyConfig",
+    # AII 3O Batch 5a — P4 GraphRAG (omodul 1.18.0)
+    "graphrag_query",
+    "GraphRAGQueryConfig",
+    # AII 3O Batch 5b — P5 verification + learning + governance (omodul 1.19.0)
+    "verify_knowledge",
+    "VerifyKnowledgeConfig",
+    "learning_distill",
+    "LearningDistillConfig",
+    "governance_adjudicate",
+    "GovernanceAdjudicateConfig",
     # v1.13.1
     "monthly_trade_review",
     "paper_trading_session",
