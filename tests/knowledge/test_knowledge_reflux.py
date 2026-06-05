@@ -265,3 +265,63 @@ def test_auto_apply_low_false_keeps_findings_in_needs_review():
     assert report.auto_applied == []
     review_kinds = [f.kind for f in report.needs_review]
     assert "missing_inverse" in review_kinds
+
+
+# ---------------------------------------------------------------------------
+# Protocol backend (list_nodes / list_edges) — public path exercised
+# ---------------------------------------------------------------------------
+
+
+class ProtocolBackend:
+    """Implements list_nodes() / list_edges(nid) / get_node() — no _nodes attr."""
+
+    def __init__(self):
+        self._store: dict = {}
+        self._edge_list: list = []
+
+    def put_node(self, nid, payload):
+        self._store[nid] = payload
+
+    def get_node(self, nid):
+        return self._store.get(nid)
+
+    def list_nodes(self):
+        return list(self._store.keys())
+
+    def put_edge(self, src, rel, dst):
+        self._edge_list.append((src, rel, dst))
+
+    def list_edges(self, nid):
+        from types import SimpleNamespace
+
+        return [
+            SimpleNamespace(src_id=s, relation=r, dst_id=d)
+            for s, r, d in self._edge_list
+            if s == nid
+        ]
+
+
+def test_protocol_backend_list_nodes_path():
+    """_graph_snapshot uses list_nodes() when backend exposes it."""
+    b = ProtocolBackend()
+    b.put_node("N1", {"title": "Node 1"})
+    b.put_node("N2", {"title": "Node 2"})
+    b.put_edge("N1", "supports", "N2")
+    config = make_config(backend=b)
+    result = run_reflux(config, {})
+    assert result["status"] == "completed"
+    # Both nodes visible via list_nodes() path → reflux ran without error
+    summary = result["findings"].summary()
+    assert "total_findings" in summary
+
+
+def test_protocol_backend_dangling_ref_detected():
+    """Dangling reference is detected via list_nodes() path."""
+    b = ProtocolBackend()
+    b.put_node("N1", {"title": "Node 1"})
+    b.put_edge("N1", "supports", "MISSING")
+    config = make_config(backend=b)
+    result = run_reflux(config, {})
+    assert result["status"] == "completed"
+    finding_kinds = [f.kind for f in result["findings"].findings]
+    assert "dangling" in finding_kinds

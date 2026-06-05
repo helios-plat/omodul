@@ -112,10 +112,16 @@ _enabled_pillars: set[str] = {"decision_trail"}
 def _graph_snapshot(backend):
     """读取全图快照：nodes {id: payload}, edges [(src, rel, dst)]。"""
     nodes, edges = {}, []
-    if hasattr(backend, "_nodes"):  # InMemoryBackend
+    if hasattr(backend, "list_nodes"):  # Protocol-compliant backend
+        node_ids = backend.list_nodes()
+        nodes = {nid: backend.get_node(nid) for nid in node_ids}
+        for nid in node_ids:
+            for edge in backend.list_edges(nid):
+                edges.append((edge.src_id, edge.relation, edge.dst_id))
+    elif hasattr(backend, "_nodes"):  # InMemoryBackend (legacy)
         nodes = {nid: backend.get_node(nid) for nid in backend._nodes}
         edges = [(s, r, d) for (s, r, d) in backend._edges]
-    else:  # SqlBackend
+    else:  # SqlBackend (legacy)
         cur = backend._conn.execute("SELECT node_id, payload FROM nodes")
         for nid, pj in cur.fetchall():
             nodes[nid] = json.loads(pj)

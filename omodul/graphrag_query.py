@@ -65,7 +65,9 @@ def graphrag_query(
         seed_ids = input_data.get("seed_ids") or []
 
         # Step 1: Get all KU nodes from backend
-        if hasattr(backend, "_nodes"):
+        if hasattr(backend, "list_nodes"):
+            all_nodes = {nid: backend.get_node(nid) for nid in backend.list_nodes()}
+        elif hasattr(backend, "_nodes"):
             all_nodes = {nid: backend.get_node(nid) for nid in backend._nodes}
         else:
             all_nodes = {}
@@ -117,6 +119,7 @@ def graphrag_query(
                     "ku_id": nid,
                     "grade": grade,
                     "natural_text": node.get("natural_text", ""),
+                    "knowledge_type": node.get("knowledge_type", ""),
                     "score": combined_score,
                 }
             )

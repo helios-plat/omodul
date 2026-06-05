@@ -272,3 +272,69 @@ def test_config_dict_accepted():
     config_dict = {"backend": backend}
     result = graphrag_query(config_dict, {"query": "test"})
     assert result["status"] == "completed"
+
+
+# ---------------------------------------------------------------------------
+# 14. Protocol backend (list_nodes / list_edges) — public path exercised
+# ---------------------------------------------------------------------------
+
+
+class ProtocolBackend:
+    """Implements list_nodes() / list_edges() / get_node() — no _nodes attr."""
+
+    def __init__(self):
+        self._store: dict = {}
+        self._edges: dict = {}
+
+    def put_node(self, nid, payload):
+        self._store[nid] = payload
+
+    def get_node(self, nid):
+        return self._store.get(nid)
+
+    def list_nodes(self):
+        return list(self._store.keys())
+
+    def put_edge(self, s, r, d):
+        self._edges.setdefault(s, []).append(SimpleNamespace(src_id=s, relation=r, dst_id=d))
+
+    def list_edges(self, nid):
+        return self._edges.get(nid, [])
+
+
+def test_protocol_backend_list_nodes_path():
+    """graphrag_query uses list_nodes() when backend exposes it (no _nodes access)."""
+    backend = ProtocolBackend()
+    backend.put_node(
+        "KU-P1",
+        {
+            "natural_text": "protocol node content",
+            "epistemic_status": {"grade": "high"},
+            "knowledge_type": "principle",
+        },
+    )
+    config = _make_config(backend=backend)
+    result = graphrag_query(config, {"query": "protocol node"})
+    assert result["status"] == "completed"
+    assert len(result["findings"]["results"]) >= 1
+    hit = result["findings"]["results"][0]
+    assert hit["ku_id"] == "KU-P1"
+    assert hit["knowledge_type"] == "principle"
+
+
+def test_protocol_backend_knowledge_type_in_result():
+    """knowledge_type field is present in every result entry."""
+    backend = ProtocolBackend()
+    backend.put_node(
+        "KU-P2",
+        {
+            "natural_text": "another principle",
+            "epistemic_status": {"grade": "medium"},
+            "knowledge_type": "heuristic",
+        },
+    )
+    config = _make_config(backend=backend)
+    result = graphrag_query(config, {"query": "another"})
+    assert result["status"] == "completed"
+    for entry in result["findings"]["results"]:
+        assert "knowledge_type" in entry

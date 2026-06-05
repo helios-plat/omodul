@@ -2,6 +2,26 @@
 
 <!-- Governance: see RELEASE_POLICY.md. main = release branch; feat branches deleted after merge; oprim → oskill → omodul merge order required; container bind-mount means git checkout is a live operation. -->
 
+## [1.20.0] — 2026-06-05
+
+### Changed
+- `graphrag_query`: 取 all_nodes 改走 `backend.list_nodes()` 优先 (Protocol 公开接口), `_nodes` 私有属性降级为 InMemoryBackend legacy fallback; result dict 含新字段 `knowledge_type`
+- `knowledge_reflux._graph_snapshot`: 同样改走 `backend.list_nodes()` + `list_edges()` 优先; `_nodes`/`_edges` (InMemory legacy) + `_conn` (SqlBackend legacy) 保留作降级路径
+- 向后兼容: InMemoryBackend / SqlBackend 旧路径保留, 不破坏现有调用方
+
+### Fixed
+- 不再从外部伸手进 `backend._nodes` / `backend._conn` 私有属性 (与陷阱 11 同模式治理 — 依赖他对象私有接口)
+
+### Tests
+- 新增 `test_protocol_backend_list_nodes_path` + `test_protocol_backend_knowledge_type_in_result` (graphrag_query 公开路径覆盖)
+- 新增 `test_protocol_backend_list_nodes_path` + `test_protocol_backend_dangling_ref_detected` (knowledge_reflux 公开路径覆盖)
+
+### Sweep
+- oprim / oskill / obase / oservice 全局扫描: 无跨对象私有属性访问违规 (oprim.MetaDB._conn + obase.dns_pinned_transport._context 均为自有属性, 不属于此模式)
+
+> 本 release 由 AII 经理人发现 + 提交修法 + AII 侧验证, Owner 采纳归入主库.
+> AII CC 越界改主库工作区是特例, 已立永久禁令, 不形成先例.
+
 ## [1.19.1] — 2026-06-05
 
 ### Fixed
