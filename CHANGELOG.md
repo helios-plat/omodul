@@ -2,6 +2,16 @@
 
 <!-- Governance: see RELEASE_POLICY.md. main = release branch; feat branches deleted after merge; oprim → oskill → omodul merge order required; container bind-mount means git checkout is a live operation. -->
 
+## [1.21.0] — 2026-06-05
+
+### Added — Aegis 3O Batch 4 (3 new omodul elements)
+- feat: `diagnose_queue_health` — RabbitMQ 队列健康诊断 (oprim.rabbitmq_queue_depth/consumer_count → oskill pattern/severity/circuit_breaker; B option: needs_deep_investigation flag 代替调用 oservice)
+- feat: `diagnose_connection_pool` — PostgreSQL 连接池诊断 (oprim.postgres_long_running_queries/locks_status → oskill classify/pattern/severity; B option: needs_deep_investigation flag)
+- feat: `diagnose_service_health` — 服务综合健康诊断 (oprim.network_http_health/docker_inspect/system_cpu/ram → oskill classify/pattern/severity; B option: needs_deep_investigation flag; container_name 可选)
+- All 3: BaseConfig subclass, standard signature, 7-key return dict, status="failed" no-raise, decision_trail.json in finally
+- test: 39 新测试 (test_aegis_b4.py: 13+12+14)
+- Note: generate_incident_postmortem already shipped in v1.17.0; no change needed for B4
+
 ## [1.20.0] — 2026-06-05
 
 ### Changed

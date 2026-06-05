@@ -97,6 +97,10 @@ def compute_fingerprint_for(omodul_name: str, config: Any, input_data: Any) -> s
         "sync_user_preferences": compute_fingerprint_for_sync_prefs,
         "register_entity": compute_fingerprint_for_register_entity,
         "register_ku": compute_fingerprint_for_register_ku,
+        # Aegis 3O Batch 4 (v1.21.0)
+        "diagnose_queue_health": compute_fingerprint_for_diagnose_queue_health,
+        "diagnose_connection_pool": compute_fingerprint_for_diagnose_connection_pool,
+        "diagnose_service_health": compute_fingerprint_for_diagnose_service_health,
     }
 
     if omodul_name not in routers:
@@ -193,6 +197,21 @@ __all__ = [
     "SyncPrefsConfig",
     "SyncPrefsInput",
     "SyncPrefsFindings",
+    # Aegis 3O Batch 4 (v1.21.0)
+    "DiagnoseQueueHealthConfig",
+    "DiagnoseQueueHealthInput",
+    "DiagnoseQueueHealthFindings",
+    "QueueStat",
+    "diagnose_queue_health",
+    "DiagnoseConnectionPoolConfig",
+    "DiagnoseConnectionPoolInput",
+    "DiagnoseConnectionPoolFindings",
+    "SlowQuerySummary",
+    "diagnose_connection_pool",
+    "DiagnoseServiceHealthConfig",
+    "DiagnoseServiceHealthInput",
+    "DiagnoseServiceHealthFindings",
+    "diagnose_service_health",
 ]
 
 # Sprint 13 — C1 + C2
@@ -357,3 +376,28 @@ from omodul.sync_user_preferences import (
 
 # v1.15.0 — builtin agents re-export (避免 export 漏症再发)
 from omodul.knowledge.agents.builtin import IllustrationAgent
+
+# --- Aegis 3O Batch 4 (v1.21.0) ---
+from omodul.diagnose_queue_health import (
+    DiagnoseQueueHealthConfig,
+    DiagnoseQueueHealthInput,
+    DiagnoseQueueHealthFindings,
+    QueueStat,
+    diagnose_queue_health,
+    compute_fingerprint_for_diagnose_queue_health,
+)
+from omodul.diagnose_connection_pool import (
+    DiagnoseConnectionPoolConfig,
+    DiagnoseConnectionPoolInput,
+    DiagnoseConnectionPoolFindings,
+    SlowQuerySummary,
+    diagnose_connection_pool,
+    compute_fingerprint_for_diagnose_connection_pool,
+)
+from omodul.diagnose_service_health import (
+    DiagnoseServiceHealthConfig,
+    DiagnoseServiceHealthInput,
+    DiagnoseServiceHealthFindings,
+    diagnose_service_health,
+    compute_fingerprint_for_diagnose_service_health,
+)
