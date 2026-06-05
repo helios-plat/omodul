@@ -174,6 +174,7 @@ def process_inbox_substrate(
                     "user_id_hash": config.user_id_hash,
                     **input_data.metadata_override,
                 },
+                user_id_hash=config.user_id_hash,
                 user_hint={"medium": medium} if medium else None,
             )
         )

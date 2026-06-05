@@ -35,6 +35,7 @@ class KnowledgeCuratorAgent(Agent):
                 result = await ingest_substrate(
                     path=file_path,
                     source={"user_id": context.user_id},
+                    user_id_hash=context.user_id,
                 )
                 elapsed = int((time.monotonic() - t0) * 1000)
                 if result.duplicate_of:

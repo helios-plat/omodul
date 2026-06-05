@@ -133,6 +133,7 @@ class TestRunIngest:
                 content="Hello world content",
                 url="https://example.com",
                 tags=["test"],
+                user_id_hash="test_user",
             )
 
         assert substrate_id == "ingest_sub_xyz"
@@ -147,13 +148,15 @@ class TestRunIngest:
 
         captured_path: list[str] = []
 
-        async def mock_ingest(path, source):
+        async def mock_ingest(path, source, user_id_hash=""):
             captured_path.append(str(path))
             assert Path(str(path)).exists()
             return IngestResult(substrate_id="cleanup_test", medium="web_page")
 
         with patch("omodul.knowledge.browser_extension.server.ingest_substrate", mock_ingest):
-            await _run_ingest("Title", "content", "https://example.com", [])
+            await _run_ingest(
+                "Title", "content", "https://example.com", [], user_id_hash="test_user"
+            )
 
         # temp file should be cleaned up
         assert not Path(captured_path[0]).exists()
@@ -162,7 +165,7 @@ class TestRunIngest:
     async def test_run_ingest_cleans_up_temp_file_on_exception(self):
         captured_path: list[str] = []
 
-        async def failing_ingest(path, source):
+        async def failing_ingest(path, source, user_id_hash=""):
             captured_path.append(str(path))
             raise RuntimeError("ingest failed")
 
@@ -170,7 +173,9 @@ class TestRunIngest:
             with patch(
                 "omodul.knowledge.browser_extension.server.ingest_substrate", failing_ingest
             ):
-                await _run_ingest("Title", "content", "https://example.com", [])
+                await _run_ingest(
+                    "Title", "content", "https://example.com", [], user_id_hash="test_user"
+                )
 
         assert not Path(captured_path[0]).exists()
 

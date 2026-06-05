@@ -2,6 +2,15 @@
 
 <!-- Governance: see RELEASE_POLICY.md. main = release branch; feat branches deleted after merge; oprim → oskill → omodul merge order required; container bind-mount means git checkout is a live operation. -->
 
+## [1.19.1] — 2026-06-05
+
+### Fixed
+- `process_inbox_substrate`: pass `user_id_hash=config.user_id_hash` as direct arg to `ingest_substrate` (oskill v3.13.2 required param)
+- `knowledge/process_inbox`: add `user_id_hash: str` to `process_inbox()` signature; propagate to `ingest_substrate` call
+- `knowledge/browser_extension/server`: add `user_id_hash` param to `_run_ingest`; `ingest_page` reads `STRATUM_USER_ID` from oprim config and forwards it
+- `knowledge/agents/builtin/knowledge_curator`: pass `user_id_hash=context.user_id` to `ingest_substrate`
+- Tests: update all `process_inbox()` call sites with `user_id_hash="test_user"`; update `_run_ingest` direct calls and mock signatures in browser extension tests; add `test_process_inbox_substrate_passes_user_id_hash`
+
 ## [1.19.0] — 2026-06-04
 
 ### Added (AII-3O Batch 5b — P5 verification + learning + governance)

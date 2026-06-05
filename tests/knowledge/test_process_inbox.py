@@ -51,7 +51,7 @@ class TestProcessInbox:
     async def test_empty_inbox_returns_empty(self, stratum_home):
         inbox = stratum_home / "inbox"
         inbox.mkdir()
-        result = await process_inbox(inbox)
+        result = await process_inbox(inbox, user_id_hash="test_user")
         assert result.processed == []
         assert result.failed == []
         assert result.needs_review == []
@@ -60,7 +60,7 @@ class TestProcessInbox:
         inbox = stratum_home / "inbox"
         inbox.mkdir()
         (inbox / ".hidden").write_text("ignore me")
-        result = await process_inbox(inbox)
+        result = await process_inbox(inbox, user_id_hash="test_user")
         assert result.processed == []
         assert result.failed == []
 
@@ -68,7 +68,7 @@ class TestProcessInbox:
         inbox = stratum_home / "inbox"
         inbox.mkdir()
         (inbox / "subdir").mkdir()
-        result = await process_inbox(inbox)
+        result = await process_inbox(inbox, user_id_hash="test_user")
         assert result.processed == []
         assert result.failed == []
 
@@ -85,7 +85,9 @@ class TestProcessInbox:
                 "omodul.knowledge.process_inbox.ingest_substrate",
                 new=AsyncMock(return_value=_make_ingest()),
             ):
-                result = await process_inbox(inbox, archive_after_process=False)
+                result = await process_inbox(
+                    inbox, user_id_hash="test_user", archive_after_process=False
+                )
 
         assert len(result.processed) == 1
         assert result.failed == []
@@ -104,7 +106,9 @@ class TestProcessInbox:
                 "omodul.knowledge.process_inbox.ingest_substrate",
                 new=AsyncMock(return_value=_make_ingest()),
             ):
-                result = await process_inbox(inbox, archive_after_process=True)
+                result = await process_inbox(
+                    inbox, user_id_hash="test_user", archive_after_process=True
+                )
 
         assert len(result.processed) == 1
         assert not target.exists()
@@ -123,7 +127,7 @@ class TestProcessInbox:
                 "omodul.knowledge.process_inbox.ingest_substrate",
                 new=AsyncMock(return_value=_make_ingest()),
             ):
-                await process_inbox(inbox, archive_after_process=False)
+                await process_inbox(inbox, user_id_hash="test_user", archive_after_process=False)
 
         assert target.exists()
 
@@ -145,7 +149,9 @@ class TestProcessInbox:
                 "omodul.knowledge.process_inbox.ingest_substrate",
                 new=AsyncMock(return_value=_make_ingest()),
             ):
-                result = await process_inbox(inbox, archive_after_process=False)
+                result = await process_inbox(
+                    inbox, user_id_hash="test_user", archive_after_process=False
+                )
 
         assert len(result.processed) == 1
         assert len(result.failed) == 1
@@ -164,7 +170,9 @@ class TestProcessInbox:
             with patch(
                 "omodul.knowledge.process_inbox.ingest_substrate", new=AsyncMock()
             ) as mock_ingest:
-                result = await process_inbox(inbox, archive_after_process=False)
+                result = await process_inbox(
+                    inbox, user_id_hash="test_user", archive_after_process=False
+                )
 
         assert result.processed == []
         assert len(result.needs_review) == 1
@@ -181,7 +189,9 @@ class TestProcessInbox:
             return_value=_make_classify(layer="needs_review", medium=None, confidence=0.2),
         ):
             with patch("omodul.knowledge.process_inbox.ingest_substrate", new=AsyncMock()):
-                result = await process_inbox(inbox, archive_after_process=True)
+                result = await process_inbox(
+                    inbox, user_id_hash="test_user", archive_after_process=True
+                )
 
         assert len(result.needs_review) == 1
         assert not target.exists()
@@ -195,7 +205,9 @@ class TestProcessInbox:
                 "omodul.knowledge.process_inbox.ingest_substrate",
                 new=AsyncMock(side_effect=[_make_ingest("ID1"), _make_ingest("ID2")]),
             ):
-                result = await process_inbox(inbox_with_files, archive_after_process=False)
+                result = await process_inbox(
+                    inbox_with_files, user_id_hash="test_user", archive_after_process=False
+                )
 
         assert len(result.processed) == 2
         assert result.failed == []
@@ -212,7 +224,9 @@ class TestProcessInbox:
                 "omodul.knowledge.process_inbox.ingest_substrate",
                 new=AsyncMock(side_effect=RuntimeError("ingest failed")),
             ):
-                result = await process_inbox(inbox, archive_after_process=False)
+                result = await process_inbox(
+                    inbox, user_id_hash="test_user", archive_after_process=False
+                )
 
         assert result.processed == []
         assert len(result.failed) == 1

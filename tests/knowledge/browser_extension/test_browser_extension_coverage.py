@@ -65,7 +65,9 @@ class TestRunIngestOsError:
                 side_effect=OSError("file busy"),
             ),
         ):
-            substrate_id = await _run_ingest("Title", "Content", "https://example.com", [])
+            substrate_id = await _run_ingest(
+                "Title", "Content", "https://example.com", [], user_id_hash="test_user"
+            )
 
         assert substrate_id == "oserr_sub"
 

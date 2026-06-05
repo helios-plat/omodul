@@ -21,6 +21,7 @@ class ProcessInboxResult:
 
 async def process_inbox(
     inbox_dir: Path,
+    user_id_hash: str,
     archive_after_process: bool = True,
 ) -> ProcessInboxResult:
     """Process all files in inbox_dir.
@@ -51,6 +52,7 @@ async def process_inbox(
             ingest_result = await ingest_substrate(
                 path=file_path,
                 source={"type": "inbox_local", "filename": file_path.name},
+                user_id_hash=user_id_hash,
                 target_storage="local",
             )
             result.processed.append(ingest_result)
@@ -86,5 +88,5 @@ if __name__ == "__main__":  # pragma: no cover
 
     bootstrap()
     inbox = Path(cfg.get("STRATUM_HOME", str(Path.home() / ".stratum"))) / "inbox"
-    r = asyncio.run(process_inbox(inbox))
+    r = asyncio.run(process_inbox(inbox, user_id_hash=cfg.get("STRATUM_USER_ID", "")))
     print(f"processed={len(r.processed)} failed={len(r.failed)} needs_review={len(r.needs_review)}")

@@ -55,7 +55,7 @@ def _inbox_config(**kw) -> InboxConfig:
     return InboxConfig(
         file_path=kw.pop("file_path", Path("/tmp/test.pdf")),
         file_checksum=kw.pop("file_checksum", _FAKE_CHECKSUM),
-        user_id_hash="user-hash-abc",
+        user_id_hash=kw.pop("user_id_hash", "user-hash-abc"),
         **kw,
     )
 
@@ -385,6 +385,51 @@ class TestProcessInboxSubstrate:
             result = process_inbox_substrate(config, input_data, tmp_path)
 
         assert result["cost_usd"] == 0.0
+
+    def test_process_inbox_substrate_passes_user_id_hash(self, tmp_path):
+        """ingest_substrate must receive user_id_hash matching InboxConfig.user_id_hash."""
+        import asyncio as _asyncio
+
+        from oskill.ingest_substrate import IngestResult
+
+        test_file = tmp_path / "test.pdf"
+        test_file.write_bytes(b"fake pdf content")
+        config = _inbox_config(file_path=test_file, user_id_hash="uid-check-789")
+        input_data = InboxInput()
+
+        mock_ingest = AsyncMock(return_value=IngestResult(substrate_id="sub-xyz", medium="paper"))
+        call_idx = [0]
+
+        def _fake_run(coro):
+            call_idx[0] += 1
+            if call_idx[0] == 1:
+                loop = _asyncio.new_event_loop()
+                try:
+                    return loop.run_until_complete(coro)
+                finally:
+                    loop.close()
+            coro.close()
+            return "deriv-id-xyz"
+
+        with (
+            patch("oprim.file_type_detector.file_type_detector", return_value=_mock_file_info()),
+            patch("oprim.file_parser_pdf.file_parser_pdf", return_value=_mock_parsed_doc()),
+            patch(
+                "oprim.document_structure_extractor.document_structure_extractor",
+                return_value=_mock_structure(),
+            ),
+            patch("oprim._document_types.ParsedDocument", MagicMock),
+            patch(
+                "oskill.knowledge.classify_inbox_file.classify_inbox_file",
+                return_value=_mock_classify(),
+            ),
+            patch("oskill.ingest_substrate.ingest_substrate", mock_ingest),
+            patch("asyncio.run", side_effect=_fake_run),
+        ):
+            process_inbox_substrate(config, input_data, tmp_path)
+
+        mock_ingest.assert_called_once()
+        assert mock_ingest.call_args.kwargs["user_id_hash"] == "uid-check-789"
 
 
 # ---------------------------------------------------------------------------

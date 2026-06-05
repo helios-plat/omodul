@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from oprim._config import cfg as _cfg
 from oprim._logging import log
 from oprim.errors import StratumError
 from oprim.meta_db import open_meta_db
@@ -84,7 +85,9 @@ def _slugify(text: str) -> str:
     return re.sub(r"[\s-]+", "_", text).strip("_")[:60] or "webpage"
 
 
-async def _run_ingest(title: str, content: str, url: str, tags: list[str]) -> str:
+async def _run_ingest(
+    title: str, content: str, url: str, tags: list[str], user_id_hash: str
+) -> str:
     """Write content to a temp HTML file, run ingest_substrate, return substrate_id."""
     slug = _slugify(title)
     with tempfile.NamedTemporaryFile(
@@ -106,6 +109,7 @@ async def _run_ingest(title: str, content: str, url: str, tags: list[str]) -> st
                 "title": title,
                 "tags": tags,
             },
+            user_id_hash=user_id_hash,
         )
         return result.substrate_id
     finally:
@@ -156,6 +160,7 @@ async def ingest_page(
         content=content,
         url=request.url,
         tags=request.tags,
+        user_id_hash=_cfg.get("STRATUM_USER_ID", ""),
     )
 
     mark_url_ingested(request.url, substrate_id)
