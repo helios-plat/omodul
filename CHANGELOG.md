@@ -2,6 +2,11 @@
 
 <!-- Governance: see RELEASE_POLICY.md. main = release branch; feat branches deleted after merge; oprim → oskill → omodul merge order required; container bind-mount means git checkout is a live operation. -->
 
+## [1.22.1] — 2026-06-12
+
+### Fixed
+- fix: 修正 _version.py / pyproject.toml 版本不一致（"chore: bump to 1.22.0" 漏更新 _version.py，实际为 1.21.0）; 无 paramiko 直接用法（oprim 已声明，transitive 覆盖）
+
 ## [1.21.0] — 2026-06-05
 
 ### Added — Aegis 3O Batch 4 (3 new omodul elements)
