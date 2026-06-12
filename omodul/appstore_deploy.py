@@ -9,11 +9,8 @@ from typing import Any, ClassVar, Literal
 
 import yaml  # type: ignore[import-untyped]
 from obase.cost_tracker import CostTracker
-from oprim import (
-    caddy_admin_post,
-    compose_up,
-    docker_image_pull,
-)
+from obase.docker import docker_image_pull
+from oprim import caddy_admin_post, compose_up
 from pydantic import Field
 
 from omodul._base_config import BaseConfig

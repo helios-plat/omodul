@@ -9,7 +9,8 @@ from pathlib import Path
 from typing import Any, ClassVar, Literal
 
 from obase.cost_tracker import CostTracker
-from oprim import docker_container_list, http_health_probe
+from obase.docker import docker_container_list
+from oprim import http_health_probe
 
 from omodul._base_config import BaseConfig
 from omodul._decision_trail import build_decision_trail, record_step

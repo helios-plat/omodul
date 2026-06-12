@@ -6,13 +6,8 @@ from pathlib import Path
 from typing import Any, ClassVar, Literal
 
 from obase.cost_tracker import CostTracker
-from oprim import (
-    caddy_admin_reload,
-    docker_container_inspect,
-    docker_container_start,
-    docker_image_pull,
-    http_health_probe,
-)
+from obase.docker import docker_container_inspect, docker_container_start, docker_image_pull
+from oprim import caddy_admin_reload, http_health_probe
 from pydantic import BaseModel, Field
 
 from omodul._base_config import BaseConfig

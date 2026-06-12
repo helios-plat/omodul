@@ -91,7 +91,7 @@ def test_appstore_deploy_compose_fail(mock_up, mock_catalog, tmp_path):
     )
     res = appstore_deploy(config, None, tmp_path / "out")
     assert res["status"] == "failed"
-    assert "OprimConnectionError" in res["error"]["type"]
+    assert "OBaseConnectionError" in res["error"]["type"]
 
 
 def test_appstore_deploy_fingerprint_stability(mock_catalog, tmp_path):

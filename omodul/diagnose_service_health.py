@@ -8,7 +8,8 @@ from typing import Any, ClassVar, Literal
 from obase.cost_tracker import CostTracker
 from pydantic import BaseModel
 
-from oprim import network_http_health, docker_inspect, system_cpu_usage, system_ram_usage
+from obase.docker import docker_inspect
+from oprim import network_http_health, system_cpu_usage, system_ram_usage
 from oskill import classify_signal, compute_severity_score, diagnose_pattern_match
 
 from omodul._base_config import BaseConfig

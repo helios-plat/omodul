@@ -10,12 +10,8 @@ from omodul._decision_trail import build_decision_trail, record_step
 from omodul._fingerprint import compute_fingerprint
 from omodul._report import write_markdown_report
 from omodul._runtime import _current_cost_tracker
-from oprim import (
-    docker_image_pull,
-    docker_container_stop,
-    docker_container_start,
-    http_health_probe
-)
+from obase.docker import docker_container_start, docker_container_stop, docker_image_pull
+from oprim import http_health_probe
 from pydantic import BaseModel, Field
 
 

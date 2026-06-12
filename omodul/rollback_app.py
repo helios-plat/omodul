@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, ClassVar, Literal
 
 from obase.cost_tracker import CostTracker
-from oprim import (
+from obase.docker import (
     docker_container_create,
     docker_container_inspect,
     docker_image_list,
