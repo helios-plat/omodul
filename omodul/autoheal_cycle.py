@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import time
+import asyncio
 import traceback
 from collections.abc import Callable
 from datetime import UTC, datetime
@@ -10,7 +10,11 @@ from pathlib import Path
 from typing import Any, ClassVar, Literal
 
 from obase.cost_tracker import CostTracker
-from oprim import db_query, db_update, docker_container_restart, http_post_webhook
+from obase.docker import docker_container_restart
+from obase.persistence import PgPool
+from obase.persistence import query as execute_query
+from obase.persistence import update_one
+from oprim import http_post_webhook
 from oskill import verify_health_after_action
 from pydantic import BaseModel
 
@@ -35,6 +39,7 @@ class AutohealCycleConfig(BaseConfig):
     _fingerprint_fields: ClassVar[set[str]] = {"cycle_id"}
 
     cycle_id: str
+    db_dsn: str
     max_alerts_per_run: int = 10
     restart_timeout_sec: int = 10
     verify_timeout_sec: int = 30
@@ -56,7 +61,7 @@ class AutohealCycleFindings(BaseModel):
     duration_ms: int
 
 
-def autoheal_cycle(
+async def autoheal_cycle(
     config: AutohealCycleConfig,
     input_data: AutohealCycleInput,
     output_dir: Path,
@@ -72,19 +77,20 @@ def autoheal_cycle(
     status: Literal["completed", "failed"] = "completed"
     findings = None
 
+    pool = await PgPool.get_or_create(dsn=config.db_dsn)
     token = _current_cost_tracker.set(cost_tracker)
     try:
         # 1. Fetch alerts
-        alerts = _stage_fetch_alerts(config, input_data, trail_steps, on_step)
+        alerts = await _stage_fetch_alerts(config, input_data, pool, trail_steps, on_step)
 
         # 2. Attempt restart
         actions = _stage_attempt_restart(config, input_data, alerts, trail_steps, on_step)
 
         # 3. Verify recovery
-        actions = _stage_verify_recovery(config, input_data, actions, trail_steps, on_step)
+        actions = await _stage_verify_recovery(config, input_data, actions, trail_steps, on_step)
 
         # 4. Mark handled
-        _stage_mark_handled(config, input_data, alerts, trail_steps, on_step)
+        await _stage_mark_handled(config, input_data, alerts, pool, trail_steps, on_step)
 
         recovered = sum(1 for a in actions if a.recovered)
         failed = sum(1 for a in actions if a.action_taken == "failed")
@@ -110,43 +116,58 @@ def autoheal_cycle(
     finally:
         _current_cost_tracker.reset(token)
 
-    result = {
+    output_dir.mkdir(parents=True, exist_ok=True)
+    decision_trail = build_decision_trail(
+        fingerprint=fingerprint,
+        config=config,
+        input_data=input_data,
+        trail_steps=trail_steps,
+        cost_tracker=cost_tracker,
+        started_at=started_at,
+        status=status,
+        error=error_info,
+    )
+    report_path = write_markdown_report(
+        output_dir=output_dir,
+        omodul_name=config._omodul_name,
+        fingerprint=fingerprint,
+        config=config,
+        findings=findings,
+        decision_trail=decision_trail,
+        cost_tracker=cost_tracker,
+        status=status,
+    )
+
+    return {
         "status": status,
         "fingerprint": fingerprint,
         "findings": findings.model_dump() if findings else None,
         "error": error_info,
-        "decision_trail": build_decision_trail(
-            omodul_name=config._omodul_name,
-            omodul_version=config._omodul_version,
-            status=status,
-            started_at=started_at,
-            steps=trail_steps,
-        ),
+        "decision_trail": decision_trail,
+        "report_path": str(report_path),
     }
 
-    write_markdown_report(output_dir / "report.md", result)
-    return result
 
-
-def _stage_fetch_alerts(
+async def _stage_fetch_alerts(
     config: AutohealCycleConfig,
     input_data: AutohealCycleInput,
+    pool: PgPool,
     trail_steps: list[dict[str, Any]],
     on_step: Callable[[dict[str, Any]], None] | None,
-):
+) -> list[dict[str, Any]]:
     step_start = datetime.now(UTC)
-    query = (
+    sql_text = (
         "SELECT id, source FROM aegis_alert_events "
         "WHERE handled=false AND severity='critical' "
-        f"ORDER BY created_at ASC LIMIT {config.max_alerts_per_run}"
+        "ORDER BY created_at ASC"
     )
-    alerts = db_query(query)
+    alerts = await execute_query(pool=pool, sql=sql_text, limit=config.max_alerts_per_run)
 
     record_step(
         trail_steps=trail_steps,
         on_step=on_step,
-        layer="oprim",
-        callable_name="db_query",
+        layer="obase",
+        callable_name="query",
         inputs_summary={"limit": config.max_alerts_per_run},
         outputs_summary={"alerts_found": len(alerts)},
         started_at=step_start,
@@ -160,7 +181,7 @@ def _stage_attempt_restart(
     alerts: list[dict[str, Any]],
     trail_steps: list[dict[str, Any]],
     on_step: Callable[[dict[str, Any]], None] | None,
-):
+) -> list[AutohealAction]:
     step_start = datetime.now(UTC)
     actions: list[AutohealAction] = []
 
@@ -220,7 +241,7 @@ def _stage_attempt_restart(
     record_step(
         trail_steps=trail_steps,
         on_step=on_step,
-        layer="oprim",
+        layer="obase",
         callable_name="docker_container_restart",
         inputs_summary={"alerts": len(alerts)},
         outputs_summary={"restarts": sum(1 for a in actions if a.action_taken == "restart")},
@@ -229,16 +250,16 @@ def _stage_attempt_restart(
     return actions
 
 
-def _stage_verify_recovery(
+async def _stage_verify_recovery(
     config: AutohealCycleConfig,
     input_data: AutohealCycleInput,
     actions: list[AutohealAction],
     trail_steps: list[dict[str, Any]],
     on_step: Callable[[dict[str, Any]], None] | None,
-):
+) -> list[AutohealAction]:
     step_start = datetime.now(UTC)
-    # Wait a bit for containers to settle
-    time.sleep(5)
+    # Wait for containers to settle
+    await asyncio.sleep(5)
 
     for action in actions:
         if action.action_taken != "restart" or not action.container_id:
@@ -253,7 +274,6 @@ def _stage_verify_recovery(
             action.recovered = res.healthy
             if not res.healthy:
                 action.reason += f" | verify failed: {res.detail}"
-                # Emit secondary alert if failed to recover
                 if input_data.webhook_url:
                     http_post_webhook(
                         url=input_data.webhook_url,
@@ -280,29 +300,31 @@ def _stage_verify_recovery(
     return actions
 
 
-def _stage_mark_handled(
+async def _stage_mark_handled(
     config: AutohealCycleConfig,
     input_data: AutohealCycleInput,
     alerts: list[dict[str, Any]],
+    pool: PgPool,
     trail_steps: list[dict[str, Any]],
     on_step: Callable[[dict[str, Any]], None] | None,
-):
+) -> None:
     step_start = datetime.now(UTC)
     now_str = datetime.now(UTC).isoformat()
     for alert in alerts:
         alert_id = alert.get("id")
         if alert_id:
-            db_update(
-                "UPDATE aegis_alert_events "
-                f"SET handled=true, handled_at='{now_str}' "
-                f"WHERE id={alert_id}"
+            await update_one(
+                pool,
+                table="aegis_alert_events",
+                id=alert_id,
+                data={"handled": True, "handled_at": now_str},
             )
 
     record_step(
         trail_steps=trail_steps,
         on_step=on_step,
-        layer="oprim",
-        callable_name="db_update",
+        layer="obase",
+        callable_name="update_one",
         inputs_summary={"alerts_marked": len(alerts)},
         outputs_summary={"status": "updated"},
         started_at=step_start,

@@ -9,7 +9,9 @@ from pathlib import Path
 from typing import Any, ClassVar, Literal
 
 from obase.cost_tracker import CostTracker
-from oprim import db_insert, docker_container_list, http_post_webhook
+from obase.docker import docker_container_list
+from obase.persistence import PgPool, insert_one
+from oprim import http_post_webhook
 from oskill import container_resource_rank, multi_node_health_sweep
 from pydantic import BaseModel
 
@@ -33,6 +35,7 @@ class WatchCycleConfig(BaseConfig):
     _fingerprint_fields: ClassVar[set[str]] = {"cycle_id"}
 
     cycle_id: str
+    db_dsn: str
     alert_cpu_threshold: float = 85.0
     alert_mem_threshold: float = 90.0
     alert_container_down: bool = True
@@ -54,7 +57,7 @@ class WatchCycleFindings(BaseModel):
     duration_ms: int
 
 
-def watch_cycle(
+async def watch_cycle(
     config: WatchCycleConfig,
     input_data: WatchCycleInput,
     output_dir: Path,
@@ -70,6 +73,7 @@ def watch_cycle(
     status: Literal["completed", "failed"] = "completed"
     findings = None
 
+    pool = await PgPool.get_or_create(dsn=config.db_dsn)
     token = _current_cost_tracker.set(cost_tracker)
     try:
         # 1. Node sweep
@@ -82,7 +86,7 @@ def watch_cycle(
 
         # 3. Emit alerts
         alerts = node_res["alerts"] + container_stats["alerts"]
-        _stage_emit_alerts(config, input_data, alerts, trail_steps, on_step)
+        await _stage_emit_alerts(config, input_data, alerts, pool, trail_steps, on_step)
 
         findings = WatchCycleFindings(
             cycle_id=config.cycle_id,
@@ -105,22 +109,36 @@ def watch_cycle(
     finally:
         _current_cost_tracker.reset(token)
 
-    result = {
+    output_dir.mkdir(parents=True, exist_ok=True)
+    decision_trail = build_decision_trail(
+        fingerprint=fingerprint,
+        config=config,
+        input_data=input_data,
+        trail_steps=trail_steps,
+        cost_tracker=cost_tracker,
+        started_at=started_at,
+        status=status,
+        error=error_info,
+    )
+    report_path = write_markdown_report(
+        output_dir=output_dir,
+        omodul_name=config._omodul_name,
+        fingerprint=fingerprint,
+        config=config,
+        findings=findings,
+        decision_trail=decision_trail,
+        cost_tracker=cost_tracker,
+        status=status,
+    )
+
+    return {
         "status": status,
         "fingerprint": fingerprint,
         "findings": findings.model_dump() if findings else None,
         "error": error_info,
-        "decision_trail": build_decision_trail(
-            omodul_name=config._omodul_name,
-            omodul_version=config._omodul_version,
-            status=status,
-            started_at=started_at,
-            steps=trail_steps,
-        ),
+        "decision_trail": decision_trail,
+        "report_path": str(report_path),
     }
-
-    write_markdown_report(output_dir / "report.md", result)
-    return result
 
 
 def _stage_node_sweep(
@@ -128,7 +146,7 @@ def _stage_node_sweep(
     input_data: WatchCycleInput,
     trail_steps: list[dict[str, Any]],
     on_step: Callable[[dict[str, Any]], None] | None,
-):
+) -> dict[str, Any]:
     step_start = datetime.now(UTC)
     res = multi_node_health_sweep(docker_hosts=input_data.docker_hosts)
 
@@ -161,7 +179,7 @@ def _stage_container_sweep(
     node_res: dict[str, Any],
     trail_steps: list[dict[str, Any]],
     on_step: Callable[[dict[str, Any]], None] | None,
-):
+) -> dict[str, Any]:
     step_start = datetime.now(UTC)
     total_scanned = 0
     healthy = 0
@@ -173,7 +191,6 @@ def _stage_container_sweep(
         if not node.reachable:
             continue
 
-        # Resource rank (running containers)
         rank = container_resource_rank(docker_host=node.docker_host, top_n=100)
         for entry in rank.ranked:
             if entry.cpu_percent > config.alert_cpu_threshold:
@@ -199,7 +216,6 @@ def _stage_container_sweep(
             else:
                 healthy += 1
 
-        # All containers check for down state
         all_c = docker_container_list(all=True, docker_host=node.docker_host)
         total_scanned += len(all_c)
         for c in all_c:
@@ -232,23 +248,23 @@ def _stage_container_sweep(
     }
 
 
-def _stage_emit_alerts(
+async def _stage_emit_alerts(
     config: WatchCycleConfig,
     input_data: WatchCycleInput,
     alerts: list[WatchAlert],
+    pool: PgPool,
     trail_steps: list[dict[str, Any]],
     on_step: Callable[[dict[str, Any]], None] | None,
-):
+) -> None:
     step_start = datetime.now(UTC)
     for alert in alerts:
-        # Webhook
         if input_data.webhook_url:
             http_post_webhook(url=input_data.webhook_url, payload=alert.model_dump())
 
-        # DB
-        db_insert(
+        await insert_one(
+            pool,
             table="aegis_alert_events",
-            row={
+            data={
                 "cycle_id": config.cycle_id,
                 "severity": alert.severity,
                 "source": alert.source,
@@ -261,8 +277,8 @@ def _stage_emit_alerts(
     record_step(
         trail_steps=trail_steps,
         on_step=on_step,
-        layer="oprim",
-        callable_name="db_insert",
+        layer="obase",
+        callable_name="insert_one",
         inputs_summary={"alerts_count": len(alerts)},
         outputs_summary={"status": "emitted"},
         started_at=step_start,

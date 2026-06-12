@@ -10,7 +10,9 @@ from pathlib import Path
 from typing import Any, ClassVar, Literal
 
 from obase.cost_tracker import CostTracker
-from oprim import db_insert, docker_node_info, ssh_exec
+from obase.docker import docker_node_info
+from obase.persistence import PgPool, insert_one
+from oprim import ssh_exec
 from oskill import node_register_probe
 from pydantic import BaseModel
 
@@ -29,6 +31,7 @@ class NodeRegisterConfig(BaseConfig):
     host: str
     node_label: str
     ssh_username: str
+    db_dsn: str
     docker_connection_mode: Literal["auto", "tcp", "ssh"] = "auto"
 
 
@@ -51,7 +54,7 @@ class NodeRegisterFindings(BaseModel):
     registered_at_utc: str
 
 
-def node_register(
+async def node_register(
     config: NodeRegisterConfig,
     input_data: NodeRegisterInput,
     output_dir: Path,
@@ -67,13 +70,14 @@ def node_register(
     status: Literal["completed", "failed"] = "completed"
     findings = None
 
+    pool = await PgPool.get_or_create(dsn=config.db_dsn)
     token = _current_cost_tracker.set(cost_tracker)
     try:
         # _stage_probe
         probe_res = _stage_probe(config, input_data, trail_steps, on_step)
 
         # _stage_persist
-        node_id = _stage_persist(config, input_data, probe_res, trail_steps, on_step)
+        node_id = await _stage_persist(config, input_data, probe_res, pool, trail_steps, on_step)
 
         # _stage_verify
         _stage_verify(config, input_data, probe_res, trail_steps, on_step)
@@ -100,24 +104,36 @@ def node_register(
     finally:
         _current_cost_tracker.reset(token)
 
-    # Final result
-    result = {
+    output_dir.mkdir(parents=True, exist_ok=True)
+    decision_trail = build_decision_trail(
+        fingerprint=fingerprint,
+        config=config,
+        input_data=input_data,
+        trail_steps=trail_steps,
+        cost_tracker=cost_tracker,
+        started_at=started_at,
+        status=status,
+        error=error_info,
+    )
+    report_path = write_markdown_report(
+        output_dir=output_dir,
+        omodul_name=config._omodul_name,
+        fingerprint=fingerprint,
+        config=config,
+        findings=findings,
+        decision_trail=decision_trail,
+        cost_tracker=cost_tracker,
+        status=status,
+    )
+
+    return {
         "status": status,
         "fingerprint": fingerprint,
         "findings": findings.model_dump() if findings else None,
         "error": error_info,
-        "decision_trail": build_decision_trail(
-            omodul_name=config._omodul_name,
-            omodul_version=config._omodul_version,
-            status=status,
-            started_at=started_at,
-            steps=trail_steps,
-        ),
+        "decision_trail": decision_trail,
+        "report_path": str(report_path),
     }
-
-    # Write report
-    write_markdown_report(output_dir / "report.md", result)
-    return result
 
 
 def _stage_probe(
@@ -149,20 +165,22 @@ def _stage_probe(
     return res
 
 
-def _stage_persist(
+async def _stage_persist(
     config: NodeRegisterConfig,
     input_data: NodeRegisterInput,
     probe_res: Any,
+    pool: PgPool,
     trail_steps: list[dict[str, Any]],
     on_step: Callable[[dict[str, Any]], None] | None,
-):
+) -> str:
     step_start = datetime.now(UTC)
     node_id = hashlib.sha256(
         f"{config.host}:{config.node_label}".encode()
     ).hexdigest()[:12]
-    db_insert(
+    await insert_one(
+        pool,
         table="aegis_nodes",
-        row={
+        data={
             "node_id": node_id,
             "host": config.host,
             "node_label": config.node_label,
@@ -175,12 +193,13 @@ def _stage_persist(
             "memory_bytes": probe_res.memory_bytes,
             "registered_at": datetime.now(UTC).isoformat(),
         },
+        returning="node_id",
     )
     record_step(
         trail_steps=trail_steps,
         on_step=on_step,
-        layer="oprim",
-        callable_name="db_insert",
+        layer="obase",
+        callable_name="insert_one",
         inputs_summary={"table": "aegis_nodes", "node_id": node_id},
         outputs_summary={"result": "inserted"},
         started_at=step_start,
@@ -216,7 +235,7 @@ def _stage_verify(
     record_step(
         trail_steps=trail_steps,
         on_step=on_step,
-        layer="oprim",
+        layer="obase",
         callable_name=v_name,
         inputs_summary={"host": config.host},
         outputs_summary={"result": "verified"},
