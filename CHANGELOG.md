@@ -2,6 +2,26 @@
 
 <!-- Governance: see RELEASE_POLICY.md. main = release branch; feat branches deleted after merge; oprim → oskill → omodul merge order required; container bind-mount means git checkout is a live operation. -->
 
+## [1.25.1] — 2026-06-13
+
+### Fixed
+- `appstore_deploy`: `from oprim import compose_up` → `from obase.docker import compose_up` (跟上 obase 迁移)
+
+## [1.25.0] — 2026-06-12
+
+### Changed
+- batch-3: `node_register` / `autoheal_cycle` / `watch_cycle` 迁 `obase.docker` + `obase.persistence`, 全部改 async
+
+## [1.24.0] — 2026-06-12
+
+### Changed
+- batch-2: `rollback_app` / `install_self_hosted_app` / `upgrade_self_hosted_app` 等 6 个 docker omodul 迁 `obase.docker`
+
+## [1.23.0] — 2026-06-12
+
+### Changed
+- batch-1: `export_user_data_csv` / `sync_user_preferences` / `verify_email_workflow` / `reset_password_workflow` 迁 `obase.persistence`, 全部改 async
+
 ## [1.22.1] — 2026-06-12
 
 ### Fixed
