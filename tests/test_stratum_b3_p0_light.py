@@ -6,7 +6,7 @@ import json
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -65,18 +65,6 @@ def _otp_result():
         code="123456",
         expires_at=datetime(2099, 1, 1, tzinfo=UTC),
     )
-
-
-def _psycopg_conn_mock():
-    mock_conn = MagicMock()
-    mock_conn.__enter__ = MagicMock(return_value=mock_conn)
-    mock_conn.__exit__ = MagicMock(return_value=False)
-    mock_cur = MagicMock()
-    mock_cur.__enter__ = MagicMock(return_value=mock_cur)
-    mock_cur.__exit__ = MagicMock(return_value=False)
-    mock_conn.cursor.return_value = mock_cur
-    mock_cur.rowcount = 1
-    return mock_conn
 
 
 def _welcome_config(user_id_hash: str = "hash-abc", **kw) -> WelcomeEmailConfig:
@@ -214,89 +202,94 @@ class TestSendWelcomeEmail:
 
 
 class TestResetPasswordWorkflow:
-    def _patches(self):
-        return [
-            patch("oprim.template_render.template_render", return_value="Click to reset: url"),
-            patch("oprim.push_email.push_email", return_value=_email_result()),
-            patch("psycopg.connect", return_value=_psycopg_conn_mock()),
-        ]
-
-    def test_success_status_completed(self, tmp_path):
+    async def test_success_status_completed(self, tmp_path):
         with (
             patch("oprim.template_render.template_render", return_value="body"),
             patch("oprim.push_email.push_email", return_value=_email_result()),
-            patch("psycopg.connect", return_value=_psycopg_conn_mock()),
+            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
+            patch("omodul.reset_password_workflow.write_one", new_callable=AsyncMock, return_value=1),
         ):
-            result = reset_password_workflow(
+            result = await reset_password_workflow(
                 _reset_config(), ResetPasswordInput(request_ip="1.2.3.4"), tmp_path
             )
         assert result["status"] == "completed"
         assert result["findings"] is not None
 
-    def test_findings_has_reset_url_and_expires(self, tmp_path):
+    async def test_findings_has_reset_url_and_expires(self, tmp_path):
         with (
             patch("oprim.template_render.template_render", return_value="body"),
             patch("oprim.push_email.push_email", return_value=_email_result()),
-            patch("psycopg.connect", return_value=_psycopg_conn_mock()),
+            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
+            patch("omodul.reset_password_workflow.write_one", new_callable=AsyncMock, return_value=1),
         ):
-            result = reset_password_workflow(_reset_config(), ResetPasswordInput(), tmp_path)
+            result = await reset_password_workflow(_reset_config(), ResetPasswordInput(), tmp_path)
         findings = result["findings"]
         assert "reset-password?token=" in findings.reset_url
         assert findings.token_expires_at is not None
         assert len(findings.token_id) == 12
 
-    def test_decision_trail_json_written(self, tmp_path):
+    async def test_decision_trail_json_written(self, tmp_path):
         with (
             patch("oprim.template_render.template_render", return_value="body"),
             patch("oprim.push_email.push_email", return_value=_email_result()),
-            patch("psycopg.connect", return_value=_psycopg_conn_mock()),
+            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
+            patch("omodul.reset_password_workflow.write_one", new_callable=AsyncMock, return_value=1),
         ):
-            reset_password_workflow(_reset_config(), ResetPasswordInput(), tmp_path)
+            await reset_password_workflow(_reset_config(), ResetPasswordInput(), tmp_path)
         trail_file = tmp_path / "decision_trail.json"
         assert trail_file.exists()
         data = json.loads(trail_file.read_text())
         assert data["omodul_name"] == "reset_password_workflow"
         assert data["status"] == "completed"
 
-    def test_db_write_failure_status_failed(self, tmp_path):
-        with patch("psycopg.connect", side_effect=Exception("DB down")):
-            result = reset_password_workflow(_reset_config(), ResetPasswordInput(), tmp_path)
+    async def test_db_write_failure_status_failed(self, tmp_path):
+        with (
+            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
+            patch("omodul.reset_password_workflow.write_one", new_callable=AsyncMock, side_effect=Exception("DB down")),
+        ):
+            result = await reset_password_workflow(_reset_config(), ResetPasswordInput(), tmp_path)
         assert result["status"] == "failed"
         assert result["error"]["error_message"] == "DB down"
 
-    def test_decision_trail_still_written_on_failure(self, tmp_path):
-        with patch("psycopg.connect", side_effect=Exception("DB down")):
-            reset_password_workflow(_reset_config(), ResetPasswordInput(), tmp_path)
+    async def test_decision_trail_still_written_on_failure(self, tmp_path):
+        with (
+            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
+            patch("omodul.reset_password_workflow.write_one", new_callable=AsyncMock, side_effect=Exception("DB down")),
+        ):
+            await reset_password_workflow(_reset_config(), ResetPasswordInput(), tmp_path)
         trail_file = tmp_path / "decision_trail.json"
         assert trail_file.exists()
         data = json.loads(trail_file.read_text())
         assert data["status"] == "failed"
 
-    def test_no_fingerprint(self, tmp_path):
+    async def test_no_fingerprint(self, tmp_path):
         with (
             patch("oprim.template_render.template_render", return_value="body"),
             patch("oprim.push_email.push_email", return_value=_email_result()),
-            patch("psycopg.connect", return_value=_psycopg_conn_mock()),
+            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
+            patch("omodul.reset_password_workflow.write_one", new_callable=AsyncMock, return_value=1),
         ):
-            result = reset_password_workflow(_reset_config(), ResetPasswordInput(), tmp_path)
+            result = await reset_password_workflow(_reset_config(), ResetPasswordInput(), tmp_path)
         assert result["fingerprint"] is None
 
-    def test_decision_trail_has_steps(self, tmp_path):
+    async def test_decision_trail_has_steps(self, tmp_path):
         with (
             patch("oprim.template_render.template_render", return_value="body"),
             patch("oprim.push_email.push_email", return_value=_email_result()),
-            patch("psycopg.connect", return_value=_psycopg_conn_mock()),
+            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
+            patch("omodul.reset_password_workflow.write_one", new_callable=AsyncMock, return_value=1),
         ):
-            result = reset_password_workflow(_reset_config(), ResetPasswordInput(), tmp_path)
+            result = await reset_password_workflow(_reset_config(), ResetPasswordInput(), tmp_path)
         assert len(result["decision_trail"]["steps"]) >= 2
 
-    def test_cost_is_zero(self, tmp_path):
+    async def test_cost_is_zero(self, tmp_path):
         with (
             patch("oprim.template_render.template_render", return_value="body"),
             patch("oprim.push_email.push_email", return_value=_email_result()),
-            patch("psycopg.connect", return_value=_psycopg_conn_mock()),
+            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
+            patch("omodul.reset_password_workflow.write_one", new_callable=AsyncMock, return_value=1),
         ):
-            result = reset_password_workflow(_reset_config(), ResetPasswordInput(), tmp_path)
+            result = await reset_password_workflow(_reset_config(), ResetPasswordInput(), tmp_path)
         assert result["cost_usd"] == 0.0
 
 
@@ -306,14 +299,14 @@ class TestResetPasswordWorkflow:
 
 
 class TestVerifyEmailWorkflow:
-    def test_send_action_sent_true_and_otp_secret_returned(self, tmp_path):
+    async def test_send_action_sent_true_and_otp_secret_returned(self, tmp_path):
         otp = _otp_result()
         with (
             patch("oprim.otp_generate.otp_generate", return_value=otp),
             patch("oprim.template_render.template_render", return_value="Your code is: 123456"),
             patch("oprim.push_email.push_email", return_value=_email_result()),
         ):
-            result = verify_email_workflow(
+            result = await verify_email_workflow(
                 _verify_config(action="send"),
                 VerifyEmailInput(),
                 tmp_path,
@@ -322,12 +315,13 @@ class TestVerifyEmailWorkflow:
         assert result["findings"].sent is True
         assert result["findings"].otp_secret == "JBSWY3DPEHPK3PXP"
 
-    def test_verify_valid_otp_verified_true(self, tmp_path):
+    async def test_verify_valid_otp_verified_true(self, tmp_path):
         with (
             patch("oprim.otp_generate.otp_verify", return_value=True),
-            patch("psycopg.connect", return_value=_psycopg_conn_mock()),
+            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
+            patch("omodul.verify_email_workflow.update_one", new_callable=AsyncMock, return_value=True),
         ):
-            result = verify_email_workflow(
+            result = await verify_email_workflow(
                 _verify_config(action="verify"),
                 VerifyEmailInput(otp_secret="JBSWY3DPEHPK3PXP", otp_code="123456"),
                 tmp_path,
@@ -335,9 +329,9 @@ class TestVerifyEmailWorkflow:
         assert result["status"] == "completed"
         assert result["findings"].verified is True
 
-    def test_verify_invalid_otp_verified_false(self, tmp_path):
+    async def test_verify_invalid_otp_verified_false(self, tmp_path):
         with patch("oprim.otp_generate.otp_verify", return_value=False):
-            result = verify_email_workflow(
+            result = await verify_email_workflow(
                 _verify_config(action="verify"),
                 VerifyEmailInput(otp_secret="JBSWY3DPEHPK3PXP", otp_code="000000"),
                 tmp_path,
@@ -345,8 +339,8 @@ class TestVerifyEmailWorkflow:
         assert result["status"] == "completed"
         assert result["findings"].verified is False
 
-    def test_missing_otp_for_verify_status_failed(self, tmp_path):
-        result = verify_email_workflow(
+    async def test_missing_otp_for_verify_status_failed(self, tmp_path):
+        result = await verify_email_workflow(
             _verify_config(action="verify"),
             VerifyEmailInput(),  # no otp_secret or otp_code
             tmp_path,
@@ -354,14 +348,14 @@ class TestVerifyEmailWorkflow:
         assert result["status"] == "failed"
         assert "otp_secret" in result["error"]["error_message"]
 
-    def test_fingerprint_present(self, tmp_path):
+    async def test_fingerprint_present(self, tmp_path):
         otp = _otp_result()
         with (
             patch("oprim.otp_generate.otp_generate", return_value=otp),
             patch("oprim.template_render.template_render", return_value="code body"),
             patch("oprim.push_email.push_email", return_value=_email_result()),
         ):
-            result = verify_email_workflow(
+            result = await verify_email_workflow(
                 _verify_config(action="send"),
                 VerifyEmailInput(),
                 tmp_path,
@@ -369,42 +363,42 @@ class TestVerifyEmailWorkflow:
         assert result["fingerprint"] is not None
         assert len(result["fingerprint"]) == 64
 
-    def test_send_smtp_failure_status_failed(self, tmp_path):
+    async def test_send_smtp_failure_status_failed(self, tmp_path):
         otp = _otp_result()
         with (
             patch("oprim.otp_generate.otp_generate", return_value=otp),
             patch("oprim.template_render.template_render", return_value="code body"),
             patch("oprim.push_email.push_email", side_effect=OSError("smtp down")),
         ):
-            result = verify_email_workflow(
+            result = await verify_email_workflow(
                 _verify_config(action="send"),
                 VerifyEmailInput(),
                 tmp_path,
             )
         assert result["status"] == "failed"
 
-    def test_decision_trail_is_none(self, tmp_path):
+    async def test_decision_trail_is_none(self, tmp_path):
         otp = _otp_result()
         with (
             patch("oprim.otp_generate.otp_generate", return_value=otp),
             patch("oprim.template_render.template_render", return_value="code body"),
             patch("oprim.push_email.push_email", return_value=_email_result()),
         ):
-            result = verify_email_workflow(
+            result = await verify_email_workflow(
                 _verify_config(action="send"),
                 VerifyEmailInput(),
                 tmp_path,
             )
         assert result["decision_trail"] is None
 
-    def test_cost_is_zero(self, tmp_path):
+    async def test_cost_is_zero(self, tmp_path):
         otp = _otp_result()
         with (
             patch("oprim.otp_generate.otp_generate", return_value=otp),
             patch("oprim.template_render.template_render", return_value="code body"),
             patch("oprim.push_email.push_email", return_value=_email_result()),
         ):
-            result = verify_email_workflow(
+            result = await verify_email_workflow(
                 _verify_config(action="send"),
                 VerifyEmailInput(),
                 tmp_path,

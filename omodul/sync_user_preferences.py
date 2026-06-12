@@ -2,8 +2,7 @@
 
 Pillars: fingerprint only (去重)
 Composition:
-  - oprim.db_read (fetch current preferences)
-  - oprim.db_write (save merged preferences)
+  - obase.persistence (fetch/save preferences)
   - oskill.resolve_conflict (three-way merge, depth-1)
 """
 
@@ -15,6 +14,7 @@ from typing import Any, ClassVar
 
 from pydantic import BaseModel
 
+from obase.persistence import PgPool, read_one, write_one
 from omodul._base_config import BaseConfig
 from omodul._fingerprint import compute_fingerprint
 
@@ -42,19 +42,14 @@ class SyncPrefsFindings(BaseModel):
     resolution_strategy: str
 
 
-def sync_user_preferences(
+async def sync_user_preferences(
     config: SyncPrefsConfig,
     input_data: SyncPrefsInput,
     output_dir: Path,
+    *,
+    on_step: Any = None,
 ) -> dict[str, Any]:
     """Merge remote and local user preferences with conflict resolution.
-
-    Internal oprim composition:
-      - oprim.db_read — fetch current preferences
-      - oprim.db_write — save merged preferences
-
-    Internal oskill composition (depth-1):
-      - oskill.resolve_conflict — three-way merge
 
     Returns status="completed" on success, status="failed" on any error (never raises).
     """
@@ -65,10 +60,9 @@ def sync_user_preferences(
     findings: SyncPrefsFindings | None = None
 
     try:
-        from oprim.db_read import db_read
-
+        pool = await PgPool.get_or_create(dsn=config.db_dsn)
         local_prefs = (
-            db_read(dsn=config.db_dsn, table=config.preferences_table, id=config.user_id) or {}
+            await read_one(pool=pool, table=config.preferences_table, id=config.user_id) or {}
         )
 
         from oskill.resolve_conflict import resolve_conflict
@@ -80,10 +74,8 @@ def sync_user_preferences(
             conflict_type="metadata",
         )
 
-        from oprim.db_write import db_write
-
-        db_write(
-            dsn=config.db_dsn,
+        await write_one(
+            pool=pool,
             table=config.preferences_table,
             data={"user_id": config.user_id, **resolved.resolved},
             conflict_on=["user_id"],

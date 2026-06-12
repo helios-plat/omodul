@@ -3,7 +3,7 @@
 Pillars: fingerprint
 Composition:
   - oprim.otp_generate (Batch 1)
-  - oprim.db_update (Batch 1)
+  - obase.persistence.update_one (Batch 1)
   - oprim.push_email (Batch 1)
   - oprim.template_render (Batch 1)
 """
@@ -16,6 +16,7 @@ from typing import Any, ClassVar, Literal
 
 from pydantic import BaseModel
 
+from obase.persistence import PgPool, update_one
 from omodul._base_config import BaseConfig
 from omodul._fingerprint import compute_fingerprint
 
@@ -49,18 +50,20 @@ class VerifyEmailFindings(BaseModel):
     otp_secret: str | None = None  # Returned on send (caller stores it)
 
 
-def verify_email_workflow(
+async def verify_email_workflow(
     config: VerifyEmailConfig,
     input_data: VerifyEmailInput,
     output_dir: Path,
+    *,
+    on_step: Any = None,
 ) -> dict[str, Any]:
     """Two-phase email verification: send OTP or verify OTP.
 
-    Internal oprim composition:
+    Internal composition:
       - oprim.otp_generate — TOTP generation (send phase)
       - oprim.template_render — email body (send phase)
       - oprim.push_email — SMTP delivery (send phase)
-      - oprim.db_update — mark email_verified=True (verify phase)
+      - obase.persistence.update_one — mark email_verified=True (verify phase)
     """
     enabled = config._enabled_pillars
     fingerprint = compute_fingerprint(config, input_data) if "fingerprint" in enabled else None
@@ -72,7 +75,7 @@ def verify_email_workflow(
         if config.action == "send":
             findings = _stage_send(config, input_data)
         else:
-            findings = _stage_verify(config, input_data)
+            findings = await _stage_verify(config, input_data)
 
     except Exception as e:
         error_info = {
@@ -116,8 +119,9 @@ def _stage_send(config: VerifyEmailConfig, input_data: VerifyEmailInput) -> Veri
     return VerifyEmailFindings(action="send", sent=True, otp_secret=otp_result.secret)
 
 
-def _stage_verify(config: VerifyEmailConfig, input_data: VerifyEmailInput) -> VerifyEmailFindings:
-    from oprim.db_update import db_update
+async def _stage_verify(
+    config: VerifyEmailConfig, input_data: VerifyEmailInput
+) -> VerifyEmailFindings:
     from oprim.otp_generate import otp_verify
 
     if not input_data.otp_secret or not input_data.otp_code:
@@ -125,8 +129,9 @@ def _stage_verify(config: VerifyEmailConfig, input_data: VerifyEmailInput) -> Ve
 
     is_valid = otp_verify(secret=input_data.otp_secret, code=input_data.otp_code)
     if is_valid:
-        db_update(
-            dsn=config.db_dsn,
+        pool = await PgPool.get_or_create(dsn=config.db_dsn)
+        await update_one(
+            pool=pool,
             table=config.users_table,
             id=config.user_id,
             data={"email_verified": True},

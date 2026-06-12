@@ -3,7 +3,7 @@
 Pillars: decision_trail (安全敏感，只审计)
 Composition:
   - oprim.crypto_token_generate (Batch 1)
-  - oprim.db_write (Batch 1) — 存储 reset token hash
+  - obase.persistence.write_one (Batch 1) — 存储 reset token hash
   - oprim.push_email (Batch 1)
   - oprim.template_render (Batch 1)
 """
@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any, ClassVar
 
 from obase.cost_tracker import CostTracker
+from obase.persistence import PgPool, write_one
 from pydantic import BaseModel
 
 from omodul._base_config import BaseConfig
@@ -52,18 +53,14 @@ class ResetPasswordFindings(BaseModel):
     token_expires_at: datetime
 
 
-def reset_password_workflow(
+async def reset_password_workflow(
     config: ResetPasswordConfig,
     input_data: ResetPasswordInput,
     output_dir: Path,
+    *,
+    on_step: Any = None,
 ) -> dict[str, Any]:
     """Generate a password reset token and email it to the user.
-
-    Internal oprim composition:
-      - oprim.crypto_token_generate — secure random token
-      - oprim.db_write — upsert token record
-      - oprim.template_render — email template
-      - oprim.push_email — SMTP delivery
 
     Security: decision_trail only (no fingerprint, audit log mandatory).
     """
@@ -95,12 +92,11 @@ def reset_password_workflow(
         )
 
         # Stage 2: Store token hash in DB
-        from oprim.db_write import db_write
-
+        pool = await PgPool.get_or_create(dsn=config.db_dsn)
         token_hash = hashlib.sha256(token.encode()).hexdigest()
         step_start = datetime.now(UTC)
-        db_write(
-            dsn=config.db_dsn,
+        await write_one(
+            pool=pool,
             table=config.reset_tokens_table,
             data={
                 "user_id": config.user_id,
@@ -113,8 +109,8 @@ def reset_password_workflow(
         record_step(
             trail_steps=trail_steps,
             on_step=None,
-            layer="oprim",
-            callable_name="db_write",
+            layer="obase",
+            callable_name="write_one",
             inputs_summary={
                 "table": config.reset_tokens_table,
                 "user_id_hash": config.user_id_hash,

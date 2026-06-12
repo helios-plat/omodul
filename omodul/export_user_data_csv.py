@@ -2,7 +2,7 @@
 
 Pillars: fingerprint, report
 Composition:
-  - oprim.db_query (fetch user data)
+  - obase.persistence (fetch user data)
   - oprim.csv_writer (write to CSV file)
 """
 
@@ -14,6 +14,7 @@ from typing import Any, ClassVar
 
 from pydantic import BaseModel
 
+from obase.persistence import PgPool, query
 from omodul._base_config import BaseConfig
 from omodul._fingerprint import compute_fingerprint
 
@@ -41,16 +42,14 @@ class ExportUserDataFindings(BaseModel):
     export_scope: str
 
 
-def export_user_data_csv(
+async def export_user_data_csv(
     config: ExportUserDataConfig,
     input_data: ExportUserDataInput,
     output_dir: Path,
+    *,
+    on_step: Any = None,
 ) -> dict[str, Any]:
     """Export user data to CSV.
-
-    Internal oprim composition:
-      - oprim.db_query — fetch user data
-      - oprim.csv_writer — write to CSV file
 
     Returns status="completed" on success, status="failed" on any error (never raises).
     """
@@ -61,12 +60,9 @@ def export_user_data_csv(
     findings: ExportUserDataFindings | None = None
 
     try:
-        from oprim.db_query import db_query
-
-        query = input_data.custom_query or _build_query(config.export_scope)
-        rows = db_query(
-            dsn=config.db_dsn, query=query, params={"user_id": config.user_id}, limit=10000
-        )
+        pool = await PgPool.get_or_create(dsn=config.db_dsn)
+        built_sql = input_data.custom_query or _build_query(config.export_scope)
+        rows = await query(pool=pool, sql=built_sql, params=[config.user_id], limit=10000)
 
         output_dir.mkdir(parents=True, exist_ok=True)
         csv_path = output_dir / config.output_filename
@@ -102,12 +98,12 @@ def export_user_data_csv(
 
 def _build_query(scope: str) -> str:
     if scope == "substrates":
-        return "SELECT * FROM substrates WHERE user_id = %(user_id)s"
+        return "SELECT * FROM substrates WHERE user_id = $1"
     elif scope == "notes":
-        return "SELECT * FROM notes WHERE user_id = %(user_id)s"
+        return "SELECT * FROM notes WHERE user_id = $1"
     elif scope == "preferences":
-        return "SELECT * FROM user_preferences WHERE user_id = %(user_id)s"
-    return "SELECT * FROM user_data WHERE user_id = %(user_id)s"
+        return "SELECT * FROM user_preferences WHERE user_id = $1"
+    return "SELECT * FROM user_data WHERE user_id = $1"
 
 
 def compute_fingerprint_for(config: ExportUserDataConfig, input_data: ExportUserDataInput) -> str:

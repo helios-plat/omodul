@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -108,6 +108,10 @@ def _resolved_mock(merged: dict, conflicts: list, strategy: str = "auto"):
     return m
 
 
+def _mock_pool():
+    return AsyncMock(return_value=MagicMock())
+
+
 # ---------------------------------------------------------------------------
 # omodul-006: notification_dispatch_workflow
 # ---------------------------------------------------------------------------
@@ -198,89 +202,97 @@ class TestExportUserDataCsv:
     def _fake_rows(self, n: int = 5) -> list[dict]:
         return [{"id": i, "data": f"row-{i}"} for i in range(n)]
 
-    def test_success_csv_path_present(self, tmp_path):
+    async def test_success_csv_path_present(self, tmp_path):
         rows = self._fake_rows(3)
         csv_out = tmp_path / "user_export.csv"
         with (
-            patch("oprim.db_query.db_query", return_value=rows),
+            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
+            patch("omodul.export_user_data_csv.query", new_callable=AsyncMock, return_value=rows),
             patch("oprim.csv_writer.csv_writer", return_value=csv_out),
         ):
-            result = export_user_data_csv(_export_config(), ExportUserDataInput(), tmp_path)
+            result = await export_user_data_csv(_export_config(), ExportUserDataInput(), tmp_path)
         assert result["status"] == "completed"
         assert result["findings"].csv_path == str(csv_out)
 
-    def test_row_count_matches(self, tmp_path):
+    async def test_row_count_matches(self, tmp_path):
         rows = self._fake_rows(7)
         csv_out = tmp_path / "user_export.csv"
         with (
-            patch("oprim.db_query.db_query", return_value=rows),
+            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
+            patch("omodul.export_user_data_csv.query", new_callable=AsyncMock, return_value=rows),
             patch("oprim.csv_writer.csv_writer", return_value=csv_out),
         ):
-            result = export_user_data_csv(_export_config(), ExportUserDataInput(), tmp_path)
+            result = await export_user_data_csv(_export_config(), ExportUserDataInput(), tmp_path)
         assert result["findings"].row_count == 7
 
-    def test_failure_no_raise(self, tmp_path):
-        with patch("oprim.db_query.db_query", side_effect=Exception("DB error")):
-            result = export_user_data_csv(_export_config(), ExportUserDataInput(), tmp_path)
+    async def test_failure_no_raise(self, tmp_path):
+        with (
+            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
+            patch("omodul.export_user_data_csv.query", new_callable=AsyncMock, side_effect=Exception("DB error")),
+        ):
+            result = await export_user_data_csv(_export_config(), ExportUserDataInput(), tmp_path)
         assert result["status"] == "failed"
         assert result["error"] is not None
         assert result["findings"] is None
 
-    def test_fingerprint_non_null(self, tmp_path):
+    async def test_fingerprint_non_null(self, tmp_path):
         rows = self._fake_rows(2)
         csv_out = tmp_path / "user_export.csv"
         with (
-            patch("oprim.db_query.db_query", return_value=rows),
+            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
+            patch("omodul.export_user_data_csv.query", new_callable=AsyncMock, return_value=rows),
             patch("oprim.csv_writer.csv_writer", return_value=csv_out),
         ):
-            result = export_user_data_csv(_export_config(), ExportUserDataInput(), tmp_path)
+            result = await export_user_data_csv(_export_config(), ExportUserDataInput(), tmp_path)
         assert result["fingerprint"] is not None
         assert len(result["fingerprint"]) == 64
 
-    def test_custom_query_passed_to_db_query(self, tmp_path):
+    async def test_custom_query_passed_to_query(self, tmp_path):
         rows = self._fake_rows(1)
         csv_out = tmp_path / "user_export.csv"
-        custom_q = "SELECT id FROM substrates WHERE user_id = %(user_id)s LIMIT 1"
+        custom_q = "SELECT id FROM substrates WHERE user_id = $1 LIMIT 1"
         with (
-            patch("oprim.db_query.db_query", return_value=rows) as mock_q,
+            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
+            patch("omodul.export_user_data_csv.query", new_callable=AsyncMock, return_value=rows) as mock_q,
             patch("oprim.csv_writer.csv_writer", return_value=csv_out),
         ):
-            export_user_data_csv(
+            await export_user_data_csv(
                 _export_config(),
                 ExportUserDataInput(custom_query=custom_q),
                 tmp_path,
             )
         call_kwargs = mock_q.call_args
         assert (
-            call_kwargs.kwargs["query"] == custom_q
-            or call_kwargs.args[1] == custom_q
+            call_kwargs.kwargs.get("sql") == custom_q
             or custom_q in str(call_kwargs)
         )
 
-    def test_export_scope_substrates(self, tmp_path):
+    async def test_export_scope_substrates(self, tmp_path):
         rows = self._fake_rows(4)
         csv_out = tmp_path / "user_export.csv"
         with (
-            patch("oprim.db_query.db_query", return_value=rows) as mock_q,
+            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
+            patch("omodul.export_user_data_csv.query", new_callable=AsyncMock, return_value=rows) as mock_q,
             patch("oprim.csv_writer.csv_writer", return_value=csv_out),
         ):
-            result = export_user_data_csv(
+            result = await export_user_data_csv(
                 _export_config(export_scope="substrates"),
                 ExportUserDataInput(),
                 tmp_path,
             )
         assert result["findings"].export_scope == "substrates"
-        called_query = mock_q.call_args.kwargs.get("query", "")
-        assert "substrates" in called_query
+        called_sql = mock_q.call_args.kwargs.get("sql", "")
+        assert "substrates" in called_sql
 
-    def test_cost_is_zero(self, tmp_path):
+    async def test_cost_is_zero(self, tmp_path):
         rows = self._fake_rows(1)
         csv_out = tmp_path / "user_export.csv"
         with (
-            patch("oprim.db_query.db_query", return_value=rows),
+            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
+            patch("omodul.export_user_data_csv.query", new_callable=AsyncMock, return_value=rows),
             patch("oprim.csv_writer.csv_writer", return_value=csv_out),
         ):
-            result = export_user_data_csv(_export_config(), ExportUserDataInput(), tmp_path)
+            result = await export_user_data_csv(_export_config(), ExportUserDataInput(), tmp_path)
         assert result["cost_usd"] == 0.0
 
 
@@ -300,19 +312,21 @@ class TestSyncUserPreferences:
                 strategy="auto",
             )
         return [
-            patch("oprim.db_read.db_read", return_value=local_prefs),
+            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
+            patch("omodul.sync_user_preferences.read_one", new_callable=AsyncMock, return_value=local_prefs),
             patch("oskill.resolve_conflict.resolve_conflict", return_value=resolved_mock),
-            patch("oprim.db_write.db_write", return_value=None),
+            patch("omodul.sync_user_preferences.write_one", new_callable=AsyncMock, return_value=1),
         ]
 
-    def test_merge_status_completed(self, tmp_path):
+    async def test_merge_status_completed(self, tmp_path):
         resolved = _resolved_mock({"theme": "light"}, [], "auto")
         with (
-            patch("oprim.db_read.db_read", return_value={"theme": "dark"}),
+            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
+            patch("omodul.sync_user_preferences.read_one", new_callable=AsyncMock, return_value={"theme": "dark"}),
             patch("oskill.resolve_conflict.resolve_conflict", return_value=resolved),
-            patch("oprim.db_write.db_write", return_value=None),
+            patch("omodul.sync_user_preferences.write_one", new_callable=AsyncMock, return_value=1),
         ):
-            result = sync_user_preferences(
+            result = await sync_user_preferences(
                 _sync_config(),
                 SyncPrefsInput(remote_prefs={"theme": "light"}),
                 tmp_path,
@@ -320,28 +334,30 @@ class TestSyncUserPreferences:
         assert result["status"] == "completed"
         assert result["findings"].merged_prefs == {"theme": "light"}
 
-    def test_conflict_count_correct(self, tmp_path):
+    async def test_conflict_count_correct(self, tmp_path):
         resolved = _resolved_mock({"a": 1, "b": 2}, ["a", "b"], "auto")
         with (
-            patch("oprim.db_read.db_read", return_value={"a": 0, "b": 0}),
+            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
+            patch("omodul.sync_user_preferences.read_one", new_callable=AsyncMock, return_value={"a": 0, "b": 0}),
             patch("oskill.resolve_conflict.resolve_conflict", return_value=resolved),
-            patch("oprim.db_write.db_write", return_value=None),
+            patch("omodul.sync_user_preferences.write_one", new_callable=AsyncMock, return_value=1),
         ):
-            result = sync_user_preferences(
+            result = await sync_user_preferences(
                 _sync_config(),
                 SyncPrefsInput(remote_prefs={"a": 1, "b": 2}),
                 tmp_path,
             )
         assert result["findings"].conflict_count == 2
 
-    def test_remote_wins_strategy(self, tmp_path):
+    async def test_remote_wins_strategy(self, tmp_path):
         resolved = _resolved_mock({"theme": "light"}, ["theme"], "remote_wins")
         with (
-            patch("oprim.db_read.db_read", return_value={"theme": "dark"}),
+            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
+            patch("omodul.sync_user_preferences.read_one", new_callable=AsyncMock, return_value={"theme": "dark"}),
             patch("oskill.resolve_conflict.resolve_conflict", return_value=resolved) as mock_rc,
-            patch("oprim.db_write.db_write", return_value=None),
+            patch("omodul.sync_user_preferences.write_one", new_callable=AsyncMock, return_value=1),
         ):
-            result = sync_user_preferences(
+            result = await sync_user_preferences(
                 _sync_config(),
                 SyncPrefsInput(remote_prefs={"theme": "light"}, conflict_strategy="remote_wins"),
                 tmp_path,
@@ -350,14 +366,15 @@ class TestSyncUserPreferences:
         call_kwargs = mock_rc.call_args.kwargs
         assert call_kwargs.get("strategy") == "remote_wins"
 
-    def test_no_local_prefs_uses_empty_dict(self, tmp_path):
+    async def test_no_local_prefs_uses_empty_dict(self, tmp_path):
         resolved = _resolved_mock({"theme": "light"}, [], "auto")
         with (
-            patch("oprim.db_read.db_read", return_value=None),
+            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
+            patch("omodul.sync_user_preferences.read_one", new_callable=AsyncMock, return_value=None),
             patch("oskill.resolve_conflict.resolve_conflict", return_value=resolved) as mock_rc,
-            patch("oprim.db_write.db_write", return_value=None),
+            patch("omodul.sync_user_preferences.write_one", new_callable=AsyncMock, return_value=1),
         ):
-            sync_user_preferences(
+            await sync_user_preferences(
                 _sync_config(),
                 SyncPrefsInput(remote_prefs={"theme": "light"}),
                 tmp_path,
@@ -365,9 +382,12 @@ class TestSyncUserPreferences:
         call_kwargs = mock_rc.call_args.kwargs
         assert call_kwargs.get("local_version") == {}
 
-    def test_failure_no_raise(self, tmp_path):
-        with patch("oprim.db_read.db_read", side_effect=Exception("DB down")):
-            result = sync_user_preferences(
+    async def test_failure_no_raise(self, tmp_path):
+        with (
+            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
+            patch("omodul.sync_user_preferences.read_one", new_callable=AsyncMock, side_effect=Exception("DB down")),
+        ):
+            result = await sync_user_preferences(
                 _sync_config(),
                 SyncPrefsInput(remote_prefs={"theme": "light"}),
                 tmp_path,
@@ -376,14 +396,15 @@ class TestSyncUserPreferences:
         assert result["error"] is not None
         assert result["findings"] is None
 
-    def test_fingerprint_non_null(self, tmp_path):
+    async def test_fingerprint_non_null(self, tmp_path):
         resolved = _resolved_mock({"theme": "dark"}, [], "auto")
         with (
-            patch("oprim.db_read.db_read", return_value={"theme": "dark"}),
+            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
+            patch("omodul.sync_user_preferences.read_one", new_callable=AsyncMock, return_value={"theme": "dark"}),
             patch("oskill.resolve_conflict.resolve_conflict", return_value=resolved),
-            patch("oprim.db_write.db_write", return_value=None),
+            patch("omodul.sync_user_preferences.write_one", new_callable=AsyncMock, return_value=1),
         ):
-            result = sync_user_preferences(
+            result = await sync_user_preferences(
                 _sync_config(),
                 SyncPrefsInput(remote_prefs={}),
                 tmp_path,
@@ -391,14 +412,15 @@ class TestSyncUserPreferences:
         assert result["fingerprint"] is not None
         assert len(result["fingerprint"]) == 64
 
-    def test_cost_is_zero(self, tmp_path):
+    async def test_cost_is_zero(self, tmp_path):
         resolved = _resolved_mock({}, [], "auto")
         with (
-            patch("oprim.db_read.db_read", return_value={}),
+            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
+            patch("omodul.sync_user_preferences.read_one", new_callable=AsyncMock, return_value={}),
             patch("oskill.resolve_conflict.resolve_conflict", return_value=resolved),
-            patch("oprim.db_write.db_write", return_value=None),
+            patch("omodul.sync_user_preferences.write_one", new_callable=AsyncMock, return_value=1),
         ):
-            result = sync_user_preferences(
+            result = await sync_user_preferences(
                 _sync_config(),
                 SyncPrefsInput(remote_prefs={}),
                 tmp_path,
