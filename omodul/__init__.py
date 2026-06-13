@@ -23,6 +23,36 @@ from .migrate_dependency import MigrateDependencyConfig, MigrateDependencyInput,
 from .refactor_transaction import RefactorTransactionConfig, RefactorTransactionInput, refactor_transaction
 from .install_plugin import InstallPluginConfig, InstallPluginInput, install_plugin
 
+# M-E: Mneme omodul elements
+from .knowledge_profiling_workflow import (
+    KnowledgeProfilingConfig, KnowledgeProfilingInput, knowledge_profiling_workflow,
+)
+from .adaptive_quiz_session import (
+    AdaptiveQuizConfig, AdaptiveQuizInput, adaptive_quiz_session,
+)
+from .socratic_tutor_session import (
+    SocraticTutorConfig, SocraticTutorInput, socratic_tutor_session,
+)
+from .grade_paper_workflow import (
+    GradePaperConfig, GradePaperInput, PaperQuestion, grade_paper_workflow,
+)
+from .daily_mission_workflow import (
+    DailyMissionConfig, DailyMissionInput, daily_mission_workflow,
+)
+from .variant_generation_workflow import (
+    VariantGenerationConfig, VariantGenerationInput, VariantSource, variant_generation_workflow,
+)
+from .learning_progress_report import (
+    LearningProgressConfig, ProgressInput, learning_progress_report,
+)
+from .breakpoint_remediation_workflow import (
+    BreakpointRemediationConfig, BreakpointRemediationInput,
+    WrongQuestionEntry, breakpoint_remediation_workflow,
+)
+from .user_data_workflow import (
+    UserDataConfig, UserDataInput, UserRecord, user_data_workflow,
+)
+
 # Aliases for backward compatibility or alternate names
 InitializeConfig = InitProjectConfig
 InitializeInput = InitProjectInput
