@@ -383,3 +383,9 @@ All future Phase releases must:
 ## [1.26.1] — 2026-06-13
 ### Fixed
 - apply_changeset: 补充 compute_fingerprint_for 函数定义（whl拆分时遗漏导致 NameError）
+
+## [1.26.2] — 2026-06-13
+### Fixed
+- candidate_pool / symbol_dim_score: 修正 apply_screen_filter import 路径
+  (from oprim.apply_screen_filter → from oprim import apply_screen_filter)
+  oprim v3.6.x 惰性化后子模块直接 import 路径失效，改顶层 import
