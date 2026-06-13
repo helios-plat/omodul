@@ -117,6 +117,14 @@ def generative_video_pipeline(
     *,
     on_step: Callable[[dict[str, Any]], None] | None = None,
 ) -> dict[str, Any]:
+    import warnings
+    warnings.warn(
+        "generative_video_pipeline is deprecated; migrate to "
+        "omodul.agentic_longvideo_pipeline (v1.26.0+). "
+        "This function will be removed in the next MAJOR release.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     """End-to-end video generation pipeline.
 
     Args:
