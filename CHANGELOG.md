@@ -2,6 +2,13 @@
 
 <!-- Governance: see RELEASE_POLICY.md. main = release branch; feat branches deleted after merge; oprim → oskill → omodul merge order required; container bind-mount means git checkout is a live operation. -->
 
+## [1.26.0] — 2026-06-13
+
+### Added (hevi v2 — M8)
+- feat: `agentic_longvideo_pipeline` — 4 时长档 (1-5min/5-15min/15-45min/45min+), 6 阶段编排 (脚本→分镜→参考选取→视频→一致性校验→音频/字幕/合成), select_reference + mllm_frame_consistency_check 集成, 重试/fallback 提供商
+- feat: `LongVideoConfig`, `LongVideoResult` Pydantic 模型
+- deprecate: `generative_video_pipeline` 标记 DeprecationWarning (下一 MAJOR 删除)
+
 ## [1.25.1] — 2026-06-13
 
 ### Fixed
