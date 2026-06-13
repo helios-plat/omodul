@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Any, ClassVar
 
-from omodul._base import BaseConfig, Trail, build_result, compute_fingerprint
+from omodul._base import BaseConfig, Trail, build_result
 
 
 class OhlcvBackfillConfig(BaseConfig):
@@ -31,22 +31,19 @@ async def ohlcv_backfill(
     """Fetch OHLCV bars and write them idempotently to the persistence store.
 
     Uses ON CONFLICT DO NOTHING so re-running the same backfill is safe.
-    The decision_trail records how many rows were written vs already present.
 
     Args:
-        config: OhlcvBackfillConfig with symbol, interval, limit, venue.
-        pool: asyncpg connection pool from obase.persistence.  When None
-            the write step is skipped (dry-run / test mode).
+        config: OhlcvBackfillConfig.
+        pool: asyncpg pool. When None the write step is skipped (dry-run).
 
     Returns:
-        Standard omodul result dict with keys:
-        ``bars_fetched``, ``bars_written``, ``symbol``, ``interval``.
+        Result dict with ``bars_fetched``, ``bars_written``, ``symbol``, ``interval``.
     """
     from oprim.ohlcv_fetch import ohlcv_fetch  # noqa: PLC0415
 
     trail = Trail()
-    trail.record("fetch_start", {"symbol": config.symbol, "interval": config.interval,
-                                  "limit": config.limit, "venue": config.venue})
+    trail.record(event="fetch_start", symbol=config.symbol,
+                 interval=config.interval, limit=config.limit, venue=config.venue)
 
     bars = await ohlcv_fetch(
         config.symbol,
@@ -54,8 +51,7 @@ async def ohlcv_backfill(
         interval=config.interval,
         limit=config.limit,
     )
-
-    trail.record("fetch_complete", {"bars_fetched": len(bars)})
+    trail.record(event="fetch_complete", bars_fetched=len(bars))
 
     bars_written = 0
     if pool is not None:
@@ -77,19 +73,17 @@ async def ohlcv_backfill(
                 table=config.table,
                 data=row,
                 conflict_on=["instrument", "bar", "ts"],
-                # update_columns=None → ON CONFLICT DO NOTHING (idempotent)
             )
             bars_written += 1
 
-    trail.record("write_complete", {"bars_written": bars_written})
+    trail.record(event="write_complete", bars_written=bars_written)
 
     return build_result(
-        config=config,
+        status="ok",
         trail=trail,
-        payload={
-            "bars_fetched": len(bars),
-            "bars_written": bars_written,
-            "symbol": config.symbol,
-            "interval": config.interval,
-        },
+        cost_usd=0.0,
+        bars_fetched=len(bars),
+        bars_written=bars_written,
+        symbol=config.symbol,
+        interval=config.interval,
     )
