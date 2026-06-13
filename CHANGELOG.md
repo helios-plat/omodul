@@ -379,3 +379,7 @@ All future Phase releases must:
 1. Use independent feat branches (not accumulate Phases on one branch)
 2. Merge to main via PR before tagging
 3. Tag on main (never on feat branches)
+
+## [1.26.1] — 2026-06-13
+### Fixed
+- apply_changeset: 补充 compute_fingerprint_for 函数定义（whl拆分时遗漏导致 NameError）
