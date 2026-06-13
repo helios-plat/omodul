@@ -401,3 +401,10 @@ from omodul.diagnose_service_health import (
     diagnose_service_health,
     compute_fingerprint_for_diagnose_service_health,
 )
+
+# --- hevi v2 (v1.26.0) ---
+from omodul.agentic_longvideo_pipeline import (
+    LongVideoConfig,
+    LongVideoResult,
+    agentic_longvideo_pipeline,
+)
