@@ -113,9 +113,9 @@ def _compute_risk_status(
     status = "GREEN"
     if vol_ratio > volatility_halt_multiplier:
         status = "YELLOW"
-    if daily_loss < daily_loss_halt_pct:
+    if daily_loss < -daily_loss_halt_pct:  # loss exceeds daily halt threshold
         status = "ORANGE"
-    if weekly_loss < weekly_loss_halt_pct:
+    if weekly_loss < -weekly_loss_halt_pct:  # loss exceeds weekly halt threshold
         status = "RED"
 
     return status, daily_loss, weekly_loss, max_drawdown, vol_ratio
