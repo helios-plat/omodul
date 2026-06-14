@@ -1,5 +1,26 @@
 from typing import Any
 
+# New omodul modules (batch 1.29)
+from omodul.process_prompt import process_prompt
+from omodul.execute_tool import execute_tool
+from omodul.compact_session import compact_session
+from omodul.compact_session import compute_fingerprint_for as compact_session_fingerprint
+from omodul.init_project import init_project
+from omodul.create_session import create_session
+from omodul.create_session import compute_fingerprint_for as create_session_fingerprint
+from omodul.fork_session import fork_session
+from omodul.fork_session import compute_fingerprint_for as fork_session_fingerprint
+from omodul.share_session import share_session
+from omodul.share_session import compute_fingerprint_for as share_session_fingerprint
+from omodul.login_provider import login_provider
+from omodul.run_subagent_task import run_subagent_task
+from omodul.web_research_task import web_research_task
+from omodul.undo_changes import undo_changes
+from omodul.sync_models_catalog import sync_models_catalog
+from omodul.sync_models_catalog import compute_fingerprint_for as sync_models_catalog_fingerprint
+from omodul.index_codebase import index_codebase
+from omodul.index_codebase import compute_fingerprint_for as index_codebase_fingerprint
+
 from ._base_config import BaseConfig
 from .compute_fingerprint_for_initialize import compute_fingerprint_for_initialize
 from .compute_fingerprint_for_run_subagent import compute_fingerprint_for as compute_fingerprint_for_run_subagent
@@ -36,6 +57,12 @@ from .socratic_tutor_session import (
 from .grade_paper_workflow import (
     GradePaperConfig, GradePaperInput, PaperQuestion, grade_paper_workflow,
 )
+try:
+    from .analyze_paper import (
+        AnalyzePaperConfig, AnalyzePaperInput, analyze_paper_workflow,
+    )
+except ImportError:
+    pass
 from .daily_mission_workflow import (
     DailyMissionConfig, DailyMissionInput, daily_mission_workflow,
 )
