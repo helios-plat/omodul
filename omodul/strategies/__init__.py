@@ -837,10 +837,16 @@ def funding_rate_arbitrage(market_state: dict, config: dict) -> dict:
 
 
 from omodul.strategies.tradingagents_v1 import tradingagents_v1
+from omodul.strategies.trend_dual import trend_dual
+from omodul.strategies.vwap_mr_dual import vwap_mr_dual
+from omodul.strategies.spot_trend import spot_trend
 
 __all__ = [
     "bocpd_trend_following",
     "funding_rate_arbitrage",
     "microstructure_scalper",
     "tradingagents_v1",
+    "trend_dual",
+    "vwap_mr_dual",
+    "spot_trend",
 ]
