@@ -95,7 +95,7 @@ def daily_digest_workflow(
         combined_text = "\n\n".join(unique_texts) if unique_texts else "(no content for today)"
 
         # Stage 2: Summarize via LLM
-        from oprim.llm_summarize import llm_summarize
+        from oprim import llm_summarize
 
         style_map = {
             "morning_brief": "bullet_points",

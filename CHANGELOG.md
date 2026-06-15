@@ -394,3 +394,7 @@ All future Phase releases must:
 ### Fixed
 - daily_digest_workflow: 修正 import 路径
   from oprim.llm_summarize import → from oprim import (扁平命名空间规范)
+
+## [1.29.2] — 2026-06-15
+### Fixed
+- daily_digest_workflow: `from oprim import llm_summarize` (非子模块路径)
