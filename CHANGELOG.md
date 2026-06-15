@@ -389,3 +389,8 @@ All future Phase releases must:
 - candidate_pool / symbol_dim_score: 修正 apply_screen_filter import 路径
   (from oprim.apply_screen_filter → from oprim import apply_screen_filter)
   oprim v3.6.x 惰性化后子模块直接 import 路径失效，改顶层 import
+
+## [1.29.1] — 2026-06-14
+### Fixed
+- daily_digest_workflow: 修正 import 路径
+  from oprim.llm_summarize import → from oprim import (扁平命名空间规范)
