@@ -411,3 +411,7 @@ All future Phase releases must:
 ## [1.30.2] — 2026-06-18
 ### Fixed
 - export_substrate_markdown.py: 补建漏 commit 的文件（v1.30.1 __init__ 引用但文件不存在）
+
+## [1.30.2] — 2026-06-18
+### Fixed
+- export_substrate_markdown.py: 补建漏 commit 的文件（v1.30.1 __init__ 引用但文件不存在）
