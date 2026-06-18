@@ -66,6 +66,18 @@ except ImportError:
 from .daily_mission_workflow import (
     DailyMissionConfig, DailyMissionInput, daily_mission_workflow,
 )
+from .instant_solve import (
+    InstantSolveConfig, InstantSolveInput, instant_solve,
+)
+from .error_journal import (
+    ErrorJournalConfig, ErrorJournalInput, error_journal_diagnostic,
+)
+from .due_recall_push import (
+    DueRecallPushConfig, DueRecallPushInput, due_recall_push_workflow,
+)
+from .parent_review import (
+    ParentReviewConfig, ParentReviewInput, parent_review_summary,
+)
 from .variant_generation_workflow import (
     VariantGenerationConfig, VariantGenerationInput, VariantSource, variant_generation_workflow,
 )
@@ -127,3 +139,5 @@ class HookSpec:
 from contextvars import ContextVar
 _current_cost: ContextVar[float] = ContextVar("_current_cost", default=0.0)
 _current_depth: ContextVar[int] = ContextVar("_current_depth", default=0)
+
+from omodul.export_substrate_markdown import export_substrate_markdown, ExportSubstrateMarkdownConfig, ExportSubstrateMarkdownInput

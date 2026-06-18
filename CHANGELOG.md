@@ -398,3 +398,12 @@ All future Phase releases must:
 ## [1.29.2] — 2026-06-15
 ### Fixed
 - daily_digest_workflow: `from oprim import llm_summarize` (非子模块路径)
+
+## [1.30.1] — 2026-06-18
+### Changed
+- process_inbox_substrate: EPUB 套装检测（epub_toc_split N>1 → N 个独立 substrate）
+  InboxFindings 新增 substrate_ids / is_bundle 字段
+### Added
+- export_substrate_markdown: 端到端导出 substrate 为 markdown 文件
+  (text_clean_publish_noise + markdown_frontmatter_build + 写文件，无 LLM，cost=0)
+  四支柱: fingerprint + decision_trail + report

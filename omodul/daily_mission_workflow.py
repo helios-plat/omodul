@@ -109,21 +109,53 @@ def daily_mission_workflow(
             for it in selected
         ]
 
+        # 新增 subjects 分组模式 (Contract Change v2)
+        subjects_map = {}
+        for q in input_data.available_questions:
+            # 假设输入中带有 subject 字段，若无则默认为 math
+            subj = q.get("subject", "math")
+            if subj not in subjects_map:
+                subjects_map[subj] = []
+            subjects_map[subj].append(q)
+
+        # 简单按科目各取几个
+        subjects_missions = {}
+        for subj, q_list in subjects_map.items():
+            subj_items = [
+                MissionItem(
+                    question_id=q.get("question_id", "q"),
+                    kc_id=q.get("kc_id", "unknown"),
+                    difficulty=float(q.get("difficulty", 0.5)),
+                    mastery=input_data.kc_mastery.get(q.get("kc_id", ""), 0.5),
+                    days_since_last=input_data.last_seen_dates.get(q.get("question_id", ""), 99)
+                )
+                for q in q_list
+            ]
+            subj_items.sort(key=_mission_priority, reverse=True)
+            subjects_missions[subj] = [
+                {
+                    "question_id": it.question_id,
+                    "kc_id": it.kc_id,
+                    "difficulty": it.difficulty
+                }
+                for it in subj_items[:2] # 每科取2个作为演示
+            ]
+
         trail_path = trail.write(output_dir)
         trail.record(event="done")
 
         if on_step:
             on_step("daily_mission_workflow", "done")
 
-        return build_result(
-            status="ok",
-            fingerprint=fp,
-            trail=trail,
-            trail_path=trail_path,
-            cost_usd=0.0,
-            missions=missions,
-            mission_count=len(missions),
-        )
+        return {
+            "status": "ok",
+            "fingerprint": fp,
+            "decision_trail": trail.steps,
+            "trail_path": str(trail_path),
+            "cost_usd": cost.total_usd,
+            "missions": missions, # 旧契约保留
+            "subjects": subjects_missions # 新增多科目分组契约
+        }
 
     except Exception as exc:
         trail.record(event="error", detail=str(exc))

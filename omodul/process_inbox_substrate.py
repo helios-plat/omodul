@@ -49,11 +49,13 @@ class InboxInput(BaseModel):
 
 class InboxFindings(BaseModel):
     substrate_id: str
+    substrate_ids: list[str] = []   # 套装时含多个，单本时含1个
     medium: str
     derivative_ids: list[str] = []
     classification_confidence: float = 0.0
     page_count: int = 0
     heading_count: int = 0
+    is_bundle: bool = False          # True 表示套装，已拆分为多个 substrate
 
 
 def process_inbox_substrate(
@@ -162,31 +164,65 @@ def process_inbox_substrate(
             started_at=step_start,
         )
 
-        # Stage 5: Ingest substrate (async oskill — run in event loop)
-        step_start = datetime.now(UTC)
+        # Stage 5: Ingest substrate(s)
+        # If parsed_doc is a list[EpubBook], it's a bundle — ingest each separately
         from oskill.ingest_substrate import ingest_substrate
+        from oprim._epub_toc_split import EpubBook
 
-        substrate_id = asyncio.run(
-            ingest_substrate(
-                path=config.file_path,
-                source={
-                    "corpus_id": config.corpus_id,
-                    "user_id_hash": config.user_id_hash,
-                    **input_data.metadata_override,
-                },
-                user_id_hash=config.user_id_hash,
-                user_hint={"medium": medium} if medium else None,
+        step_start = datetime.now(UTC)
+        if isinstance(parsed_doc, list) and parsed_doc and isinstance(parsed_doc[0], EpubBook):
+            # Bundle: create N independent substrates
+            substrate_ids = []
+            for book in parsed_doc:
+                s_id = asyncio.run(
+                    ingest_substrate(
+                        path=config.file_path,
+                        source={
+                            "corpus_id": config.corpus_id,
+                            "user_id_hash": config.user_id_hash,
+                            "book_title": book.book_title,
+                            **input_data.metadata_override,
+                        },
+                        user_id_hash=config.user_id_hash,
+                        user_hint={"medium": medium, "book_title": book.book_title},
+                        content_override=book.content,
+                        metadata_override=book.metadata,
+                    )
+                )
+                substrate_ids.append(str(s_id))
+            substrate_id = substrate_ids[0]  # primary for findings
+            record_step(
+                trail_steps=trail_steps,
+                on_step=None,
+                layer="oskill",
+                callable_name="ingest_substrate (bundle)",
+                inputs_summary={"corpus_id": config.corpus_id, "book_count": len(parsed_doc)},
+                outputs_summary={"substrate_ids": [s[:12]+"..." for s in substrate_ids]},
+                started_at=step_start,
             )
-        )
-        record_step(
-            trail_steps=trail_steps,
-            on_step=None,
-            layer="oskill",
-            callable_name="ingest_substrate",
-            inputs_summary={"corpus_id": config.corpus_id, "medium": medium},
-            outputs_summary={"substrate_id": str(substrate_id)[:12] + "..."},
-            started_at=step_start,
-        )
+        else:
+            substrate_id = asyncio.run(
+                ingest_substrate(
+                    path=config.file_path,
+                    source={
+                        "corpus_id": config.corpus_id,
+                        "user_id_hash": config.user_id_hash,
+                        **input_data.metadata_override,
+                    },
+                    user_id_hash=config.user_id_hash,
+                    user_hint={"medium": medium} if medium else None,
+                )
+            )
+            substrate_ids = [str(substrate_id)]
+            record_step(
+                trail_steps=trail_steps,
+                on_step=None,
+                layer="oskill",
+                callable_name="ingest_substrate",
+                inputs_summary={"corpus_id": config.corpus_id, "medium": medium},
+                outputs_summary={"substrate_id": str(substrate_id)[:12] + "..."},
+                started_at=step_start,
+            )
 
         # Stage 6: Generate derivatives
         derivative_ids: list[str] = []
@@ -215,11 +251,13 @@ def process_inbox_substrate(
 
         findings = InboxFindings(
             substrate_id=str(substrate_id),
+            substrate_ids=substrate_ids,
             medium=medium,
             derivative_ids=derivative_ids,
             classification_confidence=confidence,
             page_count=len(doc_for_structure.pages),
             heading_count=len(structure.headings),
+            is_bundle=len(substrate_ids) > 1,
         )
 
     except Exception as e:
@@ -279,8 +317,13 @@ def _stage_parse(file_path: Path, mime_type: str) -> Any:
 
         return file_parser_pdf(file_path=file_path)
     elif "epub" in mime_type or "epub+zip" in mime_type:
+        from oprim.epub_toc_split import epub_toc_split
         from oprim.file_parser_epub import file_parser_epub
 
+        books = epub_toc_split(file_path=file_path)
+        if len(books) > 1:
+            # Bundle detected — return list for multi-substrate handling
+            return books  # list[EpubBook]
         return file_parser_epub(file_path=file_path)
     elif "html" in mime_type:
         with open(file_path) as f:
