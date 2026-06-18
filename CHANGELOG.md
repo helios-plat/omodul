@@ -407,3 +407,7 @@ All future Phase releases must:
 - export_substrate_markdown: 端到端导出 substrate 为 markdown 文件
   (text_clean_publish_noise + markdown_frontmatter_build + 写文件，无 LLM，cost=0)
   四支柱: fingerprint + decision_trail + report
+
+## [1.30.2] — 2026-06-18
+### Fixed
+- export_substrate_markdown.py: 补建漏 commit 的文件（v1.30.1 __init__ 引用但文件不存在）
