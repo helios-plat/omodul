@@ -415,3 +415,11 @@ All future Phase releases must:
 ## [1.30.2] — 2026-06-18
 ### Fixed
 - export_substrate_markdown.py: 补建漏 commit 的文件（v1.30.1 __init__ 引用但文件不存在）
+
+## [1.30.3] — 2026-06-18
+### Added
+- process_inbox_substrate: parse_quality 检测 (ok/empty/scanned/garbled)
+- process_inbox_substrate: is_duplicate/duplicate_of 字段（透传 ingest_substrate 去重结果）
+- InboxFindings: parse_quality / is_duplicate / duplicate_of 三个新字段
+### Fixed
+- duplicate 检测：正确从 IngestResult 对象取 duplicate_of，不用 hasattr 字符串

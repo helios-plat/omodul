@@ -56,6 +56,9 @@ class InboxFindings(BaseModel):
     page_count: int = 0
     heading_count: int = 0
     is_bundle: bool = False          # True 表示套装，已拆分为多个 substrate
+    parse_quality: str = "ok"        # "ok"|"empty"|"scanned"|"garbled"
+    is_duplicate: bool = False       # True 表示已有相同 file_hash 的 substrate
+    duplicate_of: str | None = None  # 重复时指向已有 substrate_id
 
 
 def process_inbox_substrate(
@@ -113,6 +116,23 @@ def process_inbox_substrate(
             outputs_summary={"page_count": len(getattr(parsed_doc, "pages", []))},
             started_at=step_start,
         )
+
+        # Stage 2b: Parse quality check
+        _all_text = " ".join(
+            getattr(p, "text", "") for p in getattr(parsed_doc, "pages", [])
+        )
+        _text_len = len(_all_text.strip())
+        _ufffd_ratio = _all_text.count("\ufffd") / max(_text_len, 1) if _text_len else 0
+        _pic_ratio = _all_text.count("[image]") / max(_text_len // 10, 1) if _text_len else 0
+
+        if _text_len < 500:
+            _parse_quality = "empty"
+        elif _ufffd_ratio > 0.30:
+            _parse_quality = "garbled"
+        elif _pic_ratio > 0.50:
+            _parse_quality = "scanned"
+        else:
+            _parse_quality = "ok"
 
         # Stage 3: Extract structure
         step_start = datetime.now(UTC)
@@ -249,8 +269,15 @@ def process_inbox_substrate(
                 started_at=step_start,
             )
 
+        # Check if ingest_substrate returned duplicate_of
+        # substrate_id here is IngestResult object (asyncio.run returns IngestResult)
+        _is_dup = bool(getattr(substrate_id, "duplicate_of", None))
+        _dup_of = str(substrate_id.duplicate_of) if _is_dup else None
+        # Normalize substrate_id to string for downstream use
+        _substrate_id_str = str(getattr(substrate_id, "substrate_id", substrate_id))
+
         findings = InboxFindings(
-            substrate_id=str(substrate_id),
+            substrate_id=_substrate_id_str,
             substrate_ids=substrate_ids,
             medium=medium,
             derivative_ids=derivative_ids,
@@ -258,6 +285,9 @@ def process_inbox_substrate(
             page_count=len(doc_for_structure.pages),
             heading_count=len(structure.headings),
             is_bundle=len(substrate_ids) > 1,
+            parse_quality=_parse_quality,
+            is_duplicate=_is_dup,
+            duplicate_of=_dup_of,
         )
 
     except Exception as e:
