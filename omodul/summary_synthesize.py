@@ -34,7 +34,7 @@ from omodul._base import (
 # ---------------------------------------------------------------------------
 
 _GRADE_RANKS: dict[str, int] = {
-    "unverified": 0, "low": 1, "medium": 2, "high": 3, "verified": 4,
+    "unverified": 0, "low": 1, "medium": 2, "high": 3, "verified": 4, "proven": 5,
 }
 _GRADE_BY_RANK = {v: k for k, v in _GRADE_RANKS.items()}
 
