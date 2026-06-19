@@ -77,16 +77,21 @@ async def speaking_practice_workflow(
         )
 
         # Persist to speaking_sessions
+        from dataclasses import asdict
+        import json
+        pron_scores_dicts = [asdict(p) for p in practice_result.pronunciation_scores]
+
         if input_data.db_pool is not None:
             from obase.persistence import insert_one
             await insert_one(
                 input_data.db_pool,
                 table="speaking_sessions",
                 data={
-                    "session_id": session_id,
-                    "user_id": input_data.user_id,
+                    "id": session_id,
+                    "student_id": input_data.user_id,
                     "topic": input_data.topic,
-                    "turns": len(practice_result.turns),
+                    "turns": json.dumps(practice_result.turns) if isinstance(practice_result.turns, (list, dict)) else practice_result.turns,
+                    "pronunciation_scores": json.dumps(pron_scores_dicts) if isinstance(pron_scores_dicts, (list, dict)) else pron_scores_dicts,
                     "overall_progress": practice_result.overall_progress,
                 },
             )
@@ -108,7 +113,8 @@ async def speaking_practice_workflow(
             cost_usd=cost.total_usd,
             session_id=session_id,
             overall_progress=practice_result.overall_progress,
-            turns=len(practice_result.turns),
+            turns=practice_result.turns,
+            pronunciation_scores=pron_scores_dicts,
         )
 
     except asyncio.CancelledError:
