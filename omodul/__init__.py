@@ -1,3 +1,4 @@
+__version__ = "1.30.6"
 from typing import Any
 
 # New omodul modules (batch 1.29)
