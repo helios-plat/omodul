@@ -423,3 +423,10 @@ All future Phase releases must:
 - InboxFindings: parse_quality / is_duplicate / duplicate_of 三个新字段
 ### Fixed
 - duplicate 检测：正确从 IngestResult 对象取 duplicate_of，不用 hasattr 字符串
+
+## [1.30.6] — 2026-06-19
+### Fixed
+- process_inbox_substrate: bundle 检测阈值（avg >200K chars才拆）
+  防止单本多章 EPUB 误拆为多个 substrate
+- process_inbox_substrate: bundle 入库时传 bundle_file_hash 到 metadata
+  （溯源锚点，解决去重追溯问题）

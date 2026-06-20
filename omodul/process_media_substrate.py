@@ -46,6 +46,7 @@ class MediaConfig(BaseConfig):
     proxy: str | None = None
     asr_backend: str = "local"
     transcribe_if_no_subtitle: bool = True
+    cookies_path: str | None = None
 
 
 class MediaInput(BaseModel):
@@ -86,6 +87,7 @@ async def process_media_substrate(
             video_url=config.video_url,
             proxy=config.proxy,
             work_dir=work_dir,
+            cookies_path=config.cookies_path,
         )
         trail.record(
             event="extract_done",
