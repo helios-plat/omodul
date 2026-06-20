@@ -356,7 +356,7 @@ def _stage_parse(file_path: Path, mime_type: str) -> Any:
             # Single-volume EPUBs with flat chapter TOC return many small-content nodes;
             # real bundles (丛书) have independent books averaging 200K+ chars each.
             content_sizes = [len(b.content) for b in books if len(b.content) > 5_000]
-            if len(content_sizes) >= 2 and sum(content_sizes) / len(content_sizes) > 50_000:
+            if len(content_sizes) >= 2 and sum(content_sizes) / len(content_sizes) > 200_000:
                 return books  # list[EpubBook]
         return file_parser_epub(file_path=file_path)
     elif "html" in mime_type:
