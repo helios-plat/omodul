@@ -430,3 +430,8 @@ All future Phase releases must:
   防止单本多章 EPUB 误拆为多个 substrate
 - process_inbox_substrate: bundle 入库时传 bundle_file_hash 到 metadata
   （溯源锚点，解决去重追溯问题）
+
+## [1.30.7] — 2026-06-19
+### Added
+- force_analysis_workflow: 物理受力分析引导业务事务 {decision_trail, cost}
+- reading_guide_workflow: 阅读理解引导业务事务 {decision_trail}

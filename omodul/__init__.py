@@ -142,3 +142,6 @@ _current_cost: ContextVar[float] = ContextVar("_current_cost", default=0.0)
 _current_depth: ContextVar[int] = ContextVar("_current_depth", default=0)
 
 from omodul.export_substrate_markdown import export_substrate_markdown, ExportSubstrateMarkdownConfig, ExportSubstrateMarkdownInput
+
+from omodul.force_analysis_workflow import force_analysis_workflow, ForceAnalysisConfig, ForceAnalysisInput
+from omodul.reading_guide_workflow import reading_guide_workflow, ReadingGuideConfig, ReadingGuideInput
