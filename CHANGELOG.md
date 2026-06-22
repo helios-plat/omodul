@@ -435,3 +435,8 @@ All future Phase releases must:
 ### Added
 - force_analysis_workflow: 物理受力分析引导业务事务 {decision_trail, cost}
 - reading_guide_workflow: 阅读理解引导业务事务 {decision_trail}
+
+## [1.30.9] — 2026-06-19
+### Fixed
+- process_inbox_substrate: 扫描版 PDF（无文字层）pq 标为 "scanned" 而非 "empty"
+  修复根因：_text_len < 500 时加 _is_pdf 判断区分扫描版与真空文档

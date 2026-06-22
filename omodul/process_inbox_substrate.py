@@ -125,8 +125,11 @@ def process_inbox_substrate(
         _ufffd_ratio = _all_text.count("\ufffd") / max(_text_len, 1) if _text_len else 0
         _pic_ratio = _all_text.count("[image]") / max(_text_len // 10, 1) if _text_len else 0
 
-        if _text_len < 500:
-            _parse_quality = "empty"
+        _is_pdf = str(config.file_path).lower().endswith(".pdf") if hasattr(config, "file_path") else False
+        if _text_len < 500 and _is_pdf:
+            _parse_quality = "scanned"   # PDF 无文字层 → 扫描版（非空文档）
+        elif _text_len < 500:
+            _parse_quality = "empty"     # 非 PDF 的空内容
         elif _ufffd_ratio > 0.30:
             _parse_quality = "garbled"
         elif _pic_ratio > 0.50:
