@@ -145,3 +145,5 @@ from omodul.export_substrate_markdown import export_substrate_markdown, ExportSu
 
 from omodul.force_analysis_workflow import force_analysis_workflow, ForceAnalysisConfig, ForceAnalysisInput
 from omodul.reading_guide_workflow import reading_guide_workflow, ReadingGuideConfig, ReadingGuideInput
+# ── AII Conflict Detection Workflow (M-G1) ───────────────────────────────────
+from omodul.conflict_detection_workflow import conflict_detection_workflow, ConflictDetectionConfig
