@@ -1,6 +1,6 @@
 [project]
 name = "omodul"
-version = "1.30.9"
+version = "1.30.10"
 description = "End-to-end financial analysis features built on oprim + oskill"
 readme = "README.md"
 requires-python = ">=3.11"
