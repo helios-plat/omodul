@@ -440,3 +440,11 @@ All future Phase releases must:
 ### Fixed
 - process_inbox_substrate: 扫描版 PDF（无文字层）pq 标为 "scanned" 而非 "empty"
   修复根因：_text_len < 500 时加 _is_pdf 判断区分扫描版与真空文档
+
+## [1.31.0] — 2026-06-25
+### Added
+- register_ku_ontology: valid_knowledge_types / valid_sub_types / valid_grades /
+  valid_relation_types injectable params (backward-compatible defaults to VALID_* sets)
+### Fixed
+- Edge validation now uses injectable _vrt instead of hardcoded VALID_RELATION_TYPES
+  (enables Layer4 domain-specific relation type injection)

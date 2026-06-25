@@ -221,3 +221,45 @@ class TestRegisterKuOntology:
         )
         assert result["status"] == "completed"
         assert result["concepts_linked"] == 3
+
+    def test_valid_types_injectable(self, tmp_path):
+        # Inject custom vocab that includes "domain_specific" not in default set
+        custom_vkt = frozenset(["factual", "conceptual", "positional",
+                                  "procedural", "explanatory", "metacognitive",
+                                  "domain_specific"])
+        ku = _ku("domain_specific")
+        result = register_ku_ontology(
+            config=_config(knowledge_type="domain_specific"),
+            input_data=_input(ku),
+            output_dir=tmp_path,
+            valid_knowledge_types=custom_vkt,
+        )
+        assert result["status"] == "completed"
+
+    def test_valid_types_injectable_still_rejects_unknown(self, tmp_path):
+        custom_vkt = frozenset(["factual", "conceptual"])
+        ku = _ku("bogus")
+        result = register_ku_ontology(
+            config=_config(knowledge_type="bogus"),
+            input_data=_input(ku),
+            output_dir=tmp_path,
+            valid_knowledge_types=custom_vkt,
+        )
+        assert result["status"] == "failed"
+
+    def test_relation_type_validation_injectable(self, tmp_path):
+        # Regression: injectable _vrt used (not hardcoded VALID_RELATION_TYPES)
+        custom_vrt = frozenset(["explains", "causes", "custom_link"])
+        edges = [
+            {"source": "ku001", "target": "ku002", "relation_type": "custom_link"},
+            {"source": "ku001", "target": "ku003", "relation_type": "bogus_edge"},
+        ]
+        result = register_ku_ontology(
+            config=_config(),
+            input_data=_input(_ku("factual"), edges=edges),
+            output_dir=tmp_path,
+            valid_relation_types=custom_vrt,
+        )
+        assert result["status"] == "completed"
+        # "custom_link" in custom vocab → written; "bogus_edge" not → discarded
+        assert result["edges_written"] == 1

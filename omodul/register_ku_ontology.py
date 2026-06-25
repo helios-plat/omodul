@@ -60,13 +60,28 @@ def register_ku_ontology(
     output_dir: Path,
     *,
     on_step: Any = None,
+    valid_knowledge_types: frozenset[str] | None = None,
+    valid_sub_types: frozenset[str] | None = None,
+    valid_grades: frozenset[str] | None = None,
+    valid_relation_types: frozenset[str] | None = None,
 ) -> dict:
     """Register a KU into the ontology with full validation.
 
     Sync function (no async). Validates against all controlled vocabularies.
     Violations produce status='failed' + validation_errors; never raises.
     same_as edges trigger merge (merged=True), not a new edge record.
+
+    Vocabulary injection (backward-compatible — all default to built-in sets):
+        valid_knowledge_types: override VALID_KNOWLEDGE_TYPES (Layer4 can extend)
+        valid_sub_types:       override VALID_SUB_TYPES
+        valid_grades:          override VALID_GRADES
+        valid_relation_types:  override VALID_RELATION_TYPES
     """
+    _vkt = valid_knowledge_types or VALID_KNOWLEDGE_TYPES
+    _vst = valid_sub_types or VALID_SUB_TYPES
+    _vgr = valid_grades or VALID_GRADES
+    _vrt = valid_relation_types or VALID_RELATION_TYPES
+
     trail = Trail()
     fingerprint = compute_fingerprint({
         "substrate_id": config.substrate_id,
@@ -82,29 +97,29 @@ def register_ku_ontology(
     # Validate knowledge_type
     # ------------------------------------------------------------------
     knowledge_type = ku.get("knowledge_type", "")
-    if knowledge_type not in VALID_KNOWLEDGE_TYPES:
+    if knowledge_type not in _vkt:
         validation_errors.append(
             f"Invalid knowledge_type: {knowledge_type!r}. "
-            f"Must be one of {sorted(VALID_KNOWLEDGE_TYPES)}"
+            f"Must be one of {sorted(_vkt)}"
         )
 
     # ------------------------------------------------------------------
     # Validate sub_type (if provided)
     # ------------------------------------------------------------------
     sub_type = ku.get("sub_type")
-    if sub_type and sub_type not in VALID_SUB_TYPES:
+    if sub_type and sub_type not in _vst:
         validation_errors.append(
             f"Invalid sub_type: {sub_type!r}. "
-            f"Must be one of {sorted(VALID_SUB_TYPES)}"
+            f"Must be one of {sorted(_vst)}"
         )
 
     # ------------------------------------------------------------------
     # Validate grade
     # ------------------------------------------------------------------
     grade = ku.get("grade", "unverified")
-    if grade not in VALID_GRADES:
+    if grade not in _vgr:
         validation_errors.append(
-            f"Invalid grade: {grade!r}. Must be one of {sorted(VALID_GRADES)}"
+            f"Invalid grade: {grade!r}. Must be one of {sorted(_vgr)}"
         )
 
     # ------------------------------------------------------------------
@@ -173,7 +188,7 @@ def register_ku_ontology(
 
     for edge in edges:
         rel_type = edge.get("relation_type", "")
-        if rel_type not in VALID_RELATION_TYPES:
+        if rel_type not in _vrt:
             # Silently discard invalid relation types
             continue
         if rel_type == "same_as":
