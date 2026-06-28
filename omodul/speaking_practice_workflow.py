@@ -76,26 +76,10 @@ async def speaking_practice_workflow(
             overall_progress=practice_result.overall_progress,
         )
 
-        # Persist to speaking_sessions
+        # 持久化已上移服务层（3O：omodul 只算+返回，业务落库由服务层用真实主键做，
+        # 故 omodul 不再需要真实 user_id，可收伪名）。此处仅算 pron_scores_dicts 供返回。
         from dataclasses import asdict
-        import json
         pron_scores_dicts = [asdict(p) for p in practice_result.pronunciation_scores]
-
-        if input_data.db_pool is not None:
-            from obase.persistence import insert_one
-            await insert_one(
-                input_data.db_pool,
-                table="speaking_sessions",
-                data={
-                    "id": session_id,
-                    "student_id": input_data.user_id,
-                    "topic": input_data.topic,
-                    "turns": json.dumps(practice_result.turns) if isinstance(practice_result.turns, (list, dict)) else practice_result.turns,
-                    "pronunciation_scores": json.dumps(pron_scores_dicts) if isinstance(pron_scores_dicts, (list, dict)) else pron_scores_dicts,
-                    "overall_progress": practice_result.overall_progress,
-                },
-            )
-            trail.record(event="persisted", table="speaking_sessions")
 
         trail_path = asyncio.shield(
             asyncio.get_event_loop().run_in_executor(None, trail.write, output_dir)
