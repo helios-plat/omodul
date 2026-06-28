@@ -14,6 +14,7 @@ from obase.error_tag_store import get_error_distribution
 class ParentReviewConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "parent_review"
     _omodul_version: ClassVar[str] = "0.1.0"
+    _enabled_pillars: ClassVar[set] = {"fingerprint", "decision_trail"}
     _fingerprint_fields: ClassVar[set[str]] = {"parent_id", "student_id"}
 
 class ParentReviewInput(BaseModel):

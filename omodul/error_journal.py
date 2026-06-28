@@ -13,6 +13,7 @@ from obase.error_tag_store import get_error_distribution
 class ErrorJournalConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "error_journal"
     _omodul_version: ClassVar[str] = "0.1.0"
+    _enabled_pillars: ClassVar[set] = {"fingerprint", "decision_trail"}
     _fingerprint_fields: ClassVar[set[str]] = {"student_id"}
 
 class ErrorJournalInput(BaseModel):

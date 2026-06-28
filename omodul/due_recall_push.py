@@ -13,6 +13,7 @@ from obase.notify.telegram import telegram_send as send_message # 假设使用�
 class DueRecallPushConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "due_recall_push"
     _omodul_version: ClassVar[str] = "0.1.0"
+    _enabled_pillars: ClassVar[set] = {"fingerprint", "decision_trail"}
     _fingerprint_fields: ClassVar[set[str]] = {"batch_id"}
     
     push_frequency_limit: int = 1 # 每天最多推送次数

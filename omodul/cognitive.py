@@ -34,6 +34,8 @@ class InteractionInput(BaseModel):
     effortless: bool = False
     is_interleaved: bool = False
     time_spent_seconds: Optional[int] = None
+    difficulty: Optional[float] = None   # 题目难度 b∈[0,1]（IRT）；None 时不改变行为
+    predicted_confidence: Optional[float] = None  # JOL：作答前自评把握 ∈[0,1]（仅记录，不入算法）
     now: Optional[datetime] = None
 
 class InteractionFindings(BaseModel):
@@ -71,6 +73,7 @@ async def process_interaction_workflow(
         struggled=input_data.struggled,
         effortless=input_data.effortless,
         is_interleaved=input_data.is_interleaved,
+        difficulty=input_data.difficulty,
         now=now
     )
     result = cognitive_update(input=update_input)
@@ -91,6 +94,8 @@ async def process_interaction_workflow(
         "time_spent_seconds": input_data.time_spent_seconds,
         "days_since_last": days_since_last,
         "is_interleaved": input_data.is_interleaved,
+        "item_difficulty": input_data.difficulty,
+        "predicted_confidence": input_data.predicted_confidence,
         "occurred_at": now
     }
     await store.append_event(input_data.student_id, input_data.kc_id, event_data)
@@ -127,10 +132,12 @@ async def mastery_overview_workflow(store: BaseCognitiveStore, student_id: UUID,
     out = []
     for kc_id, (state, card) in states_map.items():
         R = fsrs_retrievability(card_dict=card, now=now)
+        long_term = state.long_term_mastery or state.current()
         out.append({
             "kc_id": kc_id,
-            "long_term_mastery": round(state.long_term_mastery or state.current(), 4),
-            "effective_mastery": round(state.current() * R, 4),
+            "long_term_mastery": round(long_term, 4),
+            # 红线：effective = long_term × R（与 process 路径同口径，非 current()×R）
+            "effective_mastery": round(long_term * R, 4),
             "n_attempts": state.n_attempts,
         })
     return sorted(out, key=lambda x: x["effective_mastery"])
