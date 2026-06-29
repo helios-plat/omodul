@@ -217,6 +217,25 @@ async def agentic_longvideo_pipeline(
 # ── Internal helpers ───────────────────────────────────────────────────────
 
 
+def _select_ref_image(ref_set: Any) -> Path | None:
+    """Collapse a ReferenceSet to a single i2v conditioning frame.
+
+    Policy (P0-1 continuity): character reference takes priority — the lowest
+    sorted character_id (e.g. char_0 before char_1) is the primary subject —
+    falling back to the first environment reference, then None. i2v accepts only
+    one image, so a multi-ref set must be reduced deterministically here.
+    """
+    if ref_set is None:
+        return None
+    char_refs = getattr(ref_set, "character_refs", None) or {}
+    if char_refs:
+        return char_refs[sorted(char_refs)[0]]
+    env_refs = getattr(ref_set, "environment_refs", None) or {}
+    if env_refs:
+        return env_refs[sorted(env_refs)[0]]
+    return None
+
+
 async def _generate_shot_with_retry(
     *,
     shot_plan: Any,
@@ -245,6 +264,11 @@ async def _generate_shot_with_retry(
     criteria = _Criteria(threshold=threshold)
     last_best: Path | None = None
 
+    # Condition generation on the selected reference frame (P0-1): ref_set was
+    # previously used only for post-hoc consistency scoring; now it also feeds
+    # the provider as an i2v init image for shot-to-shot continuity.
+    ref_image = _select_ref_image(ref_set)
+
     for attempt in range(max_retries + 1):
         current_fn = video_fn if attempt == 0 else (fallback_video_fn or video_fn)
         candidates: list[Path] = []
@@ -255,6 +279,7 @@ async def _generate_shot_with_retry(
                 await current_fn(
                     prompt=getattr(shot_plan, "image_prompt", "scene"),
                     output_path=candidate_path,
+                    reference_image=ref_image,
                 )
                 candidates.append(candidate_path)
             except Exception:
@@ -298,10 +323,21 @@ def _default_llm() -> Any:
 
 
 def _make_video_fn(provider: str) -> Any:
-    async def _fn(*, prompt: str, output_path: Path, **kw: Any) -> None:
-        from oprim.video_generate import video_generate
+    async def _fn(
+        *,
+        prompt: str,
+        output_path: Path,
+        reference_image: Path | None = None,
+        **kw: Any,
+    ) -> None:
+        from oprim import video_generate  # public lazy attr (no oprim.video_generate submodule)
 
-        await video_generate(provider=provider, prompt=prompt, output_path=output_path)
+        await video_generate(
+            provider=provider,
+            prompt=prompt,
+            output_path=output_path,
+            reference_image=reference_image,
+        )
 
     return _fn
 

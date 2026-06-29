@@ -13,6 +13,7 @@ import pytest
 from omodul.agentic_longvideo_pipeline import (
     LongVideoConfig,
     LongVideoResult,
+    _select_ref_image,
     agentic_longvideo_pipeline,
 )
 from oskill._schemas import ChapterScript, Chapter, SpeakerLine, ShotFrame, ReferenceSet, FrameConsistencyResult
@@ -76,7 +77,9 @@ def _base_providers(tmp_path: Path, *, n_chapters: int = 2) -> dict[str, Any]:
             passed=True,
         )
 
-    async def _video_fn(*, prompt: str, output_path: Path, **kw: Any) -> None:
+    async def _video_fn(
+        *, prompt: str, output_path: Path, reference_image: Path | None = None, **kw: Any
+    ) -> None:
         output_path.write_bytes(b"\x00" * 32)
 
     async def _audio_fn(*, script: list, output_path: Path) -> None:
@@ -238,3 +241,107 @@ class TestAgenticLongvideoPipeline:
         )
         assert result.shots_generated > 0
         assert check_calls > 0
+
+
+# ── P0-1 reference-frame conditioning ───────────────────────────────────────
+
+
+class TestSelectRefImage:
+    """Unit tests for the ref_set → single i2v frame collapse policy."""
+
+    def test_none_ref_set(self) -> None:
+        assert _select_ref_image(None) is None
+
+    def test_empty_refs_returns_none(self) -> None:
+        rs = ReferenceSet(character_refs={}, environment_refs={}, selected_from=[])
+        assert _select_ref_image(rs) is None
+
+    def test_character_priority_picks_lowest_sorted_id(self, tmp_path: Path) -> None:
+        # char_0 must win over char_1 regardless of dict insertion order.
+        rs = ReferenceSet(
+            character_refs={"char_1": tmp_path / "c1.png", "char_0": tmp_path / "c0.png"},
+            environment_refs={"env_0": tmp_path / "e0.png"},
+            selected_from=["s0"],
+        )
+        assert _select_ref_image(rs) == tmp_path / "c0.png"
+
+    def test_environment_fallback_when_no_character(self, tmp_path: Path) -> None:
+        rs = ReferenceSet(
+            character_refs={},
+            environment_refs={"env_1": tmp_path / "e1.png", "env_0": tmp_path / "e0.png"},
+            selected_from=["s0"],
+        )
+        assert _select_ref_image(rs) == tmp_path / "e0.png"
+
+
+class TestRefSetThreadedToVideoFn:
+    """E2E: ref_set must reach video_fn as reference_image (i2v conditioning)."""
+
+    async def test_character_ref_threaded_as_i2v(self, tmp_path: Path) -> None:
+        providers = _base_providers(tmp_path)
+        ref_png = tmp_path / "char0_ref.png"
+        ref_png.write_bytes(b"\x89PNG")
+        received: list[Path | None] = []
+
+        async def _select_ref_fn(**kw: Any) -> ReferenceSet:
+            return ReferenceSet(
+                character_refs={"char_1": tmp_path / "c1.png", "char_0": ref_png},
+                environment_refs={"env_0": tmp_path / "e0.png"},
+                selected_from=["s0"],
+            )
+
+        async def _capturing_video_fn(
+            *, prompt: str, output_path: Path, reference_image: Path | None = None, **kw: Any
+        ) -> None:
+            received.append(reference_image)
+            output_path.write_bytes(b"\x00" * 32)
+
+        providers["select_ref_fn"] = _select_ref_fn
+        providers["video_fn"] = _capturing_video_fn
+
+        await agentic_longvideo_pipeline(config=_config(tmp_path), _providers=providers)
+
+        assert received, "video_fn was never called"
+        # every generation conditioned on the primary character reference (char_0)
+        assert all(r == ref_png for r in received)
+
+    async def test_no_refs_threads_none(self, tmp_path: Path) -> None:
+        # Backward compat: empty ref_set → reference_image stays None (t2v).
+        providers = _base_providers(tmp_path)
+        received: list[Path | None] = []
+
+        async def _capturing_video_fn(
+            *, prompt: str, output_path: Path, reference_image: Path | None = None, **kw: Any
+        ) -> None:
+            received.append(reference_image)
+            output_path.write_bytes(b"\x00" * 32)
+
+        providers["video_fn"] = _capturing_video_fn  # base _select_ref_fn returns empty set
+        await agentic_longvideo_pipeline(config=_config(tmp_path), _providers=providers)
+
+        assert received, "video_fn was never called"
+        assert all(r is None for r in received)
+
+    async def test_default_make_video_fn_forwards_reference_image(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Locks the *production* closure (the original no-op stripped the param).
+        from omodul.agentic_longvideo_pipeline import _make_video_fn
+
+        seen: dict[str, Any] = {}
+
+        async def _fake_video_generate(**kw: Any) -> Path:
+            seen.update(kw)
+            Path(kw["output_path"]).write_bytes(b"\x00")
+            return Path(kw["output_path"])
+
+        import oprim
+
+        monkeypatch.setattr(oprim, "video_generate", _fake_video_generate)
+
+        fn = _make_video_fn("wan_cloud")
+        ref = tmp_path / "ref.png"
+        await fn(prompt="hello", output_path=tmp_path / "o.mp4", reference_image=ref)
+
+        assert seen["reference_image"] == ref
+        assert seen["provider"] == "wan_cloud"
