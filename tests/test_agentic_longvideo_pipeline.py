@@ -335,9 +335,9 @@ class TestRefSetThreadedToVideoFn:
             Path(kw["output_path"]).write_bytes(b"\x00")
             return Path(kw["output_path"])
 
-        import oprim
+        import oprim.video_generate as vg_mod
 
-        monkeypatch.setattr(oprim, "video_generate", _fake_video_generate)
+        monkeypatch.setattr(vg_mod, "video_generate", _fake_video_generate)
 
         fn = _make_video_fn("wan_cloud")
         ref = tmp_path / "ref.png"

@@ -330,7 +330,7 @@ def _make_video_fn(provider: str) -> Any:
         reference_image: Path | None = None,
         **kw: Any,
     ) -> None:
-        from oprim import video_generate  # public lazy attr (no oprim.video_generate submodule)
+        from oprim.video_generate import video_generate
 
         await video_generate(
             provider=provider,
