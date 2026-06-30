@@ -15,6 +15,7 @@ from omodul.base import BaseConfig, build_fingerprint, standard_return
 from oskill.cognitive_state import cognitive_update, CognitiveUpdateInput
 from obase.cognitive_store import BaseCognitiveStore
 from oprim.fsrs_engine import fsrs_due_date, fsrs_retrievability
+from oprim.due_compute import due_compute
 
 class InteractionConfig(BaseConfig):
     _omodul_name = "process_interaction_workflow"
@@ -37,6 +38,7 @@ class InteractionInput(BaseModel):
     difficulty: Optional[float] = None   # 题目难度 b∈[0,1]（IRT）；None 时不改变行为
     predicted_confidence: Optional[float] = None  # JOL：作答前自评把握 ∈[0,1]（仅记录，不入算法）
     now: Optional[datetime] = None
+    min_review_interval_hours: float = 0.0  # 集中练习去抖阈值，透传 cognitive_update；默认 0 不改变行为
 
 class InteractionFindings(BaseModel):
     kc_id: str
@@ -74,6 +76,7 @@ async def process_interaction_workflow(
         effortless=input_data.effortless,
         is_interleaved=input_data.is_interleaved,
         difficulty=input_data.difficulty,
+        min_review_interval_hours=input_data.min_review_interval_hours,
         now=now
     )
     result = cognitive_update(input=update_input)
@@ -148,7 +151,7 @@ async def review_queue_workflow(store: BaseCognitiveStore, student_id: UUID, now
     states_map = await store.get_all_states(student_id)
     queue = []
     for kc_id, (state, card) in states_map.items():
-        due_iso = fsrs_due_date(card_dict=card)
-        if due_iso and datetime.fromisoformat(due_iso) <= now:
-            queue.append({"kc_id": kc_id, "due": due_iso})
+        # 单源到期判定（item 13）：统一用 due_compute，避免与其它路径语义分叉。
+        if due_compute(card_dict=card, now=now):
+            queue.append({"kc_id": kc_id, "due": fsrs_due_date(card_dict=card)})
     return queue

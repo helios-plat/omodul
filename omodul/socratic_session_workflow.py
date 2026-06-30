@@ -34,6 +34,9 @@ class SocraticInput(BaseModel):
     kc_id: str = ""
     profiler_result: dict = {}
     student_messages: list[str] = []
+    # item 12：真实历史对话（含 assistant 真实回复，[{"role","content"}]）。给定时
+    # 只处理 student_messages 的新消息（O(1)，且模型看到真实而非重算的历史）。
+    conversation_history: list[dict] = []
     user_id: str = ""
 
 
@@ -72,6 +75,15 @@ async def socratic_session_workflow(
         state = create_socratic_state(input_data.question_text, input_data.correct_answer)
         turns: list[dict] = []
 
+        # item 12：若提供真实历史，seed state（含真实 assistant 回复），只处理新消息——
+        # 避免每轮 O(n) 重算且模型看到的是真实历史。turn_count 按历史中的 user 轮数计。
+        if input_data.conversation_history:
+            state.messages = [
+                {"role": m.get("role", "user"), "content": str(m.get("content", ""))}
+                for m in input_data.conversation_history
+            ]
+            state.turn_count = sum(1 for m in state.messages if m.get("role") == "user")
+
         # Replay prior messages to restore state, then process the latest
         messages_to_process = input_data.student_messages[: config.max_turns]
         if not messages_to_process:
@@ -96,13 +108,16 @@ async def socratic_session_workflow(
             )
 
         for i, msg in enumerate(messages_to_process):
+            # item 11：自适应脚手架——在同一题上停留越久（轮次越多）提示越具体，
+            # 从 config.hint_level 逐级升到 3（明确提示但仍不给答案）。
+            effective_hint = min(3, config.hint_level + state.turn_count // 2)
             out = await process_socratic_turn(
                 state,
                 msg,
                 caller=caller,
                 kc_ids=[input_data.kc_id] if input_data.kc_id else [],
                 model=config.model,
-                hint_level=config.hint_level,
+                hint_level=effective_hint,
             )
             turns.append({
                 "turn": out.turn_number,
