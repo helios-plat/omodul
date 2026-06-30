@@ -39,6 +39,7 @@ class InteractionInput(BaseModel):
     predicted_confidence: Optional[float] = None  # JOL：作答前自评把握 ∈[0,1]（仅记录，不入算法）
     now: Optional[datetime] = None
     min_review_interval_hours: float = 0.0  # 集中练习去抖阈值，透传 cognitive_update；默认 0 不改变行为
+    fsrs_parameters: tuple | None = None    # 个性化 FSRS 权重；None → 全局默认
 
 class InteractionFindings(BaseModel):
     kc_id: str
@@ -77,6 +78,7 @@ async def process_interaction_workflow(
         is_interleaved=input_data.is_interleaved,
         difficulty=input_data.difficulty,
         min_review_interval_hours=input_data.min_review_interval_hours,
+        fsrs_parameters=input_data.fsrs_parameters,
         now=now
     )
     result = cognitive_update(input=update_input)
