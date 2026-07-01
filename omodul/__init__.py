@@ -1,4 +1,4 @@
-__version__ = "1.33.1"
+__version__ = "1.33.2"
 from typing import Any
 
 # New omodul modules (batch 1.29)
@@ -105,12 +105,37 @@ CommitMsgInput = GenerateCommitInput
 MigrateConfig = MigrateDependencyConfig
 MigrateInput = MigrateDependencyInput
 
+# --- Tide A股 re-export 复原（R1）：历史导出过的 3 个 + smoke 需要的 daily_plan_generate ---
+from omodul.symbol_dim_score import (
+    symbol_dim_score,
+    SymbolDimScoreConfig,
+    SymbolDimScoreInput,
+    SymbolDimScoreFindings,
+    compute_fingerprint_for as compute_fingerprint_for_symbol_dim_score,
+)
+from omodul.regime_inference import (
+    regime_inference,
+    RegimeInferenceConfig,
+    RegimeInferenceInput,
+    compute_fingerprint_for as compute_fingerprint_for_regime_inference,
+)
+from omodul.candidate_pool import (
+    candidate_pool,
+    CandidatePoolConfig,
+    CandidatePoolInput,
+    compute_fingerprint_for as compute_fingerprint_for_candidate_pool,
+)
+from omodul.strategy.daily_plan_generator import daily_plan_generate
+
 # 统一的 compute_fingerprint_for(omodul_name, config, input_data) 路由
 def compute_fingerprint_for(omodul_name: str, config: Any, input_data: Any) -> str:
     routers = {
         "initialize_project": compute_fingerprint_for_initialize,
         "run_subagent": compute_fingerprint_for_run_subagent,
         "generate_tests": compute_fingerprint_for_generate_tests,
+        "symbol_dim_score": compute_fingerprint_for_symbol_dim_score,
+        "regime_inference": compute_fingerprint_for_regime_inference,
+        "candidate_pool": compute_fingerprint_for_candidate_pool,
     }
     if omodul_name not in routers: return ""
     return routers[omodul_name](config, input_data)
