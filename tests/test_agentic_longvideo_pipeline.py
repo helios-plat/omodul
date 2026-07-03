@@ -2,13 +2,19 @@
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
+from oskill._schemas import (
+    Chapter,
+    ChapterScript,
+    FrameConsistencyResult,
+    ReferenceSet,
+    SpeakerLine,
+)
 
 from omodul.agentic_longvideo_pipeline import (
     LongVideoConfig,
@@ -16,8 +22,6 @@ from omodul.agentic_longvideo_pipeline import (
     _select_ref_image,
     agentic_longvideo_pipeline,
 )
-from oskill._schemas import ChapterScript, Chapter, SpeakerLine, ShotFrame, ReferenceSet, FrameConsistencyResult
-
 
 # ── Shared fixtures / helpers ──────────────────────────────────────────────
 
@@ -374,8 +378,11 @@ async def test_max_concurrent_shots_default_is_sequential(tmp_path: Path) -> Non
     """默认 max_concurrent_shots=1 → 任意时刻至多 1 个镜头在生成(向后兼容)。"""
     providers, stat = _concurrency_probe_providers(tmp_path)
     cfg = LongVideoConfig(
-        topic="t", duration_archetype="5-15min", video_provider="ltx2_cloud",
-        audio_provider="vibevoice", output_dir=tmp_path / "out",
+        topic="t",
+        duration_archetype="5-15min",
+        video_provider="ltx2_cloud",
+        audio_provider="vibevoice",
+        output_dir=tmp_path / "out",
     )
     assert cfg.max_concurrent_shots == 1
     res = await agentic_longvideo_pipeline(config=cfg, _providers=providers)
@@ -387,8 +394,11 @@ async def test_max_concurrent_shots_runs_in_parallel(tmp_path: Path) -> None:
     """max_concurrent_shots=2 → 窗口内并发(峰值并发达 2),且镜头数/顺序不变。"""
     providers, stat = _concurrency_probe_providers(tmp_path)
     cfg = LongVideoConfig(
-        topic="t", duration_archetype="5-15min", video_provider="ltx2_cloud",
-        audio_provider="vibevoice", output_dir=tmp_path / "out",
+        topic="t",
+        duration_archetype="5-15min",
+        video_provider="ltx2_cloud",
+        audio_provider="vibevoice",
+        output_dir=tmp_path / "out",
         max_concurrent_shots=2,
     )
     res = await agentic_longvideo_pipeline(config=cfg, _providers=providers)
@@ -442,3 +452,26 @@ async def test_audio_failure_degrades_to_video_only(tmp_path: Path) -> None:
     )
     assert isinstance(res, LongVideoResult)  # 没崩
     assert captured["audio_path"] is None  # 降级为纯视频
+
+
+def test_default_llm_uses_obase_singleton_generic(monkeypatch: Any) -> None:
+    """B13: _default_llm 经 get().generic('llm','default') 取,而非 get(category=)。"""
+    import obase
+
+    from omodul.agentic_longvideo_pipeline import _default_llm
+
+    calls: dict = {}
+
+    class _Reg:
+        def generic(self, category: str, name: str = "default") -> str:
+            calls["args"] = (category, name)
+            return "LLM_OBJ"
+
+    class _PR:
+        @classmethod
+        def get(cls) -> _Reg:
+            return _Reg()
+
+    monkeypatch.setattr(obase, "ProviderRegistry", _PR)
+    assert _default_llm() == "LLM_OBJ"
+    assert calls["args"] == ("llm", "default")

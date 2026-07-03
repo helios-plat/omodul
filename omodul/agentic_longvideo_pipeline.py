@@ -351,7 +351,9 @@ def _duration_archetype_to_seconds(archetype: str) -> float:
 def _default_llm() -> Any:
     from obase import ProviderRegistry
 
-    return ProviderRegistry.get(category="llm", name="default")
+    # B13: obase ProviderRegistry.get() 是无参单例访问器,provider 经 .generic(category, name)
+    # 取(此前 get(category=, name=) → TypeError,与 obase 单例 API 不兼容)。
+    return ProviderRegistry.get().generic("llm", "default")
 
 
 def _make_video_fn(provider: str) -> Any:
