@@ -345,3 +345,52 @@ class TestRefSetThreadedToVideoFn:
 
         assert seen["reference_image"] == ref
         assert seen["provider"] == "wan_cloud"
+
+
+# ── RFC-003: 镜头生成并发窗口 ────────────────────────────────────────────────
+
+
+def _concurrency_probe_providers(tmp_path: Path) -> tuple[dict[str, Any], dict[str, int]]:
+    """在 _base_providers 基础上,用可观测并发的 video_fn 替换,记录峰值并发。"""
+    import asyncio
+
+    providers = _base_providers(tmp_path)
+    stat = {"inflight": 0, "peak": 0}
+
+    async def _probe_video_fn(
+        *, prompt: str, output_path: Path, reference_image: Path | None = None, **kw: Any
+    ) -> None:
+        stat["inflight"] += 1
+        stat["peak"] = max(stat["peak"], stat["inflight"])
+        await asyncio.sleep(0.02)  # 制造重叠窗口
+        output_path.write_bytes(b"\x00" * 32)
+        stat["inflight"] -= 1
+
+    providers["video_fn"] = _probe_video_fn
+    return providers, stat
+
+
+async def test_max_concurrent_shots_default_is_sequential(tmp_path: Path) -> None:
+    """默认 max_concurrent_shots=1 → 任意时刻至多 1 个镜头在生成(向后兼容)。"""
+    providers, stat = _concurrency_probe_providers(tmp_path)
+    cfg = LongVideoConfig(
+        topic="t", duration_archetype="5-15min", video_provider="ltx2_cloud",
+        audio_provider="vibevoice", output_dir=tmp_path / "out",
+    )
+    assert cfg.max_concurrent_shots == 1
+    res = await agentic_longvideo_pipeline(config=cfg, _providers=providers)
+    assert stat["peak"] == 1
+    assert res.shots_generated == 4  # 2 章 × 2 镜头
+
+
+async def test_max_concurrent_shots_runs_in_parallel(tmp_path: Path) -> None:
+    """max_concurrent_shots=2 → 窗口内并发(峰值并发达 2),且镜头数/顺序不变。"""
+    providers, stat = _concurrency_probe_providers(tmp_path)
+    cfg = LongVideoConfig(
+        topic="t", duration_archetype="5-15min", video_provider="ltx2_cloud",
+        audio_provider="vibevoice", output_dir=tmp_path / "out",
+        max_concurrent_shots=2,
+    )
+    res = await agentic_longvideo_pipeline(config=cfg, _providers=providers)
+    assert stat["peak"] == 2  # 真并发
+    assert res.shots_generated == 4  # 总数不变

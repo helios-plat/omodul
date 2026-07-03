@@ -39,14 +39,19 @@ class LongVideoConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "agentic_longvideo_pipeline"
     _omodul_version: ClassVar[str] = "1.0.0"
     _fingerprint_fields: ClassVar[set[str]] = {
-        "topic", "duration_archetype", "video_provider",
-        "audio_provider", "style", "num_characters", "language",
+        "topic",
+        "duration_archetype",
+        "video_provider",
+        "audio_provider",
+        "style",
+        "num_characters",
+        "language",
     }
 
     topic: str
     duration_archetype: Literal["1-5min", "5-15min", "15-45min", "45min+"]
-    video_provider: str   # "ltx2_cloud" | "wan_cloud"
-    audio_provider: str   # "ltx2_native" | "vibevoice" | "duix"
+    video_provider: str  # "ltx2_cloud" | "wan_cloud"
+    audio_provider: str  # "ltx2_native" | "vibevoice" | "duix"
     style: str = "cinematic"
     num_characters: int = 1
     language: str = "zh"
@@ -54,6 +59,10 @@ class LongVideoConfig(BaseConfig):
     max_shot_retries: int = 2
     consistency_threshold: float = 0.7
     fallback_video_provider: str | None = None
+    # RFC-003: 镜头生成并发窗口。1 = 严格顺序(默认,行为与历史版本逐字节一致);
+    # >1 = 按窗口并发生成,窗口内共享窗口起点的 timeline_history 快照,跨窗口保持
+    # 完整帧链连续性。单 GPU 工况应保持 1;云 provider 可调大以近线性加速。
+    max_concurrent_shots: int = 1
 
 
 class LongVideoResult(BaseModel):
@@ -121,13 +130,8 @@ async def agentic_longvideo_pipeline(
     select_ref_fn = providers.get("select_ref_fn") or _default_select_reference
     consistency_fn = providers.get("consistency_fn") or _default_consistency_check
     video_fn = providers.get("video_fn") or _make_video_fn(config.video_provider)
-    fallback_video_fn = (
-        providers.get("fallback_video_fn")
-        or (
-            _make_video_fn(config.fallback_video_provider)
-            if config.fallback_video_provider
-            else None
-        )
+    fallback_video_fn = providers.get("fallback_video_fn") or (
+        _make_video_fn(config.fallback_video_provider) if config.fallback_video_provider else None
     )
 
     timeline_history: list[Any] = []
@@ -135,15 +139,17 @@ async def agentic_longvideo_pipeline(
     shots_dir.mkdir(exist_ok=True)
     shots_generated = 0
 
-    for idx, shot_plan in enumerate(all_shot_plans):
+    from oskill._schemas import ShotFrame
+
+    async def _process_shot(idx: int, shot_plan: Any, hist_snapshot: list[Any]) -> Any:
+        """选参考 + 生成单镜头。hist_snapshot 为窗口起点的 timeline_history 快照。"""
         ref_set = await select_ref_fn(
             llm=mllm,
             current_shot=shot_plan,
-            timeline_history=timeline_history,
+            timeline_history=hist_snapshot,
             characters=[f"char_{i}" for i in range(config.num_characters)],
             environments=[f"env_{idx % 3}"],
         )
-
         best_frame = await _generate_shot_with_retry(
             shot_plan=shot_plan,
             ref_set=ref_set,
@@ -156,21 +162,34 @@ async def agentic_longvideo_pipeline(
             max_retries=config.max_shot_retries,
             threshold=config.consistency_threshold,
         )
+        return idx, shot_plan, best_frame
 
-        # Record in timeline history
-        from oskill._schemas import ShotFrame
-
-        timeline_history.append(
-            ShotFrame(
-                shot_id=shot_plan.shot_id if hasattr(shot_plan, "shot_id") else f"shot_{idx}",
-                scene_id=f"scene_{idx}",
-                timeline_index=idx,
-                frame_path=best_frame,
-                characters_present=[f"char_{i}" for i in range(config.num_characters)],
-                environment_id=f"env_{idx % 3}",
+    # RFC-003: 窗口并发。W=1 时与历史顺序实现等价(单元素窗口、快照即当前 history);
+    # W>1 时窗口内并发生成、窗口内共享起点参考,跨窗口保持完整帧链连续性。
+    _window_size = max(1, getattr(config, "max_concurrent_shots", 1))
+    _indexed_plans = list(enumerate(all_shot_plans))
+    for _base in range(0, len(_indexed_plans), _window_size):
+        _window = _indexed_plans[_base : _base + _window_size]
+        _snapshot = list(timeline_history)  # 窗口起点连续性快照
+        if _window_size == 1:
+            _results = [await _process_shot(_window[0][0], _window[0][1], _snapshot)]
+        else:
+            _results = list(
+                await asyncio.gather(*[_process_shot(_i, _p, _snapshot) for _i, _p in _window])
             )
-        )
-        shots_generated += 1
+        # 有序回填(保证拼接顺序 + 与顺序实现的 timeline 一致)。
+        for idx, shot_plan, best_frame in sorted(_results, key=lambda r: r[0]):
+            timeline_history.append(
+                ShotFrame(
+                    shot_id=shot_plan.shot_id if hasattr(shot_plan, "shot_id") else f"shot_{idx}",
+                    scene_id=f"scene_{idx}",
+                    timeline_index=idx,
+                    frame_path=best_frame,
+                    characters_present=[f"char_{i}" for i in range(config.num_characters)],
+                    environment_id=f"env_{idx % 3}",
+                )
+            )
+            shots_generated += 1
 
     # Stage 4: Audio
     if config.audio_provider != "ltx2_native":
@@ -198,9 +217,7 @@ async def agentic_longvideo_pipeline(
     if not final_video.exists():
         final_video.write_bytes(b"\x00" * 64)
 
-    total_duration = sum(
-        getattr(p, "duration_s", 0.0) for p in all_shot_plans
-    )
+    total_duration = sum(getattr(p, "duration_s", 0.0) for p in all_shot_plans)
 
     return LongVideoResult(
         video_path=final_video,
