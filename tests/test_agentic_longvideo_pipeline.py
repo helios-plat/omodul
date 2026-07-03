@@ -2,13 +2,19 @@
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
+from oskill._schemas import (
+    Chapter,
+    ChapterScript,
+    FrameConsistencyResult,
+    ReferenceSet,
+    SpeakerLine,
+)
 
 from omodul.agentic_longvideo_pipeline import (
     LongVideoConfig,
@@ -16,8 +22,6 @@ from omodul.agentic_longvideo_pipeline import (
     _select_ref_image,
     agentic_longvideo_pipeline,
 )
-from oskill._schemas import ChapterScript, Chapter, SpeakerLine, ShotFrame, ReferenceSet, FrameConsistencyResult
-
 
 # ── Shared fixtures / helpers ──────────────────────────────────────────────
 
@@ -374,8 +378,11 @@ async def test_max_concurrent_shots_default_is_sequential(tmp_path: Path) -> Non
     """默认 max_concurrent_shots=1 → 任意时刻至多 1 个镜头在生成(向后兼容)。"""
     providers, stat = _concurrency_probe_providers(tmp_path)
     cfg = LongVideoConfig(
-        topic="t", duration_archetype="5-15min", video_provider="ltx2_cloud",
-        audio_provider="vibevoice", output_dir=tmp_path / "out",
+        topic="t",
+        duration_archetype="5-15min",
+        video_provider="ltx2_cloud",
+        audio_provider="vibevoice",
+        output_dir=tmp_path / "out",
     )
     assert cfg.max_concurrent_shots == 1
     res = await agentic_longvideo_pipeline(config=cfg, _providers=providers)
@@ -387,10 +394,148 @@ async def test_max_concurrent_shots_runs_in_parallel(tmp_path: Path) -> None:
     """max_concurrent_shots=2 → 窗口内并发(峰值并发达 2),且镜头数/顺序不变。"""
     providers, stat = _concurrency_probe_providers(tmp_path)
     cfg = LongVideoConfig(
-        topic="t", duration_archetype="5-15min", video_provider="ltx2_cloud",
-        audio_provider="vibevoice", output_dir=tmp_path / "out",
+        topic="t",
+        duration_archetype="5-15min",
+        video_provider="ltx2_cloud",
+        audio_provider="vibevoice",
+        output_dir=tmp_path / "out",
         max_concurrent_shots=2,
     )
     res = await agentic_longvideo_pipeline(config=cfg, _providers=providers)
     assert stat["peak"] == 2  # 真并发
     assert res.shots_generated == 4  # 总数不变
+
+
+# ── B9/B10: 装配有序去重 + audio 降级 ─────────────────────────────────────────
+
+
+async def test_assembly_dedups_variants_and_orders(tmp_path: Path) -> None:
+    """B9: 每镜头恒写 2 个变体(_v0/_v1)到 shots_dir,但装配只收每镜头最佳帧、按序、不重复。"""
+    providers = _base_providers(tmp_path)  # 2 章 × 2 镜头 = 4 shots
+    captured: dict = {}
+
+    async def _assembler_fn(**kw: Any) -> None:
+        captured["shot_videos"] = list(kw["shot_videos"])
+        Path(str(kw["output_path"])).write_bytes(b"\x00" * 128)
+
+    providers["assembler_fn"] = _assembler_fn
+    res = await agentic_longvideo_pipeline(config=_config(tmp_path), _providers=providers)
+
+    sv = captured["shot_videos"]
+    # 每镜头恰好 1 个(而非 shots_dir 里的 2 个变体)
+    assert len(sv) == res.shots_generated
+    # shots_dir 实际有 2×N 个 .mp4(证明确实发生了去重,而非碰巧只写了 N 个)
+    shots_dir = (tmp_path / "out") / "shots"
+    assert len(list(shots_dir.glob("*.mp4"))) == 2 * res.shots_generated
+    # 按镜头序号严格有序 0..N-1
+    idxs = [int(Path(p).name.split("_")[1]) for p in sv]
+    assert idxs == list(range(res.shots_generated))
+
+
+async def test_audio_failure_degrades_to_video_only(tmp_path: Path) -> None:
+    """B10: 配音失败 → 纯视频出片(audio_path=None),整链不崩。"""
+    providers = _base_providers(tmp_path)
+    captured: dict = {}
+
+    async def _failing_audio(*, script: list, output_path: Path) -> None:
+        raise RuntimeError("tts backend down")
+
+    async def _assembler_fn(**kw: Any) -> None:
+        captured["audio_path"] = kw["audio_path"]
+        Path(str(kw["output_path"])).write_bytes(b"\x00" * 128)
+
+    providers["audio_fn"] = _failing_audio
+    providers["assembler_fn"] = _assembler_fn
+
+    res = await agentic_longvideo_pipeline(
+        config=_config(tmp_path, audio="vibevoice"), _providers=providers
+    )
+    assert isinstance(res, LongVideoResult)  # 没崩
+    assert captured["audio_path"] is None  # 降级为纯视频
+
+
+def test_default_llm_uses_obase_singleton_generic(monkeypatch: Any) -> None:
+    """B13: _default_llm 经 get().generic('llm','default') 取,而非 get(category=)。"""
+    import obase
+
+    from omodul.agentic_longvideo_pipeline import _default_llm
+
+    calls: dict = {}
+
+    class _Reg:
+        def generic(self, category: str, name: str = "default") -> str:
+            calls["args"] = (category, name)
+            return "LLM_OBJ"
+
+    class _PR:
+        @classmethod
+        def get(cls) -> _Reg:
+            return _Reg()
+
+    monkeypatch.setattr(obase, "ProviderRegistry", _PR)
+    assert _default_llm() == "LLM_OBJ"
+    assert calls["args"] == ("llm", "default")
+
+
+# ── B11/B12/B14: 失败暴露 + 显式时长/short + per-shot prompt 钩子 ──────────────
+
+
+def test_short_archetype_maps_to_10s() -> None:
+    """B12: 'short' 档映射 10s。"""
+    from omodul.agentic_longvideo_pipeline import _duration_archetype_to_seconds
+
+    assert _duration_archetype_to_seconds("short") == 10.0
+
+
+async def test_explicit_target_duration_overrides_archetype(tmp_path: Path) -> None:
+    """B12: config.target_duration_s 覆盖档位映射,传给 script_fn。"""
+    providers = _base_providers(tmp_path)
+    seen: dict = {}
+    _orig = providers["script_fn"]
+
+    async def _script_fn(**kw: Any) -> Any:
+        seen["target"] = kw.get("target_duration_s")
+        return await _orig(**kw)
+
+    providers["script_fn"] = _script_fn
+    cfg = LongVideoConfig(
+        topic="t",
+        duration_archetype="5-15min",
+        video_provider="ltx2_cloud",
+        audio_provider="vibevoice",
+        output_dir=tmp_path / "out",
+        target_duration_s=42.0,
+    )
+    await agentic_longvideo_pipeline(config=cfg, _providers=providers)
+    assert seen["target"] == 42.0
+
+
+async def test_failed_shots_exposed_not_silent(tmp_path: Path) -> None:
+    """B11: 全部镜头生成失败 → 回退 placeholder,failed_shots 暴露(不再静默),链不崩。"""
+    providers = _base_providers(tmp_path)
+
+    async def _failing_video(*, prompt: str, output_path: Path, **kw: Any) -> None:
+        raise RuntimeError("gpu oom")
+
+    providers["video_fn"] = _failing_video
+    res = await agentic_longvideo_pipeline(config=_config(tmp_path), _providers=providers)
+    assert res.failed_shots == list(range(res.shots_generated))
+    assert len(res.failed_shots) > 0
+
+
+async def test_shot_prompt_fn_hook_overrides_prompt(tmp_path: Path) -> None:
+    """B14: 提供 shot_prompt_fn → 每镜头 prompt 走钩子(hevi 提示词工程)。"""
+    providers = _base_providers(tmp_path)
+    seen_prompts: list[str] = []
+
+    async def _capturing_video(*, prompt: str, output_path: Path, **kw: Any) -> None:
+        seen_prompts.append(prompt)
+        output_path.write_bytes(b"\x00" * 32)
+
+    async def _shot_prompt_fn(*, shot_plan: Any, idx: int) -> str:
+        return f"ENGINEERED_{idx}"
+
+    providers["video_fn"] = _capturing_video
+    providers["shot_prompt_fn"] = _shot_prompt_fn
+    await agentic_longvideo_pipeline(config=_config(tmp_path), _providers=providers)
+    assert any(p.startswith("ENGINEERED_") for p in seen_prompts)
