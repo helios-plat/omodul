@@ -454,27 +454,20 @@ async def test_audio_failure_degrades_to_video_only(tmp_path: Path) -> None:
     assert captured["audio_path"] is None  # 降级为纯视频
 
 
-def test_default_llm_uses_obase_singleton_generic(monkeypatch: Any) -> None:
-    """B13: _default_llm 经 get().generic('llm','default') 取,而非 get(category=)。"""
-    import obase
+def test_default_llm_uses_obase_singleton_llm(monkeypatch: Any) -> None:
+    """B13: _default_llm 经 get().llm('default') 取,而非 get(category=)。
+
+    "llm" 是 obase 内置 category(register_llm()/.llm() 存取),不是
+    register_generic()/.generic() 用的自定义 category —— 用 .generic("llm", ...)
+    从未写入 _generic["llm"],会恒抛 ProviderNotFoundError。用真实
+    obase.ProviderRegistry(而非全 mock 的假 _Reg)断言,才能真正验证这个契约。
+    """
+    from obase import ProviderRegistry
 
     from omodul.agentic_longvideo_pipeline import _default_llm
 
-    calls: dict = {}
-
-    class _Reg:
-        def generic(self, category: str, name: str = "default") -> str:
-            calls["args"] = (category, name)
-            return "LLM_OBJ"
-
-    class _PR:
-        @classmethod
-        def get(cls) -> _Reg:
-            return _Reg()
-
-    monkeypatch.setattr(obase, "ProviderRegistry", _PR)
+    ProviderRegistry.register("llm", "default", "LLM_OBJ", replace=True)
     assert _default_llm() == "LLM_OBJ"
-    assert calls["args"] == ("llm", "default")
 
 
 # ── B11/B12/B14: 失败暴露 + 显式时长/short + per-shot prompt 钩子 ──────────────

@@ -369,9 +369,12 @@ def _duration_archetype_to_seconds(archetype: str) -> float:
 def _default_llm() -> Any:
     from obase import ProviderRegistry
 
-    # B13: obase ProviderRegistry.get() 是无参单例访问器,provider 经 .generic(category, name)
-    # 取(此前 get(category=, name=) → TypeError,与 obase 单例 API 不兼容)。
-    return ProviderRegistry.get().generic("llm", "default")
+    # B13: obase ProviderRegistry.get() 是无参单例访问器(此前 get(category=, name=)
+    # → TypeError,与 obase 单例 API 不兼容)。"llm" 是 obase 内置 category,经
+    # register_llm()/.llm() 存取,不走 register_generic()/.generic()(那是
+    # video/audio/embedding 等自定义 category 用的)——用 .generic("llm", ...) 会
+    # 因为从未写入 _generic["llm"] 而恒抛 ProviderNotFoundError。
+    return ProviderRegistry.get().llm("default")
 
 
 def _make_video_fn(provider: str) -> Any:
