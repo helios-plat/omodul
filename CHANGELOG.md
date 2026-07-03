@@ -2,6 +2,11 @@
 
 <!-- Governance: see RELEASE_POLICY.md. main = release branch; feat branches deleted after merge; oprim → oskill → omodul merge order required; container bind-mount means git checkout is a live operation. -->
 
+## [1.34.0] — 2026-07-02
+
+### Added
+- feat(RFC-003): `LongVideoConfig.max_concurrent_shots`(默认 1)—— 镜头生成窗口并发。>1 时按窗口并发生成,窗口内共享窗口起点的 `timeline_history` 快照、跨窗口保持完整帧链连续性;有序回填保证拼接顺序。默认 1 与历史顺序实现逐字节等价(15 项既有测试全过 + 2 项并发新测)。解锁 hevi 非 short 档的近线性出片加速(单 GPU 应保持 1,云 provider 可调大)。
+
 ## [1.26.0] — 2026-06-13
 
 ### Added (hevi v2 — M8)
