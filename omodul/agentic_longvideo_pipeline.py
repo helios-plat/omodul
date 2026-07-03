@@ -22,8 +22,11 @@ Example:
 from __future__ import annotations
 
 import asyncio
+import logging
 from pathlib import Path
 from typing import Any, ClassVar, Literal
+
+logger = logging.getLogger(__name__)
 
 from pydantic import BaseModel, Field
 
@@ -191,12 +194,22 @@ async def agentic_longvideo_pipeline(
             )
             shots_generated += 1
 
-    # Stage 4: Audio
+    # Stage 4: Audio (B10: 配音非必需 —— 失败则降级为纯视频出片,不让整链崩)
     if config.audio_provider != "ltx2_native":
         audio_fn = providers.get("audio_fn") or _make_audio_fn(config.audio_provider)
         all_lines = [line for ch in chapter_script.chapters for line in ch.dialogues]
         audio_path = output_dir / "audio.wav"
-        await audio_fn(script=all_lines, output_path=audio_path)
+        try:
+            await audio_fn(script=all_lines, output_path=audio_path)
+            if not audio_path.exists():
+                raise RuntimeError("audio_fn produced no output file")
+        except Exception as exc:
+            logger.warning(
+                "audio synthesis failed (provider=%s); degrading to video-only: %s",
+                config.audio_provider,
+                exc,
+            )
+            audio_path = None
     else:
         audio_path = None
 
@@ -208,8 +221,10 @@ async def agentic_longvideo_pipeline(
     # Stage 6: Assemble
     assembler_fn = providers.get("assembler_fn") or _default_video_assembler
     final_video = output_dir / "final.mp4"
+    # B9: 按镜头序装配 —— 用 timeline_history 记录的每镜头最佳帧(已按 idx 有序、每序号唯一),
+    # 而非 glob("*.mp4")(会把重试变体 shot_XXXX_v1.mp4 / placeholder 都乱序纳入,留废片/乱序)。
     await assembler_fn(
-        shot_videos=list(shots_dir.glob("*.mp4")),
+        shot_videos=[sf.frame_path for sf in timeline_history],
         audio_path=audio_path,
         subtitle_path=subtitle_path,
         output_path=final_video,

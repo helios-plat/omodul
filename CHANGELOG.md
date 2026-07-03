@@ -2,6 +2,12 @@
 
 <!-- Governance: see RELEASE_POLICY.md. main = release branch; feat branches deleted after merge; oprim → oskill → omodul merge order required; container bind-mount means git checkout is a live operation. -->
 
+## [1.35.0] — 2026-07-03
+
+### Fixed
+- fix(B9): `agentic_longvideo_pipeline` 装配改用 `timeline_history` 记录的每镜头最佳帧(已按 idx 有序、每序号唯一),替代 `shots_dir.glob("*.mp4")`。此前每镜头恒写 2 个变体(`_v0`/`_v1`)+ 可能的 placeholder,glob 会把它们**全部乱序纳入**成片 —— 即每镜头footage重复、顺序错乱。
+- fix(B10): audio 合成失败时**降级为纯视频出片**(记 warning、audio_path=None),不再让 `audio_fn` 抛异常崩掉整条出片链。配音非必需。
+
 ## [1.34.0] — 2026-07-02
 
 ### Added

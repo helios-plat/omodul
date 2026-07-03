@@ -394,3 +394,51 @@ async def test_max_concurrent_shots_runs_in_parallel(tmp_path: Path) -> None:
     res = await agentic_longvideo_pipeline(config=cfg, _providers=providers)
     assert stat["peak"] == 2  # 真并发
     assert res.shots_generated == 4  # 总数不变
+
+
+# ── B9/B10: 装配有序去重 + audio 降级 ─────────────────────────────────────────
+
+
+async def test_assembly_dedups_variants_and_orders(tmp_path: Path) -> None:
+    """B9: 每镜头恒写 2 个变体(_v0/_v1)到 shots_dir,但装配只收每镜头最佳帧、按序、不重复。"""
+    providers = _base_providers(tmp_path)  # 2 章 × 2 镜头 = 4 shots
+    captured: dict = {}
+
+    async def _assembler_fn(**kw: Any) -> None:
+        captured["shot_videos"] = list(kw["shot_videos"])
+        Path(str(kw["output_path"])).write_bytes(b"\x00" * 128)
+
+    providers["assembler_fn"] = _assembler_fn
+    res = await agentic_longvideo_pipeline(config=_config(tmp_path), _providers=providers)
+
+    sv = captured["shot_videos"]
+    # 每镜头恰好 1 个(而非 shots_dir 里的 2 个变体)
+    assert len(sv) == res.shots_generated
+    # shots_dir 实际有 2×N 个 .mp4(证明确实发生了去重,而非碰巧只写了 N 个)
+    shots_dir = (tmp_path / "out") / "shots"
+    assert len(list(shots_dir.glob("*.mp4"))) == 2 * res.shots_generated
+    # 按镜头序号严格有序 0..N-1
+    idxs = [int(Path(p).name.split("_")[1]) for p in sv]
+    assert idxs == list(range(res.shots_generated))
+
+
+async def test_audio_failure_degrades_to_video_only(tmp_path: Path) -> None:
+    """B10: 配音失败 → 纯视频出片(audio_path=None),整链不崩。"""
+    providers = _base_providers(tmp_path)
+    captured: dict = {}
+
+    async def _failing_audio(*, script: list, output_path: Path) -> None:
+        raise RuntimeError("tts backend down")
+
+    async def _assembler_fn(**kw: Any) -> None:
+        captured["audio_path"] = kw["audio_path"]
+        Path(str(kw["output_path"])).write_bytes(b"\x00" * 128)
+
+    providers["audio_fn"] = _failing_audio
+    providers["assembler_fn"] = _assembler_fn
+
+    res = await agentic_longvideo_pipeline(
+        config=_config(tmp_path, audio="vibevoice"), _providers=providers
+    )
+    assert isinstance(res, LongVideoResult)  # 没崩
+    assert captured["audio_path"] is None  # 降级为纯视频
