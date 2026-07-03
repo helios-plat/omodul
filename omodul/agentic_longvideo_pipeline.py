@@ -26,12 +26,11 @@ import logging
 from pathlib import Path
 from typing import Any, ClassVar, Literal
 
-logger = logging.getLogger(__name__)
-
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from omodul._base_config import BaseConfig
 
+logger = logging.getLogger(__name__)
 
 # ── Config / Result ────────────────────────────────────────────────────────
 
@@ -52,7 +51,7 @@ class LongVideoConfig(BaseConfig):
     }
 
     topic: str
-    duration_archetype: Literal["1-5min", "5-15min", "15-45min", "45min+"]
+    duration_archetype: Literal["short", "1-5min", "5-15min", "15-45min", "45min+"]
     video_provider: str  # "ltx2_cloud" | "wan_cloud"
     audio_provider: str  # "ltx2_native" | "vibevoice" | "duix"
     style: str = "cinematic"
@@ -66,6 +65,8 @@ class LongVideoConfig(BaseConfig):
     # >1 = 按窗口并发生成,窗口内共享窗口起点的 timeline_history 快照,跨窗口保持
     # 完整帧链连续性。单 GPU 工况应保持 1;云 provider 可调大以近线性加速。
     max_concurrent_shots: int = 1
+    # B12: 显式目标时长(秒);设置则覆盖 duration_archetype 档位映射(支持任意时长 / "short" 短档)。
+    target_duration_s: float | None = None
 
 
 class LongVideoResult(BaseModel):
@@ -76,6 +77,8 @@ class LongVideoResult(BaseModel):
     chapters: int
     shots_generated: int
     provider_used: dict[str, str]
+    # B11: 生成失败(回退 placeholder)的镜头 idx,供上层决定 fallback/报错(此前静默吞掉)。
+    failed_shots: list[int] = []
 
 
 # ── Public API ─────────────────────────────────────────────────────────────
@@ -110,7 +113,8 @@ async def agentic_longvideo_pipeline(
 
     # Stage 1: Script (chapter_mode)
     script_fn = providers.get("script_fn") or _default_script_writer
-    target_s = _duration_archetype_to_seconds(config.duration_archetype)
+    # B12: 显式 target_duration_s 优先,否则按档位映射。
+    target_s = config.target_duration_s or _duration_archetype_to_seconds(config.duration_archetype)
     chapter_script = await script_fn(
         topic=config.topic,
         target_duration_s=target_s,
@@ -131,6 +135,9 @@ async def agentic_longvideo_pipeline(
 
     # Stage 3: Per-shot video generation with select_reference + consistency check
     select_ref_fn = providers.get("select_ref_fn") or _default_select_reference
+    # B14: 可选 per-shot prompt 钩子 —— 提供则用它构造/改写每镜头 prompt(hevi 提示词工程),
+    # 否则沿用 shot_plan.image_prompt(默认行为不变)。签名: async (shot_plan, idx) -> str。
+    shot_prompt_fn = providers.get("shot_prompt_fn")
     consistency_fn = providers.get("consistency_fn") or _default_consistency_check
     video_fn = providers.get("video_fn") or _make_video_fn(config.video_provider)
     fallback_video_fn = providers.get("fallback_video_fn") or (
@@ -141,6 +148,7 @@ async def agentic_longvideo_pipeline(
     shots_dir = output_dir / "shots"
     shots_dir.mkdir(exist_ok=True)
     shots_generated = 0
+    failed_shots: list[int] = []  # B11: 回退 placeholder 的镜头 idx
 
     from oskill._schemas import ShotFrame
 
@@ -153,8 +161,12 @@ async def agentic_longvideo_pipeline(
             characters=[f"char_{i}" for i in range(config.num_characters)],
             environments=[f"env_{idx % 3}"],
         )
+        prompt_override = (
+            await shot_prompt_fn(shot_plan=shot_plan, idx=idx) if shot_prompt_fn else None
+        )
         best_frame = await _generate_shot_with_retry(
             shot_plan=shot_plan,
+            prompt_override=prompt_override,
             ref_set=ref_set,
             video_fn=video_fn,
             fallback_video_fn=fallback_video_fn,
@@ -182,6 +194,9 @@ async def agentic_longvideo_pipeline(
             )
         # 有序回填(保证拼接顺序 + 与顺序实现的 timeline 一致)。
         for idx, shot_plan, best_frame in sorted(_results, key=lambda r: r[0]):
+            if "placeholder" in Path(best_frame).name:  # B11: 记录生成失败(回退 placeholder)的镜头
+                failed_shots.append(idx)
+                logger.warning("shot %d generation failed; used placeholder", idx)
             timeline_history.append(
                 ShotFrame(
                     shot_id=shot_plan.shot_id if hasattr(shot_plan, "shot_id") else f"shot_{idx}",
@@ -243,6 +258,7 @@ async def agentic_longvideo_pipeline(
             "video": config.video_provider,
             "audio": config.audio_provider,
         },
+        failed_shots=failed_shots,
     )
 
 
@@ -271,6 +287,7 @@ def _select_ref_image(ref_set: Any) -> Path | None:
 async def _generate_shot_with_retry(
     *,
     shot_plan: Any,
+    prompt_override: str | None = None,
     ref_set: Any,
     video_fn: Any,
     fallback_video_fn: Any,
@@ -309,7 +326,7 @@ async def _generate_shot_with_retry(
             candidate_path = shots_dir / f"shot_{idx:04d}_v{variant}.mp4"
             try:
                 await current_fn(
-                    prompt=getattr(shot_plan, "image_prompt", "scene"),
+                    prompt=prompt_override or getattr(shot_plan, "image_prompt", "scene"),
                     output_path=candidate_path,
                     reference_image=ref_image,
                 )
@@ -341,6 +358,7 @@ async def _generate_shot_with_retry(
 
 def _duration_archetype_to_seconds(archetype: str) -> float:
     return {
+        "short": 10.0,  # B12: hevi 短档(单镜头级速览)
         "1-5min": 180.0,
         "5-15min": 600.0,
         "15-45min": 1800.0,

@@ -475,3 +475,67 @@ def test_default_llm_uses_obase_singleton_generic(monkeypatch: Any) -> None:
     monkeypatch.setattr(obase, "ProviderRegistry", _PR)
     assert _default_llm() == "LLM_OBJ"
     assert calls["args"] == ("llm", "default")
+
+
+# ── B11/B12/B14: 失败暴露 + 显式时长/short + per-shot prompt 钩子 ──────────────
+
+
+def test_short_archetype_maps_to_10s() -> None:
+    """B12: 'short' 档映射 10s。"""
+    from omodul.agentic_longvideo_pipeline import _duration_archetype_to_seconds
+
+    assert _duration_archetype_to_seconds("short") == 10.0
+
+
+async def test_explicit_target_duration_overrides_archetype(tmp_path: Path) -> None:
+    """B12: config.target_duration_s 覆盖档位映射,传给 script_fn。"""
+    providers = _base_providers(tmp_path)
+    seen: dict = {}
+    _orig = providers["script_fn"]
+
+    async def _script_fn(**kw: Any) -> Any:
+        seen["target"] = kw.get("target_duration_s")
+        return await _orig(**kw)
+
+    providers["script_fn"] = _script_fn
+    cfg = LongVideoConfig(
+        topic="t",
+        duration_archetype="5-15min",
+        video_provider="ltx2_cloud",
+        audio_provider="vibevoice",
+        output_dir=tmp_path / "out",
+        target_duration_s=42.0,
+    )
+    await agentic_longvideo_pipeline(config=cfg, _providers=providers)
+    assert seen["target"] == 42.0
+
+
+async def test_failed_shots_exposed_not_silent(tmp_path: Path) -> None:
+    """B11: 全部镜头生成失败 → 回退 placeholder,failed_shots 暴露(不再静默),链不崩。"""
+    providers = _base_providers(tmp_path)
+
+    async def _failing_video(*, prompt: str, output_path: Path, **kw: Any) -> None:
+        raise RuntimeError("gpu oom")
+
+    providers["video_fn"] = _failing_video
+    res = await agentic_longvideo_pipeline(config=_config(tmp_path), _providers=providers)
+    assert res.failed_shots == list(range(res.shots_generated))
+    assert len(res.failed_shots) > 0
+
+
+async def test_shot_prompt_fn_hook_overrides_prompt(tmp_path: Path) -> None:
+    """B14: 提供 shot_prompt_fn → 每镜头 prompt 走钩子(hevi 提示词工程)。"""
+    providers = _base_providers(tmp_path)
+    seen_prompts: list[str] = []
+
+    async def _capturing_video(*, prompt: str, output_path: Path, **kw: Any) -> None:
+        seen_prompts.append(prompt)
+        output_path.write_bytes(b"\x00" * 32)
+
+    async def _shot_prompt_fn(*, shot_plan: Any, idx: int) -> str:
+        return f"ENGINEERED_{idx}"
+
+    providers["video_fn"] = _capturing_video
+    providers["shot_prompt_fn"] = _shot_prompt_fn
+    await agentic_longvideo_pipeline(config=_config(tmp_path), _providers=providers)
+    assert any(p.startswith("ENGINEERED_") for p in seen_prompts)

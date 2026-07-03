@@ -8,6 +8,9 @@
 - fix(B9): `agentic_longvideo_pipeline` 装配改用 `timeline_history` 记录的每镜头最佳帧(已按 idx 有序、每序号唯一),替代 `shots_dir.glob("*.mp4")`。此前每镜头恒写 2 个变体(`_v0`/`_v1`)+ 可能的 placeholder,glob 会把它们**全部乱序纳入**成片 —— 即每镜头footage重复、顺序错乱。
 - fix(B10): audio 合成失败时**降级为纯视频出片**(记 warning、audio_path=None),不再让 `audio_fn` 抛异常崩掉整条出片链。配音非必需。
 - fix(B13): `_default_llm` 改用 obase 单例 API `ProviderRegistry.get().generic("llm","default")`(此前 `get(category=,name=)` 与无参单例 `get()` 不兼容 → TypeError)。
+- feat(B11): `LongVideoResult.failed_shots` 暴露回退 placeholder 的镜头 idx（此前静默吞掉失败），供上层决定 fallback/报错。
+- feat(B12): `LongVideoConfig` 增 `target_duration_s`(显式覆盖档位)+ `duration_archetype` 增 `"short"` 档(→10s)。
+- feat(B14): 新增可选 `shot_prompt_fn` provider 钩子 —— per-shot prompt 走注入(hevi 提示词工程),缺省沿用 shot_plan.image_prompt(行为不变)。
 
 ## [1.34.0] — 2026-07-02
 
