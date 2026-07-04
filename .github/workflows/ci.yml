@@ -9,17 +9,67 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: omodul
     steps:
-      - uses: actions/checkout@v4
+      # omodul depends on sibling repos (obase/oprim/oskill/oservi) that are NOT
+      # on PyPI. All are public, so they can be checked out without a token and
+      # editable-installed. See omodul#9.
+      - name: Checkout omodul
+        uses: actions/checkout@v4
+        with:
+          path: omodul
+      - name: Checkout obase
+        uses: actions/checkout@v4
+        with:
+          repository: helios-plat/obase
+          path: obase
+      - name: Checkout oprim
+        uses: actions/checkout@v4
+        with:
+          repository: helios-plat/oprim
+          path: oprim
+      - name: Checkout oskill
+        uses: actions/checkout@v4
+        with:
+          repository: helios-plat/oskill
+          path: oskill
+      - name: Checkout oservi
+        uses: actions/checkout@v4
+        with:
+          repository: helios-plat/oservi
+          path: oservi
+
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
-      - run: pip install -e ".[dev]"
-      - run: ruff check omodul/ tests/
+          python-version: "3.12"
+
+      - name: Install siblings (editable) + omodul with extras
+        # Single resolution so the omodul<->oservi cycle (oservi depends on omodul)
+        # is satisfied from the co-installed editables rather than PyPI.
+        run: |
+          pip install \
+            -e ../obase -e ../oprim -e ../oskill -e ../oservi \
+            -e ".[dev,browser-extension,knowledge]"
+
+      - name: Lint
+        run: ruff check omodul/ tests/
+
       - name: Layer 3 discipline check
+        # Run regardless of Lint outcome so every dimension's true state is
+        # visible in one run (CI is honestly red until omodul#10 is cleared).
+        if: ${{ !cancelled() }}
         run: |
           if grep -rn "from omodul\." omodul/*.py | grep -v "__init__" | grep -v "_version" | grep -v "_base"; then
             echo "ERROR: Layer 3 discipline violated"
             exit 1
           fi
-      - run: pytest --cov=omodul --cov-report=term-missing --cov-fail-under=90
+
+      # --continue-on-collection-errors so the ~5 cross-repo API-skew modules
+      # don't abort the whole run — the suite runs and reports the true state.
+      # NOTE: currently red (see omodul#10) — do NOT pin as a required
+      # check until the tracked test failures are resolved.
+      - name: Test
+        if: ${{ !cancelled() }}
+        run: pytest --continue-on-collection-errors --cov=omodul --cov-report=term-missing --cov-fail-under=90
