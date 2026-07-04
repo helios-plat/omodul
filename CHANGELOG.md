@@ -2,6 +2,13 @@
 
 <!-- Governance: see RELEASE_POLICY.md. main = release branch; feat branches deleted after merge; oprim → oskill → omodul merge order required; container bind-mount means git checkout is a live operation. -->
 
+## [1.36.0] — 2026-07-04
+
+### Added (C3 — 结构化 per-shot 结果 + 镜头级返工)
+- feat(C3a): `LongVideoResult.shots: list[ShotRecord]`(默认空 → 老调用零变化)。`ShotRecord{index, path, provider, variant_chosen, consistency_score, passed, duration_s}`。此前逐镜头在 `_generate_shot_with_retry` 内已算出选中变体/一致性分/及格与否,但只 `return best_frame: Path`,元数据即弃、对外仅 `shots_generated: int`。`_generate_shot_with_retry` 现返回 `(Path, meta)`,循环有序回填时收集 `ShotRecord`;`consistency_score`/`variant_chosen` 拿不到时降级 `None`/`-1`(不强依赖下游注入富对象)。
+- feat(C3b): `regenerate_shots(*, task_dir, shot_ids, hints, config, _providers)` —— 只重生成指定镜头(`原 prompt + hints[idx]`、清旧变体),其余复用现有最佳变体(最大 `shot_XXXX_v*.mp4`),再走注入的 `assembler_fn` 重装配(复用现有 audio/subtitle)。依赖主管线新落的 per-shot prompt 边车 `shot_XXXX.plan.json`。支撑下游 verdict→定向返工闭环(不必整片重烧)。
+- 下游动机(hevi #7 / obase 无关):hevi `ShotState` 落库 + 评分卡 `hints`→返工 依赖此。27 tests(24 既有全过 + 3 C3 新测)。向后兼容:仅新增字段/函数,默认行为不变。
+
 ## [1.35.0] — 2026-07-03
 
 ### Fixed

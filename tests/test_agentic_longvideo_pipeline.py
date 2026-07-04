@@ -539,3 +539,62 @@ async def test_shot_prompt_fn_hook_overrides_prompt(tmp_path: Path) -> None:
     providers["shot_prompt_fn"] = _shot_prompt_fn
     await agentic_longvideo_pipeline(config=_config(tmp_path), _providers=providers)
     assert any(p.startswith("ENGINEERED_") for p in seen_prompts)
+
+
+# ── C3: 结构化 per-shot 结果 + 镜头级返工 ──────────────────────────────────
+
+
+async def test_c3_result_exposes_shot_records(tmp_path: Path) -> None:
+    """C3a: LongVideoResult.shots 暴露 per-shot 明细(此前只有 shots_generated 计数)。"""
+    providers = _base_providers(tmp_path)
+    result = await agentic_longvideo_pipeline(config=_config(tmp_path), _providers=providers)
+    assert len(result.shots) == result.shots_generated
+    assert result.shots
+    r0 = result.shots[0]
+    assert r0.index == 0
+    assert r0.provider == "ltx2_cloud"
+    assert r0.variant_chosen == 0  # mock consistency 选 candidates[0]
+    assert r0.passed is True
+    assert isinstance(r0.consistency_score, float)  # mock scores {best: 0.9}
+
+
+async def test_c3_shot_plan_sidecars_persisted(tmp_path: Path) -> None:
+    """C3: 每镜头落 plan 边车,供 regenerate_shots 用原 prompt。"""
+    import json
+
+    providers = _base_providers(tmp_path)
+    await agentic_longvideo_pipeline(config=_config(tmp_path), _providers=providers)
+    sidecars = sorted((tmp_path / "out" / "shots").glob("shot_*.plan.json"))
+    assert len(sidecars) >= 1
+    data = json.loads(sidecars[0].read_text())
+    assert "prompt" in data and "index" in data
+
+
+async def test_c3_regenerate_shots_only_targets_with_hint(tmp_path: Path) -> None:
+    """C3b: regenerate_shots 只重生成指定镜头 + hints 并入 prompt;其余镜头复用。"""
+    from omodul.agentic_longvideo_pipeline import regenerate_shots
+
+    providers = _base_providers(tmp_path)
+    cfg = _config(tmp_path)
+    await agentic_longvideo_pipeline(config=cfg, _providers=providers)
+
+    regen_calls: list[tuple[str, str]] = []
+
+    async def _tracking_video(*, prompt: str, output_path: Path, **kw: Any) -> None:
+        regen_calls.append((prompt, Path(output_path).name))
+        output_path.write_bytes(b"\x00" * 48)
+
+    providers["video_fn"] = _tracking_video
+    result = await regenerate_shots(
+        task_dir=tmp_path / "out",
+        shot_ids=[1],
+        hints={1: "brighter lighting"},
+        config=cfg,
+        _providers=providers,
+    )
+    assert regen_calls, "regen 应调用 video_fn"
+    assert all(name.startswith("shot_0001_") for _, name in regen_calls)  # 只重生成 shot 1
+    assert all("brighter lighting" in p for p, _ in regen_calls)  # hint 并入 prompt
+    n_shots = len(sorted((tmp_path / "out" / "shots").glob("shot_*.plan.json")))
+    assert len(result.shots) == n_shots  # 覆盖全部(重生成 + 复用)
+    assert any(r.index == 1 for r in result.shots)
