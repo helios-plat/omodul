@@ -46,9 +46,12 @@ jobs:
           python-version: "3.12"
 
       - name: Install siblings (editable) + omodul with extras
+        # Single resolution so the omodul<->oservi cycle (oservi depends on omodul)
+        # is satisfied from the co-installed editables rather than PyPI.
         run: |
-          pip install -e ../obase -e ../oprim -e ../oskill -e ../oservi
-          pip install -e ".[dev,browser-extension,knowledge]"
+          pip install \
+            -e ../obase -e ../oprim -e ../oskill -e ../oservi \
+            -e ".[dev,browser-extension,knowledge]"
 
       - name: Lint
         run: ruff check omodul/ tests/
