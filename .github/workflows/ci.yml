@@ -57,6 +57,9 @@ jobs:
         run: ruff check omodul/ tests/
 
       - name: Layer 3 discipline check
+        # Run regardless of Lint outcome so every dimension's true state is
+        # visible in one run (CI is honestly red until omodul#10 is cleared).
+        if: ${{ !cancelled() }}
         run: |
           if grep -rn "from omodul\." omodul/*.py | grep -v "__init__" | grep -v "_version" | grep -v "_base"; then
             echo "ERROR: Layer 3 discipline violated"
@@ -68,4 +71,5 @@ jobs:
       # NOTE: currently red (see omodul#10) — do NOT pin as a required
       # check until the tracked test failures are resolved.
       - name: Test
+        if: ${{ !cancelled() }}
         run: pytest --continue-on-collection-errors --cov=omodul --cov-report=term-missing --cov-fail-under=90
