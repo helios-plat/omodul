@@ -61,11 +61,21 @@ def consensus_workflow(
         from oskill.signal.sentiment_onchain_synthesis import (
             fgi_sentiment_bias,
             onchain_signal,
+            risk_on_off_signal,
         )
 
         t0 = datetime.now(UTC)
         fgi = input_data.get("fgi")
         sentiment_bias = fgi_sentiment_bias(float(fgi))["bias"] if fgi is not None else 0.0
+        tf = input_data.get("tradfi")
+        macro_bias = (
+            risk_on_off_signal(
+                equity_returns=tf.get("equity_returns", []),
+                dxy_returns=tf.get("dxy_returns", []),
+            )["bias"]
+            if tf
+            else 0.0
+        )
         oc = input_data.get("onchain")
         onchain_bias = (
             onchain_signal(
@@ -96,6 +106,7 @@ def consensus_workflow(
             regime_state=input_data.get("regime_state", "range"),
             sentiment_bias=sentiment_bias,
             onchain_bias=onchain_bias,
+            macro_bias=macro_bias,
             ttl_seconds=config.ttl_seconds,
             base_threshold=config.base_threshold,
             max_kelly=config.max_kelly,
