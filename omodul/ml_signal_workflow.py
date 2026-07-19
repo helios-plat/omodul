@@ -48,6 +48,13 @@ class MlSignalConfig(BaseConfig):
     wfv_step: int = 100
     dsr_threshold: float = 0.60
     dsr_n_trials: int = 10  # conservative multiple-testing deflation
+    # Sharpe annualization factor for `closes`' actual bar frequency. Default is
+    # 5m bars on a 24/7 crypto market (365*24*12=105,120 bars/yr — same convention
+    # as ops/scripts/scalping_gate_r51.py's PERIODS_5M), NOT the equity-market
+    # sqrt(252) that was hardcoded here before: that silently assumed 1
+    # observation = 1 trading day while every caller actually feeds 5m closes,
+    # understating oos_sharpe (and therefore the DSR gate) by ~20x.
+    bars_per_year: int = 105_120
 
 
 def _fit_predict_lgb(x_train, y_train, x_test):
@@ -127,8 +134,15 @@ def ml_signal_workflow(
             horizon=config.horizon,
         )
         bar_idx = feats["_bar_index"].to_numpy()
+        # Triple-barrier labels for the last `horizon` bars in the series are
+        # unlabelable (not enough forward data to resolve a barrier) and come
+        # back as 0 — same value as a genuine "price stayed inside both
+        # barriers" neutral. Left in, they get trained on as real neutrals.
+        # Drop them here rather than silently mixing the two.
+        labelable = bar_idx < (len(closes) - config.horizon)
+        bar_idx = bar_idx[labelable]
         y = labels_full[bar_idx]
-        x = feats.drop(columns=["_bar_index"]).to_numpy()
+        x = feats.drop(columns=["_bar_index"]).to_numpy()[labelable]
         _rec("oprim", "triple_barrier_label", {"n_labeled": int((y != 0).sum())}, t0)
 
         # walk-forward OOS predictions
@@ -141,7 +155,13 @@ def ml_signal_workflow(
         n_folds = 0
         start = 0
         while start + config.wfv_train + config.wfv_test <= n:
-            tr = slice(start, start + config.wfv_train)
+            # Purge: a training-window label at position i is built from
+            # closes[i+1 : i+1+horizon], so the last `horizon` rows of the
+            # training slice have labels resolved using price bars that fall
+            # inside the adjacent test window — the model would train on
+            # outcomes it's about to be scored on. Drop those rows from the
+            # training slice (a plain purge; test set is untouched).
+            tr = slice(start, max(start, start + config.wfv_train - config.horizon))
             te = slice(start + config.wfv_train, start + config.wfv_train + config.wfv_test)
             pred = _fit_predict_lgb(x[tr], y[tr], x[te])
             # OOS strategy return = predicted direction * next-bar return at that bar
@@ -163,7 +183,7 @@ def ml_signal_workflow(
         wfv_accuracy = (correct / counted) if counted else 0.0
         strat = np.asarray(actual_ret, dtype=float)
         if len(strat) > 5 and strat.std(ddof=1) > 0:
-            sharpe = float(strat.mean() / strat.std(ddof=1) * np.sqrt(252))
+            sharpe = float(strat.mean() / strat.std(ddof=1) * np.sqrt(config.bars_per_year))
         else:
             sharpe = 0.0
         dsr_res = deflated_sharpe(sharpe, config.dsr_n_trials, returns=strat.tolist())

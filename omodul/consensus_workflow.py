@@ -47,7 +47,9 @@ def consensus_workflow(
 
     input_data keys: ``signals`` (list[dict] per-engine), ``weights`` (dict),
     ``regime_state`` (str), ``fgi`` (float|None), ``onchain`` (dict|None with
-    flow_in/flow_out/mvrv).
+    flow_in/flow_out/mvrv), ``news_sentiment`` (float|None, [0,1] keyword score
+    from iris md.sentiment metric=news_sentiment — a minor nudge on sentiment_bias,
+    see oskill.signal.sentiment_onchain_synthesis.news_sentiment_nudge).
     """
     from obase.cost_tracker import CostTracker
 
@@ -60,6 +62,7 @@ def consensus_workflow(
         from oskill.consensus.engine_consensus import engine_consensus
         from oskill.signal.sentiment_onchain_synthesis import (
             fgi_sentiment_bias,
+            news_sentiment_nudge,
             onchain_signal,
             risk_on_off_signal,
         )
@@ -67,6 +70,11 @@ def consensus_workflow(
         t0 = datetime.now(UTC)
         fgi = input_data.get("fgi")
         sentiment_bias = fgi_sentiment_bias(float(fgi))["bias"] if fgi is not None else 0.0
+        news_score = input_data.get("news_sentiment")
+        if news_score is not None:
+            sentiment_bias = max(
+                -1.0, min(1.0, sentiment_bias + news_sentiment_nudge(float(news_score)))
+            )
         tf = input_data.get("tradfi")
         macro_bias = (
             risk_on_off_signal(

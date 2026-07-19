@@ -51,6 +51,8 @@ class CvarRiskConfig(BaseConfig):
     max_net_exposure: float = 0.25
     min_trade_notional: float = 10.0
     slippage_scale: float = 1.0
+    max_asset_weight: float = 0.5
+    min_asset_weight: float = 0.15
 
 
 def _run_workflow(
@@ -170,7 +172,13 @@ def cvar_risk_workflow(
         from oskill.portfolio.cvar_optimal_weights import cvar_optimal_weights
 
         returns: pd.DataFrame = d["returns"]
-        result = cvar_optimal_weights(returns, alpha=config.alpha, min_obs=config.min_obs)
+        result = cvar_optimal_weights(
+            returns,
+            alpha=config.alpha,
+            min_obs=config.min_obs,
+            max_weight=config.max_asset_weight,
+            min_weight=config.min_asset_weight,
+        )
         return {"weights": result}
 
     def _stage_sizing(d: dict) -> dict:
@@ -185,8 +193,18 @@ def cvar_risk_workflow(
         caps: dict[str, dict] = {}
         for sym in symbols:
             pairs = config.correlation_pairs.get(sym, {})
+            # position_size_tiers' correlated_positions contract is fraction-of-capital
+            # (see its docstring), not raw USD — current_positions is USD notional, so
+            # it must be divided by capital_usd here. Passing raw USD made the tier-3
+            # net-exposure check compare a USD number against a 0..1 fraction bound,
+            # clipping any correlated instrument's cap to ~0 whenever the other side
+            # of the pair held any position at all.
             correlated_positions = [
-                (current_positions.get(other, 0.0), corr) for other, corr in pairs.items()
+                (
+                    (current_positions.get(other, 0.0) / capital_usd) if capital_usd > 0 else 0.0,
+                    corr,
+                )
+                for other, corr in pairs.items()
             ]
             caps[sym] = position_size_tiers(
                 proposed_notional=weights[sym] * capital_usd,
