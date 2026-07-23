@@ -10,7 +10,8 @@ Extraction source: helixa services/qlib-v2. The decisive difference from helixa:
 helixa's DSR/walk-forward gate ran with VALIDATION_STRICT=false and NEVER fired
 in production, so a directionally-wrong model (live accuracy 0.2315) kept voting.
 Here the gate is load-bearing: `findings["promoted"]` is False unless the OOS
-Deflated Sharpe clears the threshold, and un-promoted signals are observe-only.
+Deflated Sharpe — computed on returns NET of taker fees per position change —
+clears the threshold, and un-promoted signals are observe-only.
 """
 
 from __future__ import annotations
@@ -48,6 +49,11 @@ class MlSignalConfig(BaseConfig):
     wfv_step: int = 100
     dsr_threshold: float = 0.60
     dsr_n_trials: int = 10  # conservative multiple-testing deflation
+    # Taker fee applied to every OOS position change before the DSR gate. A
+    # frictionless gate promoted a model whose 5m-frequency gross alpha was
+    # ~4.6x smaller than its fee bill (2026-07-23 full-factor probe: ETH gross
+    # +2.35% vs fees 10.8%) — the gate must price the turnover it implies.
+    taker_fee_bps: float = 5.0
     # Sharpe annualization factor for `closes`' actual bar frequency. Default is
     # 5m bars on a 24/7 crypto market (365*24*12=105,120 bars/yr — same convention
     # as ops/scripts/scalping_gate_r51.py's PERIODS_5M), NOT the equity-market
@@ -121,10 +127,26 @@ def ml_signal_workflow(
         from oskill.signal.ml_feature_matrix import ml_feature_matrix
 
         closes = np.asarray(input_data["closes"], dtype=float)
+        # Full-OHLCV mode: when the caller supplies all four extra arrays the
+        # feature matrix carries the complete helixa Alpha158 factor set
+        # (volume/VWAP/Bollinger/candle/breaks/ATR/efficiency); closes-only
+        # callers keep the compact price-derived set.
+        ohlcv_keys = ("opens", "highs", "lows", "volumes")
+        extra = {
+            k: np.asarray(input_data[k], dtype=float)
+            for k in ohlcv_keys
+            if input_data.get(k) is not None
+        }
 
         t0 = datetime.now(UTC)
-        feats = ml_feature_matrix(closes)
-        _rec("oskill", "ml_feature_matrix", {"rows": len(feats), "cols": feats.shape[1] - 1}, t0)
+        feats = ml_feature_matrix(closes, **extra)
+        n_features = feats.shape[1] - 1
+        _rec(
+            "oskill",
+            "ml_feature_matrix",
+            {"rows": len(feats), "cols": n_features, "full_ohlcv": len(extra) == 4},
+            t0,
+        )
 
         t0 = datetime.now(UTC)
         labels_full = triple_barrier_label(
@@ -182,11 +204,22 @@ def ml_signal_workflow(
 
         wfv_accuracy = (correct / counted) if counted else 0.0
         strat = np.asarray(actual_ret, dtype=float)
-        if len(strat) > 5 and strat.std(ddof=1) > 0:
-            sharpe = float(strat.mean() / strat.std(ddof=1) * np.sqrt(config.bars_per_year))
-        else:
-            sharpe = 0.0
-        dsr_res = deflated_sharpe(sharpe, config.dsr_n_trials, returns=strat.tolist())
+        # Net returns: charge the taker fee on every position change the OOS
+        # prediction sequence implies (folds are contiguous, so the sequence is
+        # a coherent position path). The gate runs on NET returns — gross is
+        # kept in findings for observability only.
+        pos_path = np.asarray(preds_all, dtype=float)
+        turns = np.abs(np.diff(np.concatenate([[0.0], pos_path])))
+        strat_net = strat - turns * (config.taker_fee_bps / 10_000.0)
+
+        def _sharpe(r: np.ndarray) -> float:
+            if len(r) > 5 and r.std(ddof=1) > 0:
+                return float(r.mean() / r.std(ddof=1) * np.sqrt(config.bars_per_year))
+            return 0.0
+
+        sharpe = _sharpe(strat)
+        sharpe_net = _sharpe(strat_net)
+        dsr_res = deflated_sharpe(sharpe_net, config.dsr_n_trials, returns=strat_net.tolist())
         # dsr_probability ∈ [0,1] is the DSR in helixa/factor-analyzer's ≥0.60 convention;
         # deflated_sharpe is the (possibly negative) deflated SR magnitude.
         dsr_val = float(dsr_res["dsr_probability"])
@@ -197,6 +230,7 @@ def ml_signal_workflow(
             {
                 "wfv_accuracy": round(wfv_accuracy, 4),
                 "oos_sharpe": round(sharpe, 3),
+                "oos_sharpe_net": round(sharpe_net, 3),
                 "dsr": round(dsr_val, 4),
             },
             t0,
@@ -218,12 +252,18 @@ def ml_signal_workflow(
             "confidence": abs(float(last_pred)) * min(1.0, max(0.0, dsr_val)),
             "wfv_accuracy": wfv_accuracy,
             "oos_sharpe": sharpe,
+            "oos_sharpe_net": sharpe_net,
+            "fee_drag_pct": round(
+                float((turns * (config.taker_fee_bps / 10_000.0)).sum()) * 100, 3
+            ),
             "dsr": dsr_val,
             "deflated_sharpe": deflated_sr,
             "dsr_threshold": config.dsr_threshold,
             "promoted": promoted,
             "n_folds": n_folds,
             "n_trials": config.dsr_n_trials,
+            "n_features": n_features,
+            "full_ohlcv": len(extra) == 4,
             "note": "promoted=False -> observe-only, not a live vote (helixa never gated this)",
         }
 

@@ -31,6 +31,37 @@ def test_ml_thin_data_completes_unpromoted(tmp_path):
     assert r["findings"]["n_folds"] == 0
 
 
+def test_ml_full_ohlcv_gates_random_walk(tmp_path):
+    # full helixa factor set on random-walk OHLCV: must complete, report the
+    # larger feature count, and still NOT promote
+    rng = np.random.default_rng(1)
+    n = 900
+    c = np.array(_series(n=n, seed=1))
+    o = c * (1 + rng.normal(0, 0.001, n))
+    h = np.maximum(o, c) * (1 + np.abs(rng.normal(0, 0.002, n)))
+    low = np.minimum(o, c) * (1 - np.abs(rng.normal(0, 0.002, n)))
+    v = np.abs(rng.normal(1000, 300, n)) + 1.0
+    r = ml_signal_workflow(
+        MlSignalConfig(),
+        {
+            "closes": list(c),
+            "opens": list(o),
+            "highs": list(h),
+            "lows": list(low),
+            "volumes": list(v),
+        },
+        tmp_path,
+    )
+    assert r["status"] == "completed"
+    f = r["findings"]
+    assert f["full_ohlcv"] is True
+    assert f["n_features"] > 45
+    assert f["promoted"] is False
+    # the gate prices turnover: net Sharpe can never beat gross
+    assert f["oos_sharpe_net"] <= f["oos_sharpe"]
+    assert f["fee_drag_pct"] >= 0.0
+
+
 def test_ml_missing_closes_fails(tmp_path):
     r = ml_signal_workflow(MlSignalConfig(), {}, tmp_path)
     assert r["status"] == "failed"
