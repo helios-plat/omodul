@@ -1,4 +1,4 @@
-__version__ = "1.41.0"
+__version__ = "1.42.0"
 from typing import Any
 
 # New omodul modules (batch 1.29)
@@ -97,6 +97,18 @@ from omodul.set_cart_shipping_address import (
 from omodul.add_shipping_method_to_cart import add_shipping_method_to_cart
 from omodul.add_shipping_method_to_cart import (
     compute_fingerprint_for as add_shipping_method_to_cart_fingerprint,
+)
+from omodul.create_payment_sessions import create_payment_sessions
+from omodul.create_payment_sessions import (
+    compute_fingerprint_for as create_payment_sessions_fingerprint,
+)
+from omodul.update_payment_sessions import update_payment_sessions
+from omodul.update_payment_sessions import (
+    compute_fingerprint_for as update_payment_sessions_fingerprint,
+)
+from omodul.set_payment_session import set_payment_session
+from omodul.set_payment_session import (
+    compute_fingerprint_for as set_payment_session_fingerprint,
 )
 
 from ._base_config import BaseConfig
