@@ -1,4 +1,4 @@
-__version__ = "1.43.0"
+__version__ = "1.44.0"
 from typing import Any
 
 # New omodul modules (batch 1.29)
@@ -118,6 +118,13 @@ from omodul.complete_checkout import complete_checkout
 from omodul.complete_checkout import (
     compute_fingerprint_for as complete_checkout_fingerprint,
 )
+from omodul.update_order import update_order
+from omodul.cancel_order import cancel_order
+from omodul.archive_order import archive_order
+from omodul.create_draft_order import create_draft_order
+from omodul.update_draft_order import update_draft_order
+from omodul.delete_draft_order import delete_draft_order
+from omodul.mark_draft_order_paid import mark_draft_order_paid
 
 from ._base_config import BaseConfig
 from .compute_fingerprint_for_initialize import compute_fingerprint_for_initialize
