@@ -1,4 +1,4 @@
-__version__ = "1.40.0"
+__version__ = "1.41.0"
 from typing import Any
 
 # New omodul modules (batch 1.29)
@@ -85,6 +85,18 @@ from omodul.apply_gift_card_to_cart import (
 from omodul.remove_gift_card_from_cart import remove_gift_card_from_cart
 from omodul.remove_gift_card_from_cart import (
     compute_fingerprint_for as remove_gift_card_from_cart_fingerprint,
+)
+from omodul.set_cart_billing_address import set_cart_billing_address
+from omodul.set_cart_billing_address import (
+    compute_fingerprint_for as set_cart_billing_address_fingerprint,
+)
+from omodul.set_cart_shipping_address import set_cart_shipping_address
+from omodul.set_cart_shipping_address import (
+    compute_fingerprint_for as set_cart_shipping_address_fingerprint,
+)
+from omodul.add_shipping_method_to_cart import add_shipping_method_to_cart
+from omodul.add_shipping_method_to_cart import (
+    compute_fingerprint_for as add_shipping_method_to_cart_fingerprint,
 )
 
 from ._base_config import BaseConfig
