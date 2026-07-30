@@ -1,4 +1,4 @@
-__version__ = "1.39.0"
+__version__ = "1.40.0"
 from typing import Any
 
 # New omodul modules (batch 1.29)
@@ -44,6 +44,47 @@ from omodul.update_line_item_in_cart import (
 from omodul.delete_line_item_from_cart import delete_line_item_from_cart
 from omodul.delete_line_item_from_cart import (
     compute_fingerprint_for as delete_line_item_from_cart_fingerprint,
+)
+from omodul.create_discount import create_discount
+from omodul.create_discount import compute_fingerprint_for as create_discount_fingerprint
+from omodul.update_discount import update_discount
+from omodul.update_discount import compute_fingerprint_for as update_discount_fingerprint
+from omodul.delete_discount import delete_discount
+from omodul.delete_discount import compute_fingerprint_for as delete_discount_fingerprint
+from omodul.create_discount_rule import create_discount_rule
+from omodul.create_discount_rule import (
+    compute_fingerprint_for as create_discount_rule_fingerprint,
+)
+from omodul.update_discount_rule import update_discount_rule
+from omodul.update_discount_rule import (
+    compute_fingerprint_for as update_discount_rule_fingerprint,
+)
+from omodul.create_discount_condition import create_discount_condition
+from omodul.create_discount_condition import (
+    compute_fingerprint_for as create_discount_condition_fingerprint,
+)
+from omodul.delete_discount_condition import delete_discount_condition
+from omodul.delete_discount_condition import (
+    compute_fingerprint_for as delete_discount_condition_fingerprint,
+)
+from omodul.create_gift_card import create_gift_card
+from omodul.update_gift_card import update_gift_card
+from omodul.delete_gift_card import delete_gift_card
+from omodul.apply_discount_to_cart import apply_discount_to_cart
+from omodul.apply_discount_to_cart import (
+    compute_fingerprint_for as apply_discount_to_cart_fingerprint,
+)
+from omodul.remove_discount_from_cart import remove_discount_from_cart
+from omodul.remove_discount_from_cart import (
+    compute_fingerprint_for as remove_discount_from_cart_fingerprint,
+)
+from omodul.apply_gift_card_to_cart import apply_gift_card_to_cart
+from omodul.apply_gift_card_to_cart import (
+    compute_fingerprint_for as apply_gift_card_to_cart_fingerprint,
+)
+from omodul.remove_gift_card_from_cart import remove_gift_card_from_cart
+from omodul.remove_gift_card_from_cart import (
+    compute_fingerprint_for as remove_gift_card_from_cart_fingerprint,
 )
 
 from ._base_config import BaseConfig

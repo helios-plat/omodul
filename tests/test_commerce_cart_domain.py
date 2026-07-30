@@ -295,14 +295,14 @@ async def _seed_variant(pool: PgPool) -> tuple[str, str]:
             'INSERT INTO "public"."product" (id, title, slug) VALUES ($1, $2, $3)',
             prod_id,
             "T恤",
-            f"tshirt-{prod_id[:8]}",
+            f"tshirt-{prod_id}",
         )
         variant_id = str(uuid7())
         await conn.execute(
             'INSERT INTO "public"."product_variant" (id, product_id, sku_code) VALUES ($1, $2, $3)',
             variant_id,
             prod_id,
-            f"SKU-{variant_id[:8]}",
+            f"SKU-{variant_id}",
         )
     return variant_id, loc_id
 
