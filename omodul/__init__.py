@@ -1,4 +1,4 @@
-__version__ = "1.48.0"
+__version__ = "1.49.0"
 from typing import Any
 
 # New omodul modules (batch 1.29)
@@ -193,6 +193,23 @@ from omodul.update_sales_channel import update_sales_channel
 from omodul.delete_sales_channel import delete_sales_channel
 from omodul.publish_products_to_channel import publish_products_to_channel
 from omodul.unpublish_products_from_channel import unpublish_products_from_channel
+from omodul.capture_payment import capture_payment
+from omodul.refund_payment import refund_payment
+from omodul.create_fulfillment import create_fulfillment
+from omodul.cancel_fulfillment import cancel_fulfillment
+from omodul.ship_fulfillment import ship_fulfillment
+from omodul.create_return_request import create_return_request
+from omodul.receive_return import receive_return
+from omodul.cancel_return import cancel_return
+from omodul.create_swap import create_swap
+from omodul.cancel_swap import cancel_swap
+from omodul.fulfill_swap import fulfill_swap
+from omodul.process_swap_payment import process_swap_payment
+from omodul.create_claim import create_claim
+from omodul.cancel_claim import cancel_claim
+from omodul.fulfill_claim import fulfill_claim
+from omodul.create_batch_job import create_batch_job
+from omodul.cancel_batch_job import cancel_batch_job
 
 from ._base_config import BaseConfig
 from .compute_fingerprint_for_initialize import compute_fingerprint_for_initialize
