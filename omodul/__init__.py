@@ -1,4 +1,4 @@
-__version__ = "1.47.0"
+__version__ = "1.48.0"
 from typing import Any
 
 # New omodul modules (batch 1.29)
@@ -179,6 +179,20 @@ from omodul.delete_product_category import delete_product_category
 from omodul.create_product_collection import create_product_collection
 from omodul.update_product_collection import update_product_collection
 from omodul.delete_product_collection import delete_product_collection
+from omodul.create_price_list import create_price_list
+from omodul.update_price_list import update_price_list
+from omodul.delete_price_list import delete_price_list
+from omodul.add_prices_to_list import add_prices_to_list
+from omodul.remove_prices_from_list import remove_prices_from_list
+from omodul.create_stock_location import create_stock_location
+from omodul.update_stock_location import update_stock_location
+from omodul.delete_stock_location import delete_stock_location
+from omodul.adjust_inventory_level import adjust_inventory_level
+from omodul.create_sales_channel import create_sales_channel
+from omodul.update_sales_channel import update_sales_channel
+from omodul.delete_sales_channel import delete_sales_channel
+from omodul.publish_products_to_channel import publish_products_to_channel
+from omodul.unpublish_products_from_channel import unpublish_products_from_channel
 
 from ._base_config import BaseConfig
 from .compute_fingerprint_for_initialize import compute_fingerprint_for_initialize
