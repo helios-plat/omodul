@@ -1,4 +1,4 @@
-__version__ = "1.44.0"
+__version__ = "1.45.0"
 from typing import Any
 
 # New omodul modules (batch 1.29)
@@ -125,6 +125,18 @@ from omodul.create_draft_order import create_draft_order
 from omodul.update_draft_order import update_draft_order
 from omodul.delete_draft_order import delete_draft_order
 from omodul.mark_draft_order_paid import mark_draft_order_paid
+from omodul.create_region import create_region
+from omodul.create_region import compute_fingerprint_for as create_region_fingerprint
+from omodul.update_region import update_region
+from omodul.update_region import compute_fingerprint_for as update_region_fingerprint
+from omodul.delete_region import delete_region
+from omodul.delete_region import compute_fingerprint_for as delete_region_fingerprint
+from omodul.create_tax_rate import create_tax_rate
+from omodul.create_tax_rate import compute_fingerprint_for as create_tax_rate_fingerprint
+from omodul.update_tax_rate import update_tax_rate
+from omodul.update_tax_rate import compute_fingerprint_for as update_tax_rate_fingerprint
+from omodul.delete_tax_rate import delete_tax_rate
+from omodul.delete_tax_rate import compute_fingerprint_for as delete_tax_rate_fingerprint
 
 from ._base_config import BaseConfig
 from .compute_fingerprint_for_initialize import compute_fingerprint_for_initialize
