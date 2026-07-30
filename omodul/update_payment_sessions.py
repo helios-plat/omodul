@@ -1,10 +1,14 @@
 """omodul.update_payment_sessions — 用当前应付金额刷新所有未终态的支付会话。
 
 购物车总额在建会话之后可能变了(加/删行、改地址触发运费变化等),旧的
-provider intent 金额就过期了。本函数对该 cart 下所有 status='authorized'
-(未选定、未取消、未失败)的会话重新调 provider.authorize() 换一个新
-intent_id + 新金额;不动 'selected'/'canceled'/'failed' 状态的会话——已选定
-的会话要改用其它流程(先 remove 再重新走 set_payment_session)。
+provider intent 金额就过期了。本函数对该 cart 下所有 status IN
+('authorized', 'selected') 的会话重新调 provider.authorize() 换一个新
+intent_id + 新金额——'selected' 也要刷新(现实场景恰恰是"用户已经选好支付
+方式,购物车又变了",不是边缘情况),刷新后保持原状态不变(选定的还是选定,
+不会被悄悄打回 authorized);只有 provider 重新 authorize 失败时才会降级成
+'failed'(此时原本被选定的会话也不再可信,authorize_payment_for_cart 会因为
+找不到有效的 selected 会话而拒绝,提示用户重新选)。不动 'canceled'/'failed'
+状态的会话——那些已经是终态,刷新没有意义。
 
 范围声明:不显式 cancel 旧 intent(多数支付网关的未确认 authorize 会自然
 过期,这里只是简化处理,没有对接真实网关做验证)。
@@ -96,8 +100,8 @@ async def update_payment_sessions(
             amount_due = max(cart["grand_total_cents"] - already_applied, 0)
 
             outstanding = await tx.fetch(
-                "SELECT * FROM \"payment_session\" WHERE cart_id = $1 AND status = 'authorized' "
-                "AND deleted_at IS NULL",
+                'SELECT * FROM "payment_session" WHERE cart_id = $1 '
+                "AND status IN ('authorized', 'selected') AND deleted_at IS NULL",
                 input_data.cart_id,
             )
 
@@ -109,7 +113,10 @@ async def update_payment_sessions(
                         currency=cart["currency"],
                         meta={"cart_id": input_data.cart_id},
                     )
-                    status, intent_id, error_message = "authorized", result["intent_id"], None
+                    # Preserve the row's existing status (authorized stays
+                    # authorized, selected stays selected) — only a failed
+                    # re-authorize demotes it.
+                    status, intent_id, error_message = row["status"], result["intent_id"], None
                 except ProviderNotFoundError as exc:
                     status, intent_id, error_message = "failed", None, str(exc)
                 except Exception as exc:  # noqa: BLE001 — provider SDK errors are heterogeneous

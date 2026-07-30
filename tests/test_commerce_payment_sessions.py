@@ -344,7 +344,12 @@ class TestUpdatePaymentSessionsIntegration:
         assert row["amount_cents"] == 4000
         assert row["provider_intent_id"] != old_intent  # got a fresh intent, not the stale one
 
-    async def test_does_not_touch_selected_session(self, commerce_pool, manual_provider):
+    async def test_refreshing_selected_session_keeps_it_selected(
+        self, commerce_pool, manual_provider
+    ):
+        """A 'selected' session is still refreshable (the realistic scenario is
+        exactly this: user already picked a payment method, then the cart
+        changed) — refresh must not silently demote it back to 'authorized'."""
         cart_id = await _make_cart_with_total(commerce_pool)
         await create_payment_sessions(
             CreatePaymentSessionsConfig(),
@@ -358,6 +363,14 @@ class TestUpdatePaymentSessionsIntegration:
             _OUT,
             pool=commerce_pool,
         )
+        async with commerce_pool.acquire() as conn:
+            old_intent = await conn.fetchval(
+                'SELECT provider_intent_id FROM "payment_session" WHERE cart_id = $1', cart_id
+            )
+            await conn.execute(
+                'UPDATE "cart" SET grand_total_cents = grand_total_cents + 500 WHERE id = $1',
+                cart_id,
+            )
 
         r = await update_payment_sessions(
             UpdatePaymentSessionsConfig(),
@@ -366,13 +379,18 @@ class TestUpdatePaymentSessionsIntegration:
             pool=commerce_pool,
         )
         assert r["status"] == "completed", r
-        assert r["sessions"] == []  # nothing outstanding to refresh — the one session is 'selected'
+        assert len(r["sessions"]) == 1
+        assert r["sessions"][0]["status"] == "selected"
 
         async with commerce_pool.acquire() as conn:
-            status = await conn.fetchval(
-                'SELECT status FROM "payment_session" WHERE cart_id = $1', cart_id
+            row = await conn.fetchrow(
+                'SELECT status, amount_cents, provider_intent_id FROM "payment_session" '
+                "WHERE cart_id = $1",
+                cart_id,
             )
-        assert status == "selected"
+        assert row["status"] == "selected"
+        assert row["amount_cents"] == 2500
+        assert row["provider_intent_id"] != old_intent
 
     async def test_unknown_cart_fails(self, commerce_pool):
         r = await update_payment_sessions(

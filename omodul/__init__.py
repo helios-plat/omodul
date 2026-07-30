@@ -1,4 +1,4 @@
-__version__ = "1.42.0"
+__version__ = "1.43.0"
 from typing import Any
 
 # New omodul modules (batch 1.29)
@@ -109,6 +109,14 @@ from omodul.update_payment_sessions import (
 from omodul.set_payment_session import set_payment_session
 from omodul.set_payment_session import (
     compute_fingerprint_for as set_payment_session_fingerprint,
+)
+from omodul.authorize_payment_for_cart import authorize_payment_for_cart
+from omodul.authorize_payment_for_cart import (
+    compute_fingerprint_for as authorize_payment_for_cart_fingerprint,
+)
+from omodul.complete_checkout import complete_checkout
+from omodul.complete_checkout import (
+    compute_fingerprint_for as complete_checkout_fingerprint,
 )
 
 from ._base_config import BaseConfig
