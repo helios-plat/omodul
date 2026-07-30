@@ -1,4 +1,4 @@
-__version__ = "1.45.0"
+__version__ = "1.46.0"
 from typing import Any
 
 # New omodul modules (batch 1.29)
@@ -137,6 +137,33 @@ from omodul.update_tax_rate import update_tax_rate
 from omodul.update_tax_rate import compute_fingerprint_for as update_tax_rate_fingerprint
 from omodul.delete_tax_rate import delete_tax_rate
 from omodul.delete_tax_rate import compute_fingerprint_for as delete_tax_rate_fingerprint
+from omodul.create_user import create_user
+from omodul.update_user import update_user
+from omodul.reset_user_password import reset_user_password
+from omodul.create_customer import create_customer
+from omodul.create_customer import compute_fingerprint_for as create_customer_fingerprint
+from omodul.update_customer import update_customer
+from omodul.update_customer import compute_fingerprint_for as update_customer_fingerprint
+from omodul.add_customer_address import add_customer_address
+from omodul.add_customer_address import (
+    compute_fingerprint_for as add_customer_address_fingerprint,
+)
+from omodul.update_customer_address import update_customer_address
+from omodul.update_customer_address import (
+    compute_fingerprint_for as update_customer_address_fingerprint,
+)
+from omodul.delete_customer_address import delete_customer_address
+from omodul.delete_customer_address import (
+    compute_fingerprint_for as delete_customer_address_fingerprint,
+)
+from omodul.create_customer_group import create_customer_group
+from omodul.create_customer_group import (
+    compute_fingerprint_for as create_customer_group_fingerprint,
+)
+from omodul.assign_customer_to_group import assign_customer_to_group
+from omodul.assign_customer_to_group import (
+    compute_fingerprint_for as assign_customer_to_group_fingerprint,
+)
 
 from ._base_config import BaseConfig
 from .compute_fingerprint_for_initialize import compute_fingerprint_for_initialize
