@@ -1,4 +1,4 @@
-__version__ = "1.46.0"
+__version__ = "1.47.0"
 from typing import Any
 
 # New omodul modules (batch 1.29)
@@ -164,6 +164,21 @@ from omodul.assign_customer_to_group import assign_customer_to_group
 from omodul.assign_customer_to_group import (
     compute_fingerprint_for as assign_customer_to_group_fingerprint,
 )
+from omodul.create_product import create_product
+from omodul.update_product import update_product
+from omodul.delete_product import delete_product
+from omodul.create_product_variant import create_product_variant
+from omodul.update_product_variant import update_product_variant
+from omodul.delete_product_variant import delete_product_variant
+from omodul.create_product_option import create_product_option
+from omodul.update_product_option import update_product_option
+from omodul.delete_product_option import delete_product_option
+from omodul.create_product_category import create_product_category
+from omodul.update_product_category import update_product_category
+from omodul.delete_product_category import delete_product_category
+from omodul.create_product_collection import create_product_collection
+from omodul.update_product_collection import update_product_collection
+from omodul.delete_product_collection import delete_product_collection
 
 from ._base_config import BaseConfig
 from .compute_fingerprint_for_initialize import compute_fingerprint_for_initialize
