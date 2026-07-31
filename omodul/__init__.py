@@ -33,6 +33,8 @@ from omodul.add_line_item_to_cart import (
 )
 from omodul.create_cart import create_cart
 from omodul.create_cart import compute_fingerprint_for as create_cart_fingerprint
+from omodul.update_cart import update_cart
+from omodul.update_cart import compute_fingerprint_for as update_cart_fingerprint
 from omodul.set_cart_region import set_cart_region
 from omodul.set_cart_region import compute_fingerprint_for as set_cart_region_fingerprint
 from omodul.set_cart_customer import set_cart_customer
