@@ -40,6 +40,23 @@ async def test_narrated_video_produce_reports_missing_artifact_without_success(t
     assert result["error"]["code"] == "ARTIFACT_MISSING"
 
 
+@pytest.mark.asyncio
+async def test_narrated_video_produce_requires_landscape_when_declared(tmp_path: Path) -> None:
+    async def renderer(_storyboard: dict, output_dir: Path, _config: dict) -> dict:
+        portrait = output_dir / "portrait.mp4"
+        portrait.write_bytes(b"portrait")
+        return {"portrait_path": portrait}
+
+    result = await narrated_video_produce(
+        {"require_landscape": True},
+        {"storyboard": {"segments": []}, "renderer": renderer},
+        tmp_path,
+    )
+
+    assert result["status"] == "failed"
+    assert result["error"]["code"] == "ARTIFACT_MISSING"
+
+
 def test_narrated_fingerprint_excludes_storyboard_content() -> None:
     fingerprint = compute_fingerprint_for(
         {"renderer": "remotion"},

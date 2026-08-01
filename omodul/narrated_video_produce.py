@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any
 
 _enabled_pillars = {"fingerprint", "decision_trail", "report", "cost"}
-_CONFIG_FIELDS = {"renderer", "voice", "rate", "format", "schema_version"}
+_CONFIG_FIELDS = {"renderer", "voice", "rate", "format", "schema_version", "require_landscape"}
 Renderer = Callable[[dict[str, Any], Path, dict[str, Any]], Awaitable[dict[str, Any]] | dict[str, Any]]
 
 
@@ -112,6 +112,13 @@ async def narrated_video_produce(
         {"kind": "video", "path": str(portrait_path), "media_type": "video/mp4", "primary": True}
     ]
     landscape = rendered.get("landscape_path")
+    if landscape is None and config.get("require_landscape"):
+        return _failure(
+            code="ARTIFACT_MISSING",
+            message="landscape video was required but was not returned by renderer",
+            fingerprint=fingerprint,
+            stage="artifact_validation",
+        )
     if landscape is not None:
         landscape_path = Path(landscape) if isinstance(landscape, str | Path) else None
         if landscape_path is None or not landscape_path.is_file():
