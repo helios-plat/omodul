@@ -1,6 +1,9 @@
 __version__ = "1.36.0"
 from typing import Any
 
+from omodul.longvideo_produce import longvideo_produce
+from omodul.longvideo_produce import compute_fingerprint_for as longvideo_produce_fingerprint
+
 # New omodul modules (batch 1.29)
 from omodul.process_prompt import process_prompt
 from omodul.execute_tool import execute_tool
@@ -136,9 +139,25 @@ def compute_fingerprint_for(omodul_name: str, config: Any, input_data: Any) -> s
         "symbol_dim_score": compute_fingerprint_for_symbol_dim_score,
         "regime_inference": compute_fingerprint_for_regime_inference,
         "candidate_pool": compute_fingerprint_for_candidate_pool,
+        "longvideo_produce": longvideo_produce_fingerprint,
     }
     if omodul_name not in routers: return ""
     return routers[omodul_name](config, input_data)
+
+__manifest__ = {
+    "package": "omodul",
+    "version": __version__,
+    "elements": [
+        {
+            "name": "longvideo_produce",
+            "kind": "omodul",
+            "module": "omodul.longvideo_produce",
+            "signature": "(config, input_data, output_dir) -> dict",
+            "depends_on": ["agentic_longvideo_pipeline"],
+            "pillars": ["cost", "decision_trail", "fingerprint", "report"],
+        }
+    ],
+}
 
 # Constants and extra classes for test compatibility
 RECURSION_DEPTH_LIMIT = 5
