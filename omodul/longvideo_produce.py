@@ -48,6 +48,7 @@ __all__ = [
     "default_longvideo_shot_generator",
     "longvideo_produce",
     "rework_longvideo_shots",
+    "run_longvideo_pipeline",
 ]
 
 
@@ -60,6 +61,14 @@ async def default_longvideo_shot_generator(**kwargs: Any) -> Any:
     """
 
     return await _legacy_default_shot_generator(**kwargs)
+
+
+async def run_longvideo_pipeline(
+    *, config: LongVideoConfig, providers: dict[str, Any] | None = None
+) -> LongVideoResult:
+    """Public execution hook for applications that supply pipeline injections."""
+
+    return await agentic_longvideo_pipeline(config=config, _providers=providers)
 
 
 async def rework_longvideo_shots(

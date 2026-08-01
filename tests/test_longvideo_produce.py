@@ -10,6 +10,7 @@ from omodul.longvideo_produce import (
     default_longvideo_shot_generator,
     longvideo_produce,
     rework_longvideo_shots,
+    run_longvideo_pipeline,
 )
 
 
@@ -137,3 +138,28 @@ async def test_public_longvideo_compatibility_hooks_do_not_require_private_impor
         )
 
     assert result.shots_generated == 1
+
+
+@pytest.mark.asyncio
+async def test_public_longvideo_pipeline_hook_forwards_injections(tmp_path: Path) -> None:
+    expected = LongVideoResult(
+        video_path=tmp_path / "final.mp4",
+        duration_s=1,
+        chapters=1,
+        shots_generated=1,
+        provider_used={},
+    )
+    config = LongVideoConfig(
+        topic="test",
+        duration_archetype="1-5min",
+        video_provider="fake",
+        audio_provider="fake",
+    )
+    with patch(
+        "omodul.longvideo_produce.agentic_longvideo_pipeline",
+        new=AsyncMock(return_value=expected),
+    ) as pipeline:
+        result = await run_longvideo_pipeline(config=config, providers={"llm": "fake"})
+
+    assert result is expected
+    assert pipeline.await_args.kwargs["_providers"] == {"llm": "fake"}

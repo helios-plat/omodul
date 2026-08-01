@@ -7,6 +7,7 @@ from omodul.longvideo_produce import (
     default_longvideo_shot_generator,
     longvideo_produce,
     rework_longvideo_shots,
+    run_longvideo_pipeline,
 )
 from omodul.longvideo_produce import compute_fingerprint_for as longvideo_produce_fingerprint
 from omodul.narrated_video_produce import narrated_video_produce
