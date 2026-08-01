@@ -1,7 +1,13 @@
 __version__ = "1.36.0"
 from typing import Any
 
-from omodul.longvideo_produce import longvideo_produce
+from omodul.longvideo_produce import (
+    LongVideoConfig,
+    LongVideoResult,
+    default_longvideo_shot_generator,
+    longvideo_produce,
+    rework_longvideo_shots,
+)
 from omodul.longvideo_produce import compute_fingerprint_for as longvideo_produce_fingerprint
 from omodul.narrated_video_produce import narrated_video_produce
 from omodul.narrated_video_produce import compute_fingerprint_for as narrated_video_produce_fingerprint

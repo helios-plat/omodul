@@ -14,7 +14,17 @@ import json
 from pathlib import Path
 from typing import Any
 
-from omodul.agentic_longvideo_pipeline import LongVideoConfig, agentic_longvideo_pipeline
+from omodul.agentic_longvideo_pipeline import (
+    LongVideoConfig,
+    LongVideoResult,
+    agentic_longvideo_pipeline,
+)
+from omodul.agentic_longvideo_pipeline import (
+    _default_shot_generator as _legacy_default_shot_generator,
+)
+from omodul.agentic_longvideo_pipeline import (
+    regenerate_shots as _legacy_regenerate_shots,
+)
 
 _enabled_pillars = {"fingerprint", "decision_trail", "report", "cost"}
 _CONFIG_FIELDS = {
@@ -30,6 +40,45 @@ _CONFIG_FIELDS = {
     "max_concurrent_shots",
     "target_duration_s",
 }
+
+__all__ = [
+    "LongVideoConfig",
+    "LongVideoResult",
+    "compute_fingerprint_for",
+    "default_longvideo_shot_generator",
+    "longvideo_produce",
+    "rework_longvideo_shots",
+]
+
+
+async def default_longvideo_shot_generator(**kwargs: Any) -> Any:
+    """Public injection hook for applications that decorate shot planning.
+
+    This is intentionally a thin compatibility boundary: applications may add
+    progress reporting or product policy without importing an underscored
+    pipeline helper.
+    """
+
+    return await _legacy_default_shot_generator(**kwargs)
+
+
+async def rework_longvideo_shots(
+    *,
+    task_dir: Path,
+    shot_ids: list[int],
+    hints: dict[int, str] | None,
+    config: LongVideoConfig,
+    providers: dict[str, Any] | None = None,
+) -> LongVideoResult:
+    """Public compatibility hook for selective long-video shot rework."""
+
+    return await _legacy_regenerate_shots(
+        task_dir=task_dir,
+        shot_ids=shot_ids,
+        hints=hints,
+        config=config,
+        _providers=providers,
+    )
 
 
 def _failed(

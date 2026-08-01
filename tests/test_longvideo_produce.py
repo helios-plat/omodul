@@ -4,7 +4,13 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from omodul.agentic_longvideo_pipeline import LongVideoResult
-from omodul.longvideo_produce import compute_fingerprint_for, longvideo_produce
+from omodul.longvideo_produce import (
+    LongVideoConfig,
+    compute_fingerprint_for,
+    default_longvideo_shot_generator,
+    longvideo_produce,
+    rework_longvideo_shots,
+)
 
 
 @pytest.mark.asyncio
@@ -85,3 +91,49 @@ async def test_longvideo_produce_supports_an_injected_compatibility_renderer(tmp
     assert result["status"] == "succeeded"
     assert result["artifacts"][0]["path"] == str(tmp_path / "final.mp4")
     assert result["report"]["shots_generated"] == 2
+
+
+@pytest.mark.asyncio
+async def test_public_longvideo_compatibility_hooks_do_not_require_private_imports(
+    tmp_path: Path,
+) -> None:
+    async def fake_shot_generator(**kwargs: object) -> list[str]:
+        assert kwargs == {"storyboard": "board", "llm": "llm"}
+        return ["shot"]
+
+    async def fake_rework(**kwargs: object) -> LongVideoResult:
+        assert kwargs["shot_ids"] == [1]
+        assert kwargs["_providers"] == {"video_fn": "fake"}
+        return LongVideoResult(
+            video_path=tmp_path / "final.mp4",
+            duration_s=0,
+            chapters=0,
+            shots_generated=1,
+            provider_used={},
+        )
+
+    with (
+        patch(
+            "omodul.longvideo_produce._legacy_default_shot_generator",
+            new=AsyncMock(side_effect=fake_shot_generator),
+        ),
+        patch(
+            "omodul.longvideo_produce._legacy_regenerate_shots",
+            new=AsyncMock(side_effect=fake_rework),
+        ),
+    ):
+        assert await default_longvideo_shot_generator(storyboard="board", llm="llm") == ["shot"]
+        result = await rework_longvideo_shots(
+            task_dir=tmp_path,
+            shot_ids=[1],
+            hints={1: "more light"},
+            config=LongVideoConfig(
+                topic="test",
+                duration_archetype="1-5min",
+                video_provider="fake",
+                audio_provider="fake",
+            ),
+            providers={"video_fn": "fake"},
+        )
+
+    assert result.shots_generated == 1
