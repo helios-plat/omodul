@@ -60,3 +60,28 @@ def test_longvideo_fingerprint_does_not_contain_topic_material() -> None:
     fingerprint = compute_fingerprint_for({"video_provider": "x"}, {"topic": "private text"})
     assert "private" not in fingerprint
     assert len(fingerprint) == 64
+
+
+@pytest.mark.asyncio
+async def test_longvideo_produce_supports_an_injected_compatibility_renderer(tmp_path: Path) -> None:
+    async def renderer(topic: str, output_dir: Path, _config: dict) -> dict:
+        assert topic == "test"
+        video = output_dir / "final.mp4"
+        video.write_bytes(b"video")
+        return {
+            "url": str(video),
+            "duration": 12.0,
+            "metadata": {"shots": 2},
+            "shots": [{"index": 0}],
+            "quality": {"passed": True},
+        }
+
+    result = await longvideo_produce(
+        {"video_provider": "fake"},
+        {"topic": "test", "renderer": renderer},
+        tmp_path,
+    )
+
+    assert result["status"] == "succeeded"
+    assert result["artifacts"][0]["path"] == str(tmp_path / "final.mp4")
+    assert result["report"]["shots_generated"] == 2
