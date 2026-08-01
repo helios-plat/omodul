@@ -7,6 +7,8 @@ from omodul.narrated_video_produce import narrated_video_produce
 from omodul.narrated_video_produce import compute_fingerprint_for as narrated_video_produce_fingerprint
 from omodul.presenter_video_produce import presenter_video_produce
 from omodul.presenter_video_produce import compute_fingerprint_for as presenter_video_produce_fingerprint
+from omodul.shot_rework_produce import shot_rework_produce
+from omodul.shot_rework_produce import compute_fingerprint_for as shot_rework_produce_fingerprint
 
 # New omodul modules (batch 1.29)
 from omodul.process_prompt import process_prompt
@@ -146,6 +148,7 @@ def compute_fingerprint_for(omodul_name: str, config: Any, input_data: Any) -> s
         "longvideo_produce": longvideo_produce_fingerprint,
         "narrated_video_produce": narrated_video_produce_fingerprint,
         "presenter_video_produce": presenter_video_produce_fingerprint,
+        "shot_rework_produce": shot_rework_produce_fingerprint,
     }
     if omodul_name not in routers: return ""
     return routers[omodul_name](config, input_data)
@@ -174,6 +177,14 @@ __manifest__ = {
             "name": "presenter_video_produce",
             "kind": "omodul",
             "module": "omodul.presenter_video_produce",
+            "signature": "(config, input_data, output_dir) -> dict",
+            "depends_on": ["injected_renderer"],
+            "pillars": ["cost", "decision_trail", "fingerprint", "report"],
+        },
+        {
+            "name": "shot_rework_produce",
+            "kind": "omodul",
+            "module": "omodul.shot_rework_produce",
             "signature": "(config, input_data, output_dir) -> dict",
             "depends_on": ["injected_renderer"],
             "pillars": ["cost", "decision_trail", "fingerprint", "report"],
