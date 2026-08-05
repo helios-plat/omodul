@@ -439,3 +439,21 @@ from omodul.reading_guide_workflow import (
 
 # ── AII Conflict Detection Workflow (M-G1) ───────────────────────────────────
 from omodul.conflict_detection_workflow import conflict_detection_workflow, ConflictDetectionConfig
+
+# AutoAgent capability imports
+from .agent_creation_workflow import agent_creation_workflow  # noqa: F401
+from .orchestrator_creation_workflow import orchestrator_creation_workflow  # noqa: F401
+
+from .team_lifecycle_workflow import team_lifecycle_workflow  # noqa: F401
+
+from .agent_setup_workflow import agent_setup_workflow  # noqa: F401
+
+# cindy_mcp_server available via lazy import
+
+# ── Veya Agent OS 编排层 (P3 固化) ────────────────────────────────────────
+from omodul.automata import AutomataScheduler  # noqa: F401
+from omodul.hitl_approval import ApprovalGate  # noqa: F401
+from omodul.swarm_orchestrator import SwarmOrchestrator  # noqa: F401
+
+from omodul.task_manager import TaskManager  # noqa: F401
+from omodul.model_router import ModelRouter  # noqa: F401
