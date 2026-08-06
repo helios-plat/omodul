@@ -457,3 +457,80 @@ from omodul.swarm_orchestrator import SwarmOrchestrator  # noqa: F401
 
 from omodul.task_manager import TaskManager  # noqa: F401
 from omodul.model_router import ModelRouter  # noqa: F401
+
+# ── 红蓝对抗审判庭 (高阶审判模块) ────────────────────────────────────
+from omodul.adversarial_chamber import (  # noqa: F401
+    AdversarialChamberConfig,
+    AdversarialChamberInput,
+    adversarial_chamber,
+)
+
+# ── 神经符号 / 组合优化 / 沙箱推演 编排管线 (O1/O2/O3) ───────────────────
+from omodul.neuro_symbolic import (  # noqa: F401
+    NeuroSymbolicResult,
+    RepairPayload,
+    compute_plan_id,
+    run_neuro_symbolic,
+)
+from omodul.operator_center import (  # noqa: F401
+    OperatorDecision,
+    OperatorEscalation,
+    render_decision,
+    run_operator_center,
+)
+from omodul.observer import ObserverConfig, run_observer_lookahead  # noqa: F401
+
+# ── Phase 3: 反脆弱闭环 (最优干预 / 在线因果更新 / 威胁演化) ────────────
+from omodul.closed_loop_intervene import (  # noqa: F401
+    ClosedLoopConfig,
+    ClosedLoopInput,
+    closed_loop_intervene,
+)
+from omodul.threat_model_evolve import (  # noqa: F401
+    SIGNAL_LIKELIHOODS,
+    ThreatModelConfig,
+    ThreatModelInput,
+    threat_model_evolve,
+)
+
+# ── Phase 2: 因果诊断 (O1) + 蜜罐反间谍 (O3) 事务 ─────────────────────
+from omodul.causal_fault_diagnose import (  # noqa: F401
+    CausalDiagnosisReport,
+    NodeInterventionResult,
+    causal_fault_diagnose,
+)
+from omodul.adversarial_honeypot_observe import (  # noqa: F401
+    DEFAULT_HONEYPOT_ENV,
+    HoneypotObservation,
+    HoneypotSandboxResult,
+    adversarial_honeypot_observe,
+)
+
+# ── Phase 4: 多步反事实规划事务 ───────────────────────────────────────
+from omodul.multi_step_plan import (  # noqa: F401
+    ExecutionResult,
+    MultiStepPlanReport,
+    multi_step_plan,
+    update_cpd_from_repair,
+)
+
+# ── Phase 4 延伸: L3 反事实诊断事务 (针对本次故障) ─────────────────────
+from omodul.counterfactual_diagnose import (  # noqa: F401
+    CounterfactualDiagnosisReport,
+    CounterfactualReport,
+    counterfactual_diagnose,
+)
+
+# ── 连续 Cholesky SCM (多维遥测 L3 溯因) ────────────────────────────────
+from omodul.cholesky_scm import ContinuousCholeskySCM, ContinuousNode  # noqa: F401
+
+# ── 代码 Agent 可靠性闭环 (方案 A+C) ─────────────────────────────────────
+from omodul.code_reliability_loop import (  # noqa: F401
+    CodeLoopResult,
+    CodeTask,
+    FailureKind,
+    FailureSignature,
+    PatchArtifact,
+    TestResult,
+    run_code_reliability_loop,
+)
