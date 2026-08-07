@@ -20,7 +20,8 @@ from typing import Any
 from oprim._audit_emit import AuditEvent, JsonlSink
 
 LESSONS_FILE = Path.home() / ".veya" / "lessons.json"
-SKILLS_DIR = Path.home() / ".veya" / "skills" / "crystallized"
+# 结晶技能直接落技能库一级目录 (skill_hub 只扫一级 → 热载即用)
+SKILLS_DIR = Path.home() / ".veya" / "skills"
 
 
 def _lesson_signature(trigger_type: str, subject_ref: str, evidence: dict) -> str:
@@ -62,13 +63,8 @@ def _genesis_duplicate(skill_name: str) -> bool:
                 return True
     except Exception:  # noqa: BLE001
         pass
-    # 2) 技能库 (已结晶 / skill_hub 挂载区)
-    if (SKILLS_DIR / skill_name).exists():
-        return True
-    hub_dir = SKILLS_DIR.parent
-    if (hub_dir / skill_name).exists():
-        return True
-    return False
+    # 2) 技能库 (skill_hub 挂载区, 一级目录)
+    return (SKILLS_DIR / skill_name).exists()
 
 
 def _generate_skill_package(skill_name: str, lesson: dict[str, Any],
