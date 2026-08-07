@@ -560,3 +560,10 @@ from omodul.mission_revert import (  # noqa: E402
     mission_revert,
     snapshot_mission_baseline,
 )
+
+# G1 Artifact 预览 (pi-workbench 复刻)
+from omodul.artifact_preview import (  # noqa: E402
+    ARTIFACT_TYPES,
+    artifact_preview,
+    sanitize_markup,
+)
