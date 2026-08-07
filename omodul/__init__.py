@@ -567,3 +567,8 @@ from omodul.artifact_preview import (  # noqa: E402
     artifact_preview,
     sanitize_markup,
 )
+
+# G7 教训→技能结晶 (KiroCrew 复刻)
+from omodul.skill_crystallize import (  # noqa: E402
+    skill_crystallize,
+)
