@@ -572,3 +572,22 @@ from omodul.artifact_preview import (  # noqa: E402
 from omodul.skill_crystallize import (  # noqa: E402
     skill_crystallize,
 )
+
+# 长程任务 GoalKernel 投影状态机 (事件溯源, 依赖 obase.loop_event_store)
+from omodul.long_task_goal import (  # noqa: E402
+    EVENT_EVIDENCE_APPENDED,
+    EVENT_GATE_REQUIRED,
+    EVENT_GATE_RESOLVED,
+    EVENT_GOAL_ADDED,
+    EVENT_HANDOFF_RECORDED,
+    EVENT_TODO_UPDATED,
+    Evidence,
+    Gate,
+    Goal,
+    GoalKernel,
+    GoalKernelError,
+    Handoff,
+    IntegrityResult,
+    QuotaView,
+    Todo,
+)
