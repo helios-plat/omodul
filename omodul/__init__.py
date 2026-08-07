@@ -534,3 +534,29 @@ from omodul.code_reliability_loop import (  # noqa: F401
     TestResult,
     run_code_reliability_loop,
 )
+
+# ── 视频质检可靠性闭环 (同构 code_reliability_loop) ─────────────────────
+# 注意: video 的 FailureKind 与 code 同名, 用别名导入避免覆盖。
+from omodul.video_reliability_loop import (  # noqa: F401
+    FailureSignature as VideoFailureSignature,
+    VideoArtifact,
+    VideoEvalResult,
+    VideoLoopResult,
+    VideoSpec,
+    VideoTask,
+    FailureKind as VideoFailureKind,
+    run_video_reliability_loop,
+)
+
+# G3/G4 Vigla 复刻: Merge 审计 + Mission 回滚
+from omodul.mission_supervisor import (  # noqa: E402
+    DEFAULT_SECRET_PATTERNS,
+    SupervisorPolicy,
+    mission_supervisor,
+    parse_diff,
+)
+from omodul.mission_revert import (  # noqa: E402
+    WorktreeState,
+    mission_revert,
+    snapshot_mission_baseline,
+)
