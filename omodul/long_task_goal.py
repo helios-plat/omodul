@@ -13,7 +13,7 @@
 事件类型约定 (与 QuotaTracker 共用同一事件流):
 
   * ``goal_added``      payload: {goal_id, title, budget_usd?, meta?}
-  * ``todo_updated``    payload: {todo_id, title?, status?, note?}
+  * ``todo_updated``    payload: {todo_id, title?, status?, note?, blocked_by?}
   * ``gate_required``   payload: {gate_id, kind: operator|auto, waiting_on: [todo_id]}
   * ``gate_resolved``   payload: {gate_id, approved, by, note?}
   * ``evidence_appended`` payload: {todo_id, kind, detail, evidence_id}
@@ -79,6 +79,7 @@ class Todo:
     title: str
     status: str = TODO_OPEN
     note: str | None = None
+    blocked_by: list[str] = field(default_factory=list)
     evidence_refs: list[str] = field(default_factory=list)
     updated_at: float = 0.0
 
@@ -151,12 +152,29 @@ class Goal:
     def blocked_todos(self) -> list[Todo]:
         return [t for t in self.todos.values() if t.status == TODO_BLOCKED]
 
-    def pending_gates(self) -> list[Gate]:
-        return [g for g in self.gates.values() if g.status == GATE_OPEN]
+    def runnable_todos(self) -> list[Todo]:
+        """解算 blocked_by: 返回当前可执行的 todo (依赖全 done 且自身未 done)。
+
+        tracer-bullet 票的阻塞边由 blocked_by 声明; 某依赖完成后, 依赖它的
+        todo 进入可运行集。返回顺序为创建顺序。
+        """
+        status = {t.id: t.status for t in self.todos.values()}
+        return [
+            t for t in self.todos.values()
+            if t.status != TODO_DONE
+            and all(status.get(dep) == TODO_DONE for dep in t.blocked_by)
+        ]
 
     def next_action(self) -> Todo | None:
+        """第一个可运行 todo (runnable_todos 优先, 回退 open_todos), 无则 None。"""
+        return next(iter(self.runnable_todos()), self.next_open())
+
+    def next_open(self) -> Todo | None:
         """第一个 open todo (按创建顺序), 无则 None。"""
         return next(iter(self.open_todos()), None)
+
+    def pending_gates(self) -> list[Gate]:
+        return [g for g in self.gates.values() if g.status == GATE_OPEN]
 
     def is_complete(self) -> bool:
         """全部 todo done 且无 open gate。"""
@@ -304,8 +322,12 @@ class GoalKernel:
         title: str | None = None,
         status: str | None = None,
         note: str | None = None,
+        blocked_by: list[str] | None = None,
     ) -> Todo:
-        """新建/更新 todo。status 非法抛 GoalKernelError。"""
+        """新建/更新 todo。status 非法抛 GoalKernelError。
+
+        blocked_by: 前置 todo 依赖 (tracer-bullet 阻塞边); None 表示不改动。
+        """
         if status is not None and status not in TODO_STATUSES:
             raise GoalKernelError(f"invalid todo status {status!r}; expected {TODO_STATUSES}")
         payload: dict[str, Any] = {"todo_id": todo_id}
@@ -315,6 +337,8 @@ class GoalKernel:
             payload["status"] = status
         if note is not None:
             payload["note"] = note
+        if blocked_by is not None:
+            payload["blocked_by"] = list(blocked_by)
         row = await self._store.append(EVENT_TODO_UPDATED, payload)
         self.apply(row)
         await self._resolve_auto_gates()  # todo 置 done 可能满足 auto gate
@@ -451,6 +475,8 @@ class GoalKernel:
             todo.status = p["status"]
         if "note" in p:
             todo.note = p["note"]
+        if "blocked_by" in p:
+            todo.blocked_by = list(p["blocked_by"])
         todo.updated_at = ts
 
     def _on_gate_required(self, p: dict[str, Any]) -> None:

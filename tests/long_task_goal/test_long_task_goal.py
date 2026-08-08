@@ -294,3 +294,33 @@ async def test_apply_incremental_then_rebuild_same(tmp_path):
     fresh = GoalKernel(store, goal_id="g1").rebuild()  # 全量重放
     assert fresh.goal.todos["t1"].status == "done"
     assert fresh.last_seq == kernel.last_seq == 2
+
+
+# ---------------------------------------------------------------------------
+# blocked_by (tracer-bullet 阻塞边)
+# ---------------------------------------------------------------------------
+
+
+async def test_todo_blocked_by_and_runnable(tmp_path):
+    """blocked_by 声明 + runnable_todos 解算 + 跨重启重建保持。"""
+    store = AppendOnlyEventStore(tmp_path / "g.jsonl")
+    kernel = GoalKernel(store, goal_id="g1")
+    await kernel.add_goal("g")
+    await kernel.update_todo("t1", title="先做")
+    await kernel.update_todo("t2", title="后做", blocked_by=["t1"])
+
+    # t1 可运行, t2 被阻塞
+    runnable = kernel.goal.runnable_todos()
+    assert [t.id for t in runnable] == ["t1"]
+    assert kernel.goal.next_action().id == "t1"
+
+    # t1 完成后 t2 解禁
+    await kernel.update_todo("t1", status="done")
+    runnable = kernel.goal.runnable_todos()
+    assert [t.id for t in runnable] == ["t2"]
+    assert kernel.goal.next_action().id == "t2"
+
+    # 跨重启重建: blocked_by 从事件流恢复
+    fresh = GoalKernel(store, goal_id="g1").rebuild()
+    assert fresh.goal.todos["t2"].blocked_by == ["t1"]
+    assert fresh.goal.todos["t2"].status == "open"
