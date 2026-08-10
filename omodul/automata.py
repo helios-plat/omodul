@@ -100,6 +100,7 @@ class AutomataScheduler:
                     "id": job.id,
                     "cron_expr": cron_expr,
                     "task_prompt": job.args[1],
+                    "user_id": job.args[2] if len(job.args) > 2 else "",
                     "created_at": datetime.now().isoformat(),
                 }
             )
@@ -115,7 +116,11 @@ class AutomataScheduler:
                 self.scheduler.add_job(
                     self._run_headless_mission,
                     trigger=trigger,
-                    args=[f"[CRON TRIGGER {entry['cron_expr']}]", entry["task_prompt"]],
+                    args=[
+                        f"[CRON TRIGGER {entry['cron_expr']}]",
+                        entry["task_prompt"],
+                        entry.get("user_id", ""),
+                    ],
                     id=entry["id"],
                     replace_existing=True,
                 )
@@ -129,9 +134,12 @@ class AutomataScheduler:
 
     # ── task management ──────────────────────────────────────────────
     def register_cron_task(
-        self, cron_expr: str, task_prompt: str, task_id: str | None = None
+        self, cron_expr: str, task_prompt: str, task_id: str | None = None,
+        user_id: str = "",
     ) -> str:
-        """Register a Cron-scheduled background task (set an alarm)."""
+        """Register a Cron-scheduled background task (set an alarm).
+
+        user_id: 归属用户 (多用户隔离; 触发时在该用户上下文执行)。"""
         task_prompt = str(task_prompt).strip()
         if not task_prompt:
             raise ValueError("task_prompt 不能为空")
@@ -146,7 +154,7 @@ class AutomataScheduler:
         self.scheduler.add_job(
             self._run_headless_mission,
             trigger=trigger,
-            args=[f"[CRON TRIGGER {cron_expr}]", task_prompt],
+            args=[f"[CRON TRIGGER {cron_expr}]", task_prompt, user_id],
             id=task_id,
             replace_existing=True,
         )
@@ -167,14 +175,17 @@ class AutomataScheduler:
         return f"✅ 自动化任务 {task_id} 已取消。"
 
     def get_jobs(self) -> list[dict]:
-        return [
-            {
+        out = []
+        for job in self.scheduler.get_jobs():
+            entry = {
                 "id": job.id,
                 "next_run": job.next_run_time.isoformat() if job.next_run_time else None,
                 "trigger": str(job.trigger),
             }
-            for job in self.scheduler.get_jobs()
-        ]
+            if job.id.startswith("cron_") and len(job.args) > 2:
+                entry["user_id"] = job.args[2]
+            out.append(entry)
+        return out
 
     def trigger_event(self, event_name: str, payload: dict) -> str:
         """External system (Webhook, Github) event -> immediate async background run."""
@@ -189,14 +200,22 @@ class AutomataScheduler:
         return f"✅ 事件 {event_name} 已受理, 后台代理正在处理。"
 
     # ── headless execution (core) ────────────────────────────────────
-    async def _run_headless_mission(self, trigger_context: str, task_prompt: str) -> str:
+    async def _run_headless_mission(
+        self, trigger_context: str, task_prompt: str, user_id: str = ""
+    ) -> str:
         """Core: silently wake the LLM, disguised as a user-initiated task."""
         synthetic_prompt = SYNTHETIC_PROMPT_TEMPLATE.format(
             trigger_context=trigger_context, task_prompt=task_prompt
         )
-        _log.info("automata headless run: %s", trigger_context[:60])
+        _log.info("automata headless run: %s (user=%s)", trigger_context[:60], user_id or "-")
         try:
-            result = await self.execute_callback(synthetic_prompt)
+            if user_id:
+                try:
+                    result = await self.execute_callback(synthetic_prompt, user_id=user_id)
+                except TypeError:  # 兼容单参 execute_callback
+                    result = await self.execute_callback(synthetic_prompt)
+            else:
+                result = await self.execute_callback(synthetic_prompt)
             status = "success"
         except asyncio.CancelledError:
             self._results.append(
