@@ -600,3 +600,8 @@ from .team_lifecycle_workflow import team_lifecycle_workflow  # noqa: F401
 from .ku_health import list_open_issues, mark_resolved, persist_issues  # noqa: F401
 from .ku_heal_cycle import KuHealCycleConfig, KuHealCycleInput, ku_heal_cycle  # noqa: F401
 from .ku_lint import KuLintConfig, KuLintInput, ku_lint  # noqa: F401
+
+# ── 决策智能 / 推理 / 溯源 (semantica 能力 3O 化) ─────────────────────
+from .decision_ledger import DecisionLedgerConfig, DecisionLedgerInput, decision_ledger  # noqa: F401
+from .kg_reasoning import KgReasoningConfig, KgReasoningInput, kg_reasoning  # noqa: F401
+from .provenance_w3c import ProvenanceW3cConfig, ProvenanceW3cInput, provenance_w3c  # noqa: F401
