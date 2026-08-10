@@ -230,11 +230,11 @@ def _link(ledger: Any, inp: DecisionLedgerInput, trail: Trail) -> dict:
 
 def _query_similar(ledger: Any, inp: DecisionLedgerInput, trail: Trail) -> dict:
     decisions = ledger.list_decisions()
-    scored = sorted(
+    scored = [
         ((_similarity(inp.query_text, d.scenario) + _similarity(inp.query_text, d.reasoning)) / 2, d)
         for d in decisions
-    )
-    scored.sort(key=lambda x: x[0], reverse=True)
+    ]
+    scored.sort(key=lambda x: x[0], reverse=True)  # 只按分数排序 (Decision 不可比)
     top = [d.to_dict() for s, d in scored[: inp.max_results]]
     trail.record(event="query_precedents", query=inp.query_text[:80], hits=len(top))
     return {"precedents": top, "hits": len(top)}
