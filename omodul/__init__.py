@@ -595,3 +595,8 @@ from .agent_creation_workflow import agent_creation_workflow  # noqa: F401
 from .agent_setup_workflow import agent_setup_workflow  # noqa: F401
 from .orchestrator_creation_workflow import orchestrator_creation_workflow  # noqa: F401
 from .team_lifecycle_workflow import team_lifecycle_workflow  # noqa: F401
+
+# ── 确定性知识库体检飞轮 (ku_lint / ku_health / ku_heal_cycle) ─────────
+from .ku_health import list_open_issues, mark_resolved, persist_issues  # noqa: F401
+from .ku_heal_cycle import KuHealCycleConfig, KuHealCycleInput, ku_heal_cycle  # noqa: F401
+from .ku_lint import KuLintConfig, KuLintInput, ku_lint  # noqa: F401
