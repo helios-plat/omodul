@@ -605,3 +605,21 @@ from .ku_lint import KuLintConfig, KuLintInput, ku_lint  # noqa: F401
 from .decision_ledger import DecisionLedgerConfig, DecisionLedgerInput, decision_ledger  # noqa: F401
 from .kg_reasoning import KgReasoningConfig, KgReasoningInput, kg_reasoning  # noqa: F401
 from .provenance_w3c import ProvenanceW3cConfig, ProvenanceW3cInput, provenance_w3c  # noqa: F401
+
+# ── 工程纪律门禁 (S1–S5 编排; Coordinator 只见 project_eng_gates) ─────
+from .eng_gates import project_eng_gates  # noqa: F401
+
+# ── 统一沙箱会话 (W1 环境合同; 多后端) ────────────────────────────
+from .run_harness import run_harness  # noqa: F401
+from .sandbox_broker import SandboxBroker, get_broker, reset_broker, set_broker  # noqa: F401
+from .sandbox_session import eval_in_sandbox, sandbox_scope, sandbox_session  # noqa: F401
+
+# ── 防御底座 (loop breaker + folding) ────────────────────────────
+from .context_compactor import context_compactor  # noqa: F401
+from .execution_health_monitor import execution_health_monitor  # noqa: F401
+from .implicit_feedback_processor import implicit_feedback_processor  # noqa: F401
+from .phase_spec_driven_plan import phase_spec_driven_plan  # noqa: F401
+from .phase_verify_leaf_task import phase_verify_leaf_task  # noqa: F401
+from .phase_closed_loop_plan import phase_closed_loop_plan  # noqa: F401
+from .phase_evidence_verify import phase_evidence_verify  # noqa: F401
+from .phase_intent_triage import phase_intent_triage  # noqa: F401
