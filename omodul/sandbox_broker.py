@@ -15,21 +15,39 @@ from pathlib import Path
 DEFAULT_SLOTS: dict[str, int] = {
     "process": 4,
     "netns": 4,
-    "docker": 2,
+    "docker": 8,
+    "opensandbox": 32,
     "memory": 16,
+    "hicode_serve": 8,
+}
+
+DEFAULT_PER_USER: dict[str, int] = {
+    "process": 2,
+    "netns": 2,
+    "docker": 2,
+    "opensandbox": 2,
+    "memory": 8,
     "hicode_serve": 1,
 }
 
 
 class SandboxBroker:
-    def __init__(self, slots: dict[str, int] | None = None) -> None:
+    def __init__(
+        self,
+        slots: dict[str, int] | None = None,
+        per_user: dict[str, int] | None = None,
+    ) -> None:
         self.slots = dict(DEFAULT_SLOTS if slots is None else slots)
+        self.per_user = dict(DEFAULT_PER_USER if per_user is None else per_user)
         self._sem: dict[str, threading.Semaphore] = {
             key: threading.Semaphore(max(1, int(val))) for key, val in self.slots.items()
         }
+        self._user_guard = threading.Lock()
+        self._user_sem: dict[tuple[str, str], threading.Semaphore] = {}
         self._ws_guard = threading.Lock()
         self._ws: dict[str, threading.Lock] = {}
         self._async_sem: dict[str, asyncio.Semaphore] = {}
+        self._async_user_sem: dict[tuple[str, str], asyncio.Semaphore] = {}
         self._async_ws_guard: asyncio.Lock | None = None
         self._async_ws: dict[str, asyncio.Lock] = {}
 
@@ -39,20 +57,35 @@ class SandboxBroker:
             self.slots.setdefault(kind, 1)
         return self._sem[kind]
 
-    def acquire_slot(self, kind: str, timeout: float = 60.0) -> bool:
-        return bool(self._sem_for(kind).acquire(timeout=timeout))
+    def _user_sem_for(self, kind: str, owner_id: str) -> threading.Semaphore:
+        cap = int(self.per_user.get(kind, self.slots.get(kind, 1)))
+        key = (kind, owner_id)
+        with self._user_guard:
+            return self._user_sem.setdefault(key, threading.Semaphore(max(1, cap)))
 
-    def release_slot(self, kind: str) -> None:
+    def acquire_slot(self, kind: str, timeout: float = 60.0, owner_id: str = "") -> bool:
+        if not self._sem_for(kind).acquire(timeout=timeout):
+            return False
+        if owner_id:
+            if not self._user_sem_for(kind, owner_id).acquire(timeout=timeout):
+                self._sem_for(kind).release()
+                return False
+        return True
+
+    def release_slot(self, kind: str, owner_id: str = "") -> None:
+        if owner_id:
+            self._user_sem_for(kind, owner_id).release()
         self._sem_for(kind).release()
 
     @contextmanager
-    def slot(self, kind: str, timeout: float = 60.0) -> Iterator[str]:
-        if not self.acquire_slot(kind, timeout=timeout):
-            raise TimeoutError(f"sandbox slot {kind!r} busy")
+    def slot(self, kind: str, timeout: float = 60.0, owner_id: str = "") -> Iterator[str]:
+        if not self.acquire_slot(kind, timeout=timeout, owner_id=owner_id):
+            who = f" for user {owner_id}" if owner_id else ""
+            raise TimeoutError(f"sandbox slot {kind!r} busy{who}")
         try:
             yield kind
         finally:
-            self.release_slot(kind)
+            self.release_slot(kind, owner_id=owner_id)
 
     def _ws_key(self, workspace: str | None) -> str:
         if not workspace:
@@ -85,13 +118,25 @@ class SandboxBroker:
             self._async_sem[kind] = asyncio.Semaphore(max(1, int(self.slots.get(kind, 1))))
         return self._async_sem[kind]
 
+    def _async_user_sem_for(self, kind: str, owner_id: str) -> asyncio.Semaphore:
+        cap = int(self.per_user.get(kind, self.slots.get(kind, 1)))
+        key = (kind, owner_id)
+        if key not in self._async_user_sem:
+            self._async_user_sem[key] = asyncio.Semaphore(max(1, cap))
+        return self._async_user_sem[key]
+
     @asynccontextmanager
-    async def async_slot(self, kind: str) -> AsyncIterator[str]:
+    async def async_slot(self, kind: str, owner_id: str = "") -> AsyncIterator[str]:
         sem = self._async_sem_for(kind)
         await sem.acquire()
+        user_sem = self._async_user_sem_for(kind, owner_id) if owner_id else None
+        if user_sem is not None:
+            await user_sem.acquire()
         try:
             yield kind
         finally:
+            if user_sem is not None:
+                user_sem.release()
             sem.release()
 
     @asynccontextmanager

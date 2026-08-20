@@ -47,6 +47,17 @@ def test_workspace_lock_is_per_path(tmp_path) -> None:
     assert held == ["a", "b"]
 
 
+def test_per_user_quota_rejects_same_user() -> None:
+    broker = SandboxBroker(slots={"opensandbox": 8}, per_user={"opensandbox": 1})
+    assert broker.acquire_slot("opensandbox", timeout=0.2, owner_id="alice") is True
+    assert broker.acquire_slot("opensandbox", timeout=0.2, owner_id="alice") is False
+    assert broker.acquire_slot("opensandbox", timeout=0.2, owner_id="bob") is True
+    broker.release_slot("opensandbox", owner_id="alice")
+    assert broker.acquire_slot("opensandbox", timeout=0.2, owner_id="alice") is True
+    broker.release_slot("opensandbox", owner_id="alice")
+    broker.release_slot("opensandbox", owner_id="bob")
+
+
 @pytest.mark.asyncio
 async def test_async_workspace_lock_is_per_path(tmp_path) -> None:
     broker = SandboxBroker()

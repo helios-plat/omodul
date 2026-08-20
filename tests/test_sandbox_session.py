@@ -68,6 +68,34 @@ def test_session_forwards_pty_and_memory_refuses(sess_mod) -> None:
     session.close()
 
 
+def test_hosted_chat_verify_fails_without_driver(sess_mod, monkeypatch) -> None:
+    from omodul.sandbox_broker import reset_broker
+    from oprim._opensandbox import set_opensandbox_driver
+
+    monkeypatch.setenv("VEYA_SANDBOX_PROFILE", "hosted")
+    reset_broker()
+    set_opensandbox_driver(None)
+    session = sess_mod.sandbox_session("chat_verify", profile="hosted", owner_id="alice")
+    assert session.ok is False
+    assert "opensandbox" in session.error.lower()
+
+
+def test_hosted_chat_verify_runs_on_opensandbox(sess_mod, monkeypatch) -> None:
+    from omodul.sandbox_broker import reset_broker
+    from oprim._opensandbox import LoopbackOpenSandboxDriver, set_opensandbox_driver
+
+    monkeypatch.setenv("VEYA_SANDBOX_PROFILE", "hosted")
+    reset_broker()
+    set_opensandbox_driver(LoopbackOpenSandboxDriver())
+    session = sess_mod.sandbox_session("chat_verify", profile="hosted", owner_id="alice")
+    assert session.ok is True
+    assert session.isolation == "opensandbox"
+    ran = session.exec([sys.executable, "-c", "print(8*8)"])
+    assert ran["ok"] is True
+    assert "64" in ran["stdout"]
+    session.close()
+
+
 def test_docker_purpose_fails_honestly_without_runtime(sess_mod) -> None:
     from oprim._sandbox_backends import docker_available
 
