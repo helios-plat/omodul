@@ -532,6 +532,26 @@ from omodul.wayfinding import (  # noqa: E402
     render_map_md,
     wayfinding_store,
 )
+
+# 路径发现 WayfindingKernel 的 GitHub Issues 后端 (map=issue, ticket=native
+# sub-issue, blocking=native issue dependency — 与上面事件溯源版并存)
+from omodul.wayfinding_github import (  # noqa: E402
+    WayfindingGithubError,
+    add_fog as gh_add_fog,
+    add_ticket as gh_add_ticket,
+    chart_map as gh_chart_map,
+    claim_ticket as gh_claim_ticket,
+    complete_if_clear as gh_complete_if_clear,
+    decisions_so_far as gh_decisions_so_far,
+    ensure_labels as gh_ensure_labels,
+    frontier as gh_frontier,
+    graduate_fog as gh_graduate_fog,
+    parse_map_body,
+    render_map_body,
+    resolve_ticket as gh_resolve_ticket,
+    rule_out_of_scope as gh_rule_out_of_scope,
+    wire_blocking as gh_wire_blocking,
+)
 from omodul.mission_revert import (  # noqa: E402
     WorktreeState,
     mission_revert,
