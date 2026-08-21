@@ -517,6 +517,21 @@ from omodul.long_task_goal import (  # noqa: E402
     QuotaView,
     Todo,
 )
+
+# 路径发现 WayfindingKernel (事件溯源, 同一套模式; 收敛完成后 decisions_to_runbook
+# 桥接到 obase.orchestrator 的图状态机)
+from omodul.wayfinding import (  # noqa: E402
+    DecisionGist,
+    Map,
+    Ticket,
+    WayfindingKernel,
+    WayfindingKernelError,
+    decisions_to_runbook,
+    load_kernel,
+    new_map_id,
+    render_map_md,
+    wayfinding_store,
+)
 from omodul.mission_revert import (  # noqa: E402
     WorktreeState,
     mission_revert,
