@@ -18,7 +18,9 @@ DEFAULT_SLOTS: dict[str, int] = {
     "docker": 8,
     "opensandbox": 32,
     "memory": 16,
-    "hicode_serve": 8,
+    # Hicode serve owns a live workspace/session; keep one process-wide slot
+    # and use DEFAULT_PER_USER below for account isolation as well.
+    "hicode_serve": 1,
 }
 
 DEFAULT_PER_USER: dict[str, int] = {
