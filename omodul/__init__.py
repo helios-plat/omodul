@@ -123,6 +123,14 @@ from omodul.delete_sales_channel import delete_sales_channel
 from omodul.delete_stock_location import delete_stock_location
 from omodul.delete_tax_rate import compute_fingerprint_for as delete_tax_rate_fingerprint
 from omodul.delete_tax_rate import delete_tax_rate
+from omodul.action_gateway import (
+    ExecuteGovernedActionConfig,
+    ExecuteGovernedActionInput,
+    GovernActionConfig,
+    GovernActionInput,
+    execute_governed_action,
+    govern_action,
+)
 from omodul.execute_tool import execute_tool
 from omodul.fork_session import compute_fingerprint_for as fork_session_fingerprint
 from omodul.fork_session import fork_session

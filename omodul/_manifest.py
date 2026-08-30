@@ -5,6 +5,9 @@ from __future__ import annotations
 VERSION = "1.3.0"
 
 ELEMENTS = {
+    # Action Gateway (PR-09)
+    "govern_action": "omodul.action_gateway",
+    "execute_governed_action": "omodul.action_gateway",
     # Phase 1-4: Core business workflows
     "trade_journal_analyzer": "omodul.behavior",
     "shadow_account_simulator": "omodul.behavior",
