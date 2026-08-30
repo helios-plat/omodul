@@ -131,6 +131,11 @@ from omodul.action_gateway import (
     execute_governed_action,
     govern_action,
 )
+from omodul.computer_session import (
+    PrepareComputerSessionConfig,
+    PrepareComputerSessionInput,
+    prepare_computer_session,
+)
 from omodul.execute_tool import execute_tool
 from omodul.fork_session import compute_fingerprint_for as fork_session_fingerprint
 from omodul.fork_session import fork_session

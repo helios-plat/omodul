@@ -8,6 +8,8 @@ ELEMENTS = {
     # Action Gateway (PR-09)
     "govern_action": "omodul.action_gateway",
     "execute_governed_action": "omodul.action_gateway",
+    # Computer Supervisor (PR-10)
+    "prepare_computer_session": "omodul.computer_session",
     # Phase 1-4: Core business workflows
     "trade_journal_analyzer": "omodul.behavior",
     "shadow_account_simulator": "omodul.behavior",
