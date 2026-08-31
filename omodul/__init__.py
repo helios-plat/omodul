@@ -136,6 +136,16 @@ from omodul.provider_inference import (
     ProviderInferenceInput,
     provider_inference_transaction,
 )
+from omodul.governed_tool_transaction import (
+    GovernedToolConfig,
+    GovernedToolInput,
+    governed_tool_transaction,
+)
+from omodul.governed_mcp_transaction import (
+    GovernedMcpConfig,
+    GovernedMcpInput,
+    governed_mcp_transaction,
+)
 from omodul.computer_session import (
     PrepareComputerSessionConfig,
     PrepareComputerSessionInput,
