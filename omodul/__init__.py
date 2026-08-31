@@ -131,6 +131,11 @@ from omodul.action_gateway import (
     execute_governed_action,
     govern_action,
 )
+from omodul.provider_inference import (
+    ProviderInferenceConfig,
+    ProviderInferenceInput,
+    provider_inference_transaction,
+)
 from omodul.computer_session import (
     PrepareComputerSessionConfig,
     PrepareComputerSessionInput,
