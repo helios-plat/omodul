@@ -136,6 +136,11 @@ from omodul.computer_session import (
     PrepareComputerSessionInput,
     prepare_computer_session,
 )
+from omodul.browser_session import (
+    PrepareBrowserSessionConfig,
+    PrepareBrowserSessionInput,
+    prepare_browser_session,
+)
 from omodul.execute_tool import execute_tool
 from omodul.fork_session import compute_fingerprint_for as fork_session_fingerprint
 from omodul.fork_session import fork_session
