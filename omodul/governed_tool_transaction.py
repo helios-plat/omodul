@@ -59,6 +59,20 @@ class GovernedToolInput(BaseModel):
     capability: str = "manual_only"
 
 
+class PhysicalToolExecutionError(RuntimeError):
+    """A physical callback started but failed.
+
+    The public ``executed`` flag remains an outcome flag.  This private
+    marker lets the transaction expose the separate attempt state without
+    leaking an exception object or changing the existing result ABI.
+    """
+
+    def __init__(self, original: BaseException) -> None:
+        self.original_type = type(original).__name__
+        self.original_message = str(original)[:2000]
+        super().__init__("physical tool execution failed")
+
+
 async def _call(fn: Any, *args: Any, **kwargs: Any) -> Any:
     result = fn(*args, **kwargs)
     if inspect.isawaitable(result):
@@ -167,6 +181,7 @@ async def governed_tool_transaction(
     fingerprint = compute_fingerprint(
         {"request": request.to_dict(), "operation_key": input_data.operation_key}
     )
+    physical_attempt = False
 
     try:
         spec = input_data.spec
@@ -205,6 +220,7 @@ async def governed_tool_transaction(
                     fingerprint=fingerprint,
                     trail=trail,
                     executed=False,
+                    attempted=False,
                 )
             return build_result(
                 status="failed",
@@ -213,6 +229,7 @@ async def governed_tool_transaction(
                 trail=trail,
                 decision={"verdict": "DENY", "reason": prepared.get("reason", "grant denied")},
                 executed=False,
+                attempted=False,
             )
 
         effect = str(prepared.get("effect", spec.effect))
@@ -281,6 +298,7 @@ async def governed_tool_transaction(
                 trail=trail,
                 decision=decision.to_dict(),
                 executed=False,
+                attempted=False,
             )
 
         # This is after policy/approval and before the physical call.  The raw
@@ -307,7 +325,11 @@ async def governed_tool_transaction(
                     resolver=input_data.credential_resolver,
                 )
 
+        physical_failure: PhysicalToolExecutionError | None = None
+
         async def physical(_action: ActionRequest) -> Any:
+            nonlocal physical_attempt, physical_failure
+            physical_attempt = True
             try:
                 if request.kind == "mcp":
                     if input_data.mcp_call is None or input_data.mcp_client is None:
@@ -334,7 +356,8 @@ async def governed_tool_transaction(
                 # result, not only when returning to Layer 4.
                 return redact_payload(raw, secrets=(secret,) if secret else ())
             except Exception as exc:
-                raise RuntimeError("physical tool execution failed") from exc
+                physical_failure = PhysicalToolExecutionError(exc)
+                raise physical_failure from exc
 
         executed = await _call(
             execute,
@@ -364,6 +387,12 @@ async def governed_tool_transaction(
                 trail=trail,
                 decision=decision.to_dict(),
                 executed=bool(executed.get("executed", False)),
+                attempted=physical_attempt,
+                failure_stage="physical_execution" if physical_attempt else None,
+                physical_error_type=(physical_failure.original_type if physical_failure else None),
+                physical_error_message=(
+                    physical_failure.original_message if physical_failure else None
+                ),
                 result=redact_payload(executed.get("result"), secrets=(secret,) if secret else ()),
             )
         return build_result(
@@ -373,6 +402,7 @@ async def governed_tool_transaction(
             trail=trail,
             decision=decision.to_dict(),
             executed=True,
+            attempted=True,
             result=redact_payload(executed.get("result"), secrets=(secret,) if secret else ()),
             tool=request.identity,
             credential_ref=ref.to_dict() if ref else None,
@@ -385,6 +415,7 @@ async def governed_tool_transaction(
             fingerprint=fingerprint,
             trail=trail,
             executed=False,
+            attempted=physical_attempt,
         )
 
 
