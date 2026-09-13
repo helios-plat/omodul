@@ -13,7 +13,9 @@ Composition (oprim + oskill):
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
+import os
 import traceback
 from datetime import UTC, datetime
 from pathlib import Path
@@ -37,6 +39,12 @@ class InboxConfig(BaseConfig):
     file_path: Path  # Path to the uploaded temp file
     file_checksum: str  # SHA-256 of the file (caller computed)
     user_id_hash: str
+    # A caller that already created the canonical Source may hand its ID to
+    # oskill.  The external module does not import or depend on AII writer.
+    existing_substrate_id: str | None = None
+    # Raw authenticated identity used by the canonical Source writer.  The
+    # legacy user_id_hash remains the value passed to oskill.
+    authenticated_user_id: str | None = None
     medium_hint: str | None = None
     auto_classify: bool = True
     generate_derivatives: list[str] = ["summary"]
@@ -59,6 +67,50 @@ class InboxFindings(BaseModel):
     parse_quality: str = "ok"        # "ok"|"empty"|"scanned"|"garbled"
     is_duplicate: bool = False       # True 表示已有相同 file_hash 的 substrate
     duplicate_of: str | None = None  # 重复时指向已有 substrate_id
+
+
+def _authenticated_user(config: InboxConfig, input_data: InboxInput) -> str:
+    """Resolve the raw authenticated identity without treating a hash as one."""
+    metadata = input_data.metadata_override or {}
+    identity = (
+        config.authenticated_user_id
+        or metadata.get("authenticated_user_id")
+        or metadata.get("user_id")
+        or os.environ.get("STRATUM_AUTHENTICATED_USER_ID")
+    )
+    if not identity:
+        raise ValueError(
+            "CanonicalSourceWriter requires authenticated_user_id; "
+            "user_id_hash cannot be used as a raw identity"
+        )
+    return str(identity)
+
+
+def _create_source(
+    *,
+    config: InboxConfig,
+    input_data: InboxInput,
+    title: str,
+    mime: str | None,
+    source_type: str,
+    metadata: dict[str, Any],
+    source_id: str | None = None,
+    file_hash: str | None = None,
+) -> str:
+    """Create or ownership-validate one canonical Source through the writer."""
+    from stratum.services.canonical_source_writer import CanonicalSourceWriter
+
+    result = CanonicalSourceWriter().create(
+        authenticated_user=_authenticated_user(config, input_data),
+        source_type=source_type,
+        title=title,
+        mime=mime,
+        original_binary_uri=str(config.file_path),
+        file_hash=file_hash or config.file_checksum,
+        metadata=metadata,
+        source_id=source_id,
+    )
+    return str(result["id"])
 
 
 def process_inbox_substrate(
@@ -191,13 +243,36 @@ def process_inbox_substrate(
         # If parsed_doc is a list[EpubBook], it's a bundle — ingest each separately
         from oskill.ingest_substrate import ingest_substrate
         from oprim._epub_toc_split import EpubBook
+        from stratum.services.canonical_fragment_writer import ensure_canonical_fragments
 
         step_start = datetime.now(UTC)
         if isinstance(parsed_doc, list) and parsed_doc and isinstance(parsed_doc[0], EpubBook):
             # Bundle: create N independent substrates
             substrate_ids = []
+            primary_ingest_result: Any | None = None
             for book in parsed_doc:
-                s_id = asyncio.run(
+                child_source_id = _create_source(
+                    config=config,
+                    input_data=input_data,
+                    title=book.book_title,
+                    mime=file_info.mime_type,
+                    source_type="epub_toc_split",
+                    metadata={
+                        "corpus_id": config.corpus_id,
+                        "user_id_hash": config.user_id_hash,
+                        "bundle_file_hash": config.file_checksum,
+                        **book.metadata,
+                        **input_data.metadata_override,
+                    },
+                    file_hash=hashlib.sha256(book.content.encode("utf-8")).hexdigest(),
+                )
+                ensure_canonical_fragments(
+                    child_source_id,
+                    _authenticated_user(config, input_data),
+                    content=book.content,
+                    parser_version="omodul-parser-v1",
+                )
+                ingest_result = asyncio.run(
                     ingest_substrate(
                         path=config.file_path,
                         source={
@@ -207,12 +282,16 @@ def process_inbox_substrate(
                             **input_data.metadata_override,
                         },
                         user_id_hash=config.user_id_hash,
+                        existing_substrate_id=child_source_id,
                         user_hint={"medium": medium, "book_title": book.book_title},
                         content_override=book.content,
                         metadata_override={**book.metadata, "bundle_file_hash": config.file_checksum},
                     )
                 )
-                substrate_ids.append(str(s_id))
+                if primary_ingest_result is None:
+                    primary_ingest_result = ingest_result
+                s_id = str(getattr(ingest_result, "substrate_id", ingest_result))
+                substrate_ids.append(s_id)
             substrate_id = substrate_ids[0]  # primary for findings
             record_step(
                 trail_steps=trail_steps,
@@ -224,7 +303,34 @@ def process_inbox_substrate(
                 started_at=step_start,
             )
         else:
-            substrate_id = asyncio.run(
+            source_id = _create_source(
+                config=config,
+                input_data=input_data,
+                title=str(
+                    input_data.metadata_override.get("title")
+                    or input_data.metadata_override.get("name")
+                    or config.file_path.stem
+                ),
+                mime=file_info.mime_type,
+                source_type=medium or file_info.category,
+                metadata={
+                    "corpus_id": config.corpus_id,
+                    "user_id_hash": config.user_id_hash,
+                    **input_data.metadata_override,
+                },
+                source_id=config.existing_substrate_id,
+            )
+            canonical_text = "\n\n".join(
+                str(getattr(page, "text", ""))
+                for page in getattr(doc_for_structure, "pages", [])
+            )
+            ensure_canonical_fragments(
+                source_id,
+                _authenticated_user(config, input_data),
+                content=canonical_text,
+                parser_version="omodul-parser-v1",
+            )
+            ingest_result = asyncio.run(
                 ingest_substrate(
                     path=config.file_path,
                     source={
@@ -233,9 +339,12 @@ def process_inbox_substrate(
                         **input_data.metadata_override,
                     },
                     user_id_hash=config.user_id_hash,
+                    existing_substrate_id=source_id,
                     user_hint={"medium": medium} if medium else None,
                 )
             )
+            substrate_id = str(getattr(ingest_result, "substrate_id", ingest_result))
+            primary_ingest_result = ingest_result
             substrate_ids = [str(substrate_id)]
             record_step(
                 trail_steps=trail_steps,
@@ -274,8 +383,9 @@ def process_inbox_substrate(
 
         # Check if ingest_substrate returned duplicate_of
         # substrate_id here is IngestResult object (asyncio.run returns IngestResult)
-        _is_dup = bool(getattr(substrate_id, "duplicate_of", None))
-        _dup_of = str(substrate_id.duplicate_of) if _is_dup else None
+        _primary_result = locals().get("primary_ingest_result", substrate_id)
+        _is_dup = bool(getattr(_primary_result, "duplicate_of", None))
+        _dup_of = str(_primary_result.duplicate_of) if _is_dup else None
         # Normalize substrate_id to string for downstream use
         _substrate_id_str = str(getattr(substrate_id, "substrate_id", substrate_id))
 
