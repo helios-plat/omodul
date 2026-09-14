@@ -116,7 +116,7 @@ class Trail:
 
 def compute_fingerprint(fields: dict[str, Any]) -> str:
     """sha256(canonical JSON of fields)[:24]."""
-    canonical = json.dumps(fields, sort_keys=True, ensure_ascii=False, default=str)
+    canonical = json.dumps(_public_event(fields), sort_keys=True, ensure_ascii=False, default=str)
     return hashlib.sha256(canonical.encode()).hexdigest()[:24]
 
 
