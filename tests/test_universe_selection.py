@@ -16,50 +16,50 @@ class TestFixedListBasic:
         assert result["instrument_ids"] == ["BTC-USDT.OKX", "ETH-USDT.OKX"]
 
     def test_fixed_list_venue_stored(self):
-        result = fixed_list(["BTC-USDT"], "BINANCE", "spot")
+        result = fixed_list(["BTC-USDT"], venue="BINANCE", instrument_type="spot")
         assert result["venue"] == "BINANCE"
 
     def test_fixed_list_instrument_type_stored(self):
-        result = fixed_list(["BTC-USDT"], "OKX", "futures")
+        result = fixed_list(["BTC-USDT"], venue="OKX", instrument_type="futures")
         assert result["instrument_type"] == "futures"
 
     def test_fixed_list_symbols_preserved(self):
         syms = ["BTC-USDT", "ETH-USDT", "SOL-USDT"]
-        result = fixed_list(syms, "OKX", "spot")
+        result = fixed_list(syms, venue="OKX", instrument_type="spot")
         assert result["symbols"] == syms
 
 
 class TestFixedListOutputKeys:
     def test_fixed_list_output_keys(self):
-        result = fixed_list(["BTC-USDT"], "OKX", "spot")
+        result = fixed_list(["BTC-USDT"], venue="OKX", instrument_type="spot")
         required = {"venue", "instrument_type", "symbols", "instrument_ids", "metadata"}
         assert required.issubset(set(result.keys()))
 
     def test_fixed_list_metadata_default_empty(self):
-        result = fixed_list(["BTC-USDT"], "OKX", "spot")
+        result = fixed_list(["BTC-USDT"], venue="OKX", instrument_type="spot")
         assert result["metadata"] == {}
 
     def test_fixed_list_metadata_custom(self):
         meta = {"sector": "crypto", "tier": "1"}
-        result = fixed_list(["BTC-USDT"], "OKX", "spot", market_metadata=meta)
+        result = fixed_list(["BTC-USDT"], venue="OKX", instrument_type="spot", market_metadata=meta)
         assert result["metadata"] == meta
 
 
 class TestFixedListValidation:
     def test_fixed_list_empty_raises(self):
         with pytest.raises(ValueError, match="non-empty"):
-            fixed_list([], "OKX", "spot")
+            fixed_list([], venue="OKX", instrument_type="spot")
 
     def test_fixed_list_invalid_type_raises(self):
         with pytest.raises(ValueError, match="instrument_type"):
-            fixed_list(["BTC-USDT"], "OKX", "crypto")
+            fixed_list(["BTC-USDT"], venue="OKX", instrument_type="crypto")
 
     def test_all_valid_instrument_types_accepted(self):
         for it in VALID_INSTRUMENT_TYPES:
-            result = fixed_list(["BTC-USDT"], "OKX", it)
+            result = fixed_list(["BTC-USDT"], venue="OKX", instrument_type=it)
             assert result["instrument_type"] == it
 
     def test_instrument_id_format(self):
-        result = fixed_list(["BTC-USDT", "ETH-USDT"], "OKX", "spot")
+        result = fixed_list(["BTC-USDT", "ETH-USDT"], venue="OKX", instrument_type="spot")
         for iid in result["instrument_ids"]:
             assert ".OKX" in iid
