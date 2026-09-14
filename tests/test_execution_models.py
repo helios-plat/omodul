@@ -1,9 +1,10 @@
 """Tests for omodul.execution_models."""
+
 from __future__ import annotations
 
 import pytest
 
-from omodul.execution_models import twap_with_impact, aggressive_limit
+from omodul.execution_models import aggressive_limit, twap_with_impact
 
 _COST_MODEL = "crypto_market_impact_sigmoid"
 _COST_PARAMS = {}  # use defaults
@@ -62,8 +63,10 @@ class TestTwapWithImpact:
             cost_model_params=_COST_PARAMS,
         )
         assert set(result.keys()) == {
-            "schedule", "total_expected_impact_bps",
-            "total_slippage_estimate_usd", "urgency",
+            "schedule",
+            "total_expected_impact_bps",
+            "total_slippage_estimate_usd",
+            "urgency",
         }
 
     def test_twap_urgency_stored(self):
@@ -161,8 +164,12 @@ class TestAggressiveLimit:
             max_slippage_bps=50,
         )
         assert set(result.keys()) == {
-            "limit_offset_bps", "timeout_sec", "on_timeout",
-            "max_slippage_bps", "estimated_impact_bps", "execute",
+            "limit_offset_bps",
+            "timeout_sec",
+            "on_timeout",
+            "max_slippage_bps",
+            "estimated_impact_bps",
+            "execute",
         }
 
     def test_aggressive_limit_wrong_cost_model_raises(self):

@@ -1,4 +1,5 @@
 """Tests for omodul.run_subagent_task."""
+
 from __future__ import annotations
 
 import asyncio
@@ -6,8 +7,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from omodul.run_subagent_task import Config, InputData, run_subagent_task
 from omodul._base import CostTracker
+from omodul.run_subagent_task import Config, InputData, run_subagent_task
 
 
 # ---------------------------------------------------------------------------

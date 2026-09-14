@@ -15,23 +15,25 @@ Validation (single authority, MUST):
 Violations → status="failed" + validation_errors + record failure_lesson
              Never raise exceptions.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
 from typing import Any, ClassVar
 
+from oprim._aii_graph_types import (
+    VALID_GRADES,
+    VALID_KNOWLEDGE_TYPES,
+    VALID_RELATION_TYPES,
+    VALID_SUB_TYPES,
+)
 from pydantic import BaseModel
 
 from omodul._base import (
-    BaseConfig, Trail, build_result, compute_fingerprint,
-)
-
-from oprim._aii_graph_types import (
-    VALID_KNOWLEDGE_TYPES,
-    VALID_RELATION_TYPES,
-    VALID_GRADES,
-    VALID_SUB_TYPES,
-    RegisterKuOntologyInput,
+    BaseConfig,
+    Trail,
+    build_result,
+    compute_fingerprint,
 )
 
 
@@ -56,7 +58,7 @@ class RegisterKuOntologyFindings(BaseModel):
 
 def register_ku_ontology(
     config: RegisterKuOntologyConfig,
-    input_data: Any,   # RegisterKuOntologyInput (oprim._aii_graph_types)
+    input_data: Any,  # RegisterKuOntologyInput (oprim._aii_graph_types)
     output_dir: Path,
     *,
     on_step: Any = None,
@@ -83,10 +85,12 @@ def register_ku_ontology(
     _vrt = valid_relation_types or VALID_RELATION_TYPES
 
     trail = Trail()
-    fingerprint = compute_fingerprint({
-        "substrate_id": config.substrate_id,
-        "knowledge_type": config.knowledge_type,
-    })
+    fingerprint = compute_fingerprint(
+        {
+            "substrate_id": config.substrate_id,
+            "knowledge_type": config.knowledge_type,
+        }
+    )
 
     ku: dict = getattr(input_data, "ku", {}) or {}
     edges: list[dict] = list(getattr(input_data, "edges", []) or [])
@@ -99,8 +103,7 @@ def register_ku_ontology(
     knowledge_type = ku.get("knowledge_type", "")
     if knowledge_type not in _vkt:
         validation_errors.append(
-            f"Invalid knowledge_type: {knowledge_type!r}. "
-            f"Must be one of {sorted(_vkt)}"
+            f"Invalid knowledge_type: {knowledge_type!r}. Must be one of {sorted(_vkt)}"
         )
 
     # ------------------------------------------------------------------
@@ -108,19 +111,14 @@ def register_ku_ontology(
     # ------------------------------------------------------------------
     sub_type = ku.get("sub_type")
     if sub_type and sub_type not in _vst:
-        validation_errors.append(
-            f"Invalid sub_type: {sub_type!r}. "
-            f"Must be one of {sorted(_vst)}"
-        )
+        validation_errors.append(f"Invalid sub_type: {sub_type!r}. Must be one of {sorted(_vst)}")
 
     # ------------------------------------------------------------------
     # Validate grade
     # ------------------------------------------------------------------
     grade = ku.get("grade", "unverified")
     if grade not in _vgr:
-        validation_errors.append(
-            f"Invalid grade: {grade!r}. Must be one of {sorted(_vgr)}"
-        )
+        validation_errors.append(f"Invalid grade: {grade!r}. Must be one of {sorted(_vgr)}")
 
     # ------------------------------------------------------------------
     # Grade mandate: verified + default method → forbidden
@@ -141,9 +139,7 @@ def register_ku_ontology(
     # positional → stance_holder required
     # ------------------------------------------------------------------
     if knowledge_type == "positional" and not ku.get("stance_holder"):
-        validation_errors.append(
-            "positional KU requires a non-empty stance_holder"
-        )
+        validation_errors.append("positional KU requires a non-empty stance_holder")
 
     # ------------------------------------------------------------------
     # Reject on validation errors

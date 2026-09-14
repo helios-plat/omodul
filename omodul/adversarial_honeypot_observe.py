@@ -19,7 +19,7 @@ HoneypotObservation:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 try:
     from obase.local_sandbox_pool import LocalSandboxPool
@@ -58,14 +58,14 @@ class HoneypotObservation:
 
     is_hostile: bool
     result: HoneypotSandboxResult
-    escalation_payload: Optional[dict[str, Any]]
+    escalation_payload: dict[str, Any] | None
     injected_keys: list[str]
 
 
 def adversarial_honeypot_observe(
     code: str,
     timeout: float = 3.0,
-    injected_keys: Optional[list[str]] = None,
+    injected_keys: list[str] | None = None,
 ) -> HoneypotObservation:
     """Run ``code`` inside the honeypot sandbox and return the observation.
 
@@ -103,7 +103,7 @@ def adversarial_honeypot_observe(
         timed_out=res.timed_out,
     )
 
-    escalation: Optional[dict[str, Any]] = None
+    escalation: dict[str, Any] | None = None
     if hostile:
         escalation = {
             "event": "adversarial_agent_detected",

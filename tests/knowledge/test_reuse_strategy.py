@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-import pytest
-
 from omodul.reuse_strategy import ReuseStrategyConfig, reuse_strategy
-
 
 # ---------------------------------------------------------------------------
 # Mock backend

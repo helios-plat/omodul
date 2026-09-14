@@ -5,21 +5,20 @@ from __future__ import annotations
 import os
 import re
 import tempfile
+from datetime import UTC
 from pathlib import Path
-from typing import Optional
 
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
-
 from oprim._config import cfg as _cfg
 from oprim._logging import log
 from oprim.errors import StratumError
 from oprim.meta_db import open_meta_db
-from oskill.knowledge._context import meta_db_path
 from oskill.hybrid_search import hybrid_search
 from oskill.ingest_substrate import ingest_substrate
+from oskill.knowledge._context import meta_db_path
+from pydantic import BaseModel
 
 from .auth import AuthError, verify_token
 from .page_capture import extract_main_content
@@ -57,16 +56,16 @@ async def _stratum_error_handler(request: Request, exc: StratumError):
 class IngestRequest(BaseModel):
     url: str
     title: str
-    html: Optional[str] = None
-    selection_text: Optional[str] = None
+    html: str | None = None
+    selection_text: str | None = None
     tags: list[str] = []
     create_note: bool = False
-    note_content: Optional[str] = None
+    note_content: str | None = None
 
 
 class IngestResponse(BaseModel):
     substrate_id: str
-    note_id: Optional[str] = None
+    note_id: str | None = None
     deduplicated: bool
     message: str = ""
 
@@ -74,7 +73,7 @@ class IngestResponse(BaseModel):
 class SidebarSearchRequest(BaseModel):
     url: str
     page_title: str
-    selected_text: Optional[str] = None
+    selected_text: str | None = None
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -182,23 +181,25 @@ async def ingest_page(
         substrate_id=substrate_id,
         note_id=note_id,
         deduplicated=False,
-        message=f"Saved to Stratum",
+        message="Saved to Stratum",
     )
 
 
 async def _create_note(substrate_id: str, title: str, content: str) -> str:
     """Create a note linked to a substrate."""
     import uuid
+    from datetime import datetime
+
     import oprim.meta_db as _mod
-    from datetime import datetime, timezone
 
     db_path = meta_db_path()
     db = open_meta_db(db_path)
     db.migrate(Path(_mod.__file__).parent / "migrations")
     note_id = str(uuid.uuid4())
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     db.execute(
-        "INSERT INTO note (id, title, content, wikilinks, substrate_id, meta_json, created_at, updated_at) "
+        "INSERT INTO note (id, title, content, wikilinks, substrate_id, meta_json, "
+        "created_at, updated_at) "
         "VALUES (?, ?, ?, ?, ?, '{}', ?, ?)",
         [note_id, title, content, "[]", substrate_id, now, now],
     )

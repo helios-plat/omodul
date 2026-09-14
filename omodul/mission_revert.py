@@ -23,29 +23,31 @@ class WorktreeState:
 
     worker_id: str
     worktree: str
-    base_commit: str = ""        # 任务启动时基线
+    base_commit: str = ""  # 任务启动时基线
     branch: str = ""
     dirty: bool = False
 
 
 def _git(cwd: Path, *args: str) -> subprocess.CompletedProcess:
-    return subprocess.run(["git", *args], cwd=str(cwd),
-                          capture_output=True, text=True, timeout=120)
+    return subprocess.run(["git", *args], cwd=str(cwd), capture_output=True, text=True, timeout=120)
 
 
-def snapshot_mission_baseline(mission_id: str, worktrees: list[dict[str, str]],
-                              *, repo: str = "") -> list[WorktreeState]:
+def snapshot_mission_baseline(
+    mission_id: str, worktrees: list[dict[str, str]], *, repo: str = ""
+) -> list[WorktreeState]:
     """任务启动时记录各 worktree 基线 commit。"""
     states: list[WorktreeState] = []
     for wt in worktrees:
         cwd = Path(wt["worktree"])
         r = _git(cwd, "rev-parse", "HEAD")
-        states.append(WorktreeState(
-            worker_id=wt.get("worker_id", Path(wt["worktree"]).name),
-            worktree=str(cwd),
-            base_commit=r.stdout.strip() if r.returncode == 0 else "",
-            branch=wt.get("branch", ""),
-        ))
+        states.append(
+            WorktreeState(
+                worker_id=wt.get("worker_id", Path(wt["worktree"]).name),
+                worktree=str(cwd),
+                base_commit=r.stdout.strip() if r.returncode == 0 else "",
+                branch=wt.get("branch", ""),
+            )
+        )
     return states
 
 
@@ -84,8 +86,13 @@ def mission_revert(
 
         base = (base_commits or {}).get(str(cwd)) or (base_commits or {}).get(wt.get("branch", ""))
         if not base:
-            restored.append({"worker_id": worker, "ok": False,
-                             "error": "无基线 commit (任务启动时 snapshot_mission_baseline)"})
+            restored.append(
+                {
+                    "worker_id": worker,
+                    "ok": False,
+                    "error": "无基线 commit (任务启动时 snapshot_mission_baseline)",
+                }
+            )
             reverted_all = False
             continue
 
@@ -96,11 +103,9 @@ def mission_revert(
             patch_parts.append(r.stdout)
         r2 = _git(cwd, "status", "--porcelain")
         if r2.returncode == 0 and r2.stdout.strip():
-            untracked = [line[3:] for line in r2.stdout.splitlines()
-                         if line.startswith("?? ")]
+            untracked = [line[3:] for line in r2.stdout.splitlines() if line.startswith("?? ")]
             if untracked:
-                patch_parts.append("\n# 未跟踪文件 (回滚时清理):\n" +
-                                   "\n".join(untracked))
+                patch_parts.append("\n# 未跟踪文件 (回滚时清理):\n" + "\n".join(untracked))
         if patch_parts:
             patch = qdir / f"{worker}-{uuid.uuid4().hex[:8]}.patch"
             patch.write_text("\n".join(patch_parts), encoding="utf-8")
@@ -112,9 +117,14 @@ def mission_revert(
         if ok:
             _git(cwd, "clean", "-fd")
         reverted_all = reverted_all and ok
-        restored.append({"worker_id": worker, "ok": ok,
-                         "restored_commit": base,
-                         "error": "" if ok else r.stderr[-300:]})
+        restored.append(
+            {
+                "worker_id": worker,
+                "ok": ok,
+                "restored_commit": base,
+                "error": "" if ok else r.stderr[-300:],
+            }
+        )
 
     # 回滚动作审计
     if sink is None:
@@ -123,8 +133,11 @@ def mission_revert(
         event_type="learn",
         trace_id=trace_id or f"rv_{mission_id}",
         inputs={"mission_id": mission_id},
-        learning={"reverted_all": reverted_all, "workers": len(worktrees),
-                  "quarantined": len(quarantined)},
+        learning={
+            "reverted_all": reverted_all,
+            "workers": len(worktrees),
+            "quarantined": len(quarantined),
+        },
     )
     sink.write(audit)
 

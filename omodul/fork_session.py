@@ -3,6 +3,7 @@ omodul.fork_session — Fork an existing session, optionally from a history slic
 
 Pillars: fingerprint
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -23,7 +24,7 @@ async def _call(fn: Any, **kwargs: Any) -> Any:
     return result
 
 
-def compute_fingerprint_for(config: "Config", input_data: "InputData") -> str:
+def compute_fingerprint_for(config: Config, input_data: InputData) -> str:
     """Fingerprint over source_session_id."""
     return compute_fingerprint({"source_session_id": input_data.source_session_id})
 
@@ -55,8 +56,7 @@ async def fork_session(
         fp = compute_fingerprint_for(config, input_data)
 
         if input_data.loader is not None:
-            source = await _call(input_data.loader,
-                                 session_id=input_data.source_session_id)
+            source = await _call(input_data.loader, session_id=input_data.source_session_id)
         else:
             source = {
                 "id": input_data.source_session_id,

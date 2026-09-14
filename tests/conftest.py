@@ -1,6 +1,5 @@
 """Shared test fixtures for omodul - includes real financial data."""
 
-import os
 from pathlib import Path
 
 import numpy as np
@@ -50,13 +49,16 @@ def ff5_factors():
         return pd.read_csv(path, index_col=0, parse_dates=True)
     rng = np.random.default_rng(2024)
     dates = pd.date_range("2019-01-01", periods=60, freq="ME")
-    return pd.DataFrame({
-        "Mkt-RF": rng.normal(0.008, 0.04, 60),
-        "SMB": rng.normal(0.002, 0.03, 60),
-        "HML": rng.normal(0.001, 0.03, 60),
-        "RMW": rng.normal(0.003, 0.02, 60),
-        "CMA": rng.normal(0.002, 0.02, 60),
-    }, index=dates)
+    return pd.DataFrame(
+        {
+            "Mkt-RF": rng.normal(0.008, 0.04, 60),
+            "SMB": rng.normal(0.002, 0.03, 60),
+            "HML": rng.normal(0.001, 0.03, 60),
+            "RMW": rng.normal(0.003, 0.02, 60),
+            "CMA": rng.normal(0.002, 0.02, 60),
+        },
+        index=dates,
+    )
 
 
 @pytest.fixture
@@ -80,11 +82,13 @@ def sample_trades():
     rng = np.random.default_rng(42)
     n = 100
     dates = pd.date_range("2023-01-01", periods=n, freq="B")
-    return pd.DataFrame({
-        "timestamp": dates,
-        "symbol": rng.choice(["AAPL", "MSFT", "GOOGL", "AMZN"], n),
-        "side": rng.choice(["buy", "sell"], n),
-        "quantity": rng.integers(10, 1000, n),
-        "price": rng.uniform(100, 500, n),
-        "pnl": rng.normal(50, 200, n),
-    })
+    return pd.DataFrame(
+        {
+            "timestamp": dates,
+            "symbol": rng.choice(["AAPL", "MSFT", "GOOGL", "AMZN"], n),
+            "side": rng.choice(["buy", "sell"], n),
+            "quantity": rng.integers(10, 1000, n),
+            "price": rng.uniform(100, 500, n),
+            "pnl": rng.normal(50, 200, n),
+        }
+    )

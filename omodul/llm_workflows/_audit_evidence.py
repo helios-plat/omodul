@@ -2,6 +2,7 @@
 
 Matches HELIVEX_PHASE3_LLM_INTEGRATION §4.1 spec.
 """
+
 from __future__ import annotations
 
 import json
@@ -16,13 +17,15 @@ def build_audit_evidence(bull: dict, bear: dict, ref: dict) -> dict:
             {"function": "oskill.llm_agent.referee", "args_hash": ref["prompt_hash_hex"]},
         ],
         "llm_reasoning_trace": _format_trace(bull, bear, ref),
-        "llm_factor_dsl": json.dumps({
-            "bull_confidence": bull["confidence"],
-            "bear_confidence": bear["confidence"],
-            "referee_factor": ref["factor_value"],
-            "referee_verdict": ref["verdict"],
-            "prompt_version": bull.get("prompt_version", "unknown"),
-        }),
+        "llm_factor_dsl": json.dumps(
+            {
+                "bull_confidence": bull["confidence"],
+                "bear_confidence": bear["confidence"],
+                "referee_factor": ref["factor_value"],
+                "referee_verdict": ref["verdict"],
+                "prompt_version": bull.get("prompt_version", "unknown"),
+            }
+        ),
         "llm_consensus_votes": {
             "bull": bull["confidence"] / 100.0,
             "bear": bear["confidence"] / 100.0,

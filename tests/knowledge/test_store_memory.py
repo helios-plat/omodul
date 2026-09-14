@@ -6,10 +6,7 @@ import json
 import os
 import tempfile
 
-import pytest
-
 from omodul.store_memory import StoreMemoryConfig, store_memory
-
 
 # ---------------------------------------------------------------------------
 # Mock backend

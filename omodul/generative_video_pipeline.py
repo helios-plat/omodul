@@ -42,10 +42,16 @@ class GenerativeVideoConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "generative_video_pipeline"
     _omodul_version: ClassVar[str] = "2.0.0"
     _fingerprint_fields: ClassVar[set[str]] = {
-        "topic", "main_line", "providers",
-        "target_duration_s", "language", "template_id",
-        "portrait_path", "bgm_path",
-        "image_to_video_enabled", "image_to_video_provider",
+        "topic",
+        "main_line",
+        "providers",
+        "target_duration_s",
+        "language",
+        "template_id",
+        "portrait_path",
+        "bgm_path",
+        "image_to_video_enabled",
+        "image_to_video_provider",
         "face_animation_provider",
     }
 
@@ -57,13 +63,15 @@ class GenerativeVideoConfig(BaseConfig):
     image_to_video_enabled: bool = False
     image_to_video_provider: str = "wan22_local"
     face_animation_provider: str = "wav2lip"
-    providers: dict[str, str] = Field(default_factory=lambda: {
-        "llm": "nim",
-        "image_gen": "siliconflow",
-        "tts": "edge_tts",
-        "avatar": "wav2lip",
-        "video_gen": "stub",
-    })
+    providers: dict[str, str] = Field(
+        default_factory=lambda: {
+            "llm": "nim",
+            "image_gen": "siliconflow",
+            "tts": "edge_tts",
+            "avatar": "wav2lip",
+            "video_gen": "stub",
+        }
+    )
     burn_subtitles: bool = True
     upload_platforms: list[str] = Field(default_factory=list)
     visibility: str = "private"
@@ -118,6 +126,7 @@ def generative_video_pipeline(
     on_step: Callable[[dict[str, Any]], None] | None = None,
 ) -> dict[str, Any]:
     import warnings
+
     warnings.warn(
         "generative_video_pipeline is deprecated; migrate to "
         "omodul.agentic_longvideo_pipeline (v1.26.0+). "
@@ -190,6 +199,7 @@ def generative_video_pipeline(
     # Write report
     report_path: Path | None = None
     try:
+
         def _findings_section(f: Any) -> str:
             if f is None:
                 return "## 3. Findings\n\nNo findings available."
@@ -241,6 +251,7 @@ async def _run_stages(
     from oskill.shot_generator import shot_generator
     from oskill.storyboard_planner import storyboard_planner
     from oskill.subtitle_generator import subtitle_generator
+
     llm = ProviderRegistry.get(category="llm", name=config.providers["llm"])
 
     # Stage 0 (optional): Load template
@@ -249,7 +260,9 @@ async def _run_stages(
         t0 = datetime.now(UTC)
         template_prompt = _stage_load_template(config.template_id)
         record_step(
-            trail_steps=trail_steps, on_step=on_step, layer="oprim",
+            trail_steps=trail_steps,
+            on_step=on_step,
+            layer="oprim",
             callable_name="_stage_load_template",
             inputs_summary={"template_id": config.template_id},
             outputs_summary={"prompt_len": len(template_prompt) if template_prompt else 0},
@@ -266,7 +279,9 @@ async def _run_stages(
         language=config.language,
     )
     record_step(
-        trail_steps=trail_steps, on_step=on_step, layer="oskill",
+        trail_steps=trail_steps,
+        on_step=on_step,
+        layer="oskill",
         callable_name="script_writer",
         inputs_summary={"topic": config.topic},
         outputs_summary={"scenes": len(script.scenes)},
@@ -277,7 +292,9 @@ async def _run_stages(
     t0 = datetime.now(UTC)
     storyboard = await storyboard_planner(script=script, llm=llm)
     record_step(
-        trail_steps=trail_steps, on_step=on_step, layer="oskill",
+        trail_steps=trail_steps,
+        on_step=on_step,
+        layer="oskill",
         callable_name="storyboard_planner",
         inputs_summary={"scenes": len(script.scenes)},
         outputs_summary={"shots": len(storyboard.shots)},
@@ -288,7 +305,9 @@ async def _run_stages(
     t0 = datetime.now(UTC)
     shot_plans = await shot_generator(storyboard=storyboard, llm=llm)
     record_step(
-        trail_steps=trail_steps, on_step=on_step, layer="oskill",
+        trail_steps=trail_steps,
+        on_step=on_step,
+        layer="oskill",
         callable_name="shot_generator",
         inputs_summary={"shots": len(storyboard.shots)},
         outputs_summary={"plans": len(shot_plans)},
@@ -299,7 +318,9 @@ async def _run_stages(
     t0 = datetime.now(UTC)
     report = await consistency_check(shots=shot_plans, llm=llm)
     record_step(
-        trail_steps=trail_steps, on_step=on_step, layer="oskill",
+        trail_steps=trail_steps,
+        on_step=on_step,
+        layer="oskill",
         callable_name="consistency_check",
         inputs_summary={"shots": len(shot_plans)},
         outputs_summary={"score": report.overall_score, "issues": len(report.issues)},
@@ -311,7 +332,9 @@ async def _run_stages(
     subtitle_path = output_dir / "subtitles.srt"
     subtitle_generator(shots=shot_plans, output_path=subtitle_path)
     record_step(
-        trail_steps=trail_steps, on_step=on_step, layer="oskill",
+        trail_steps=trail_steps,
+        on_step=on_step,
+        layer="oskill",
         callable_name="subtitle_generator",
         inputs_summary={"shots": len(shot_plans)},
         outputs_summary={"path": str(subtitle_path)},
@@ -336,7 +359,9 @@ async def _run_stages(
             output_dir=output_dir / "shots",
         )
         record_step(
-            trail_steps=trail_steps, on_step=on_step, layer="oprim_batch",
+            trail_steps=trail_steps,
+            on_step=on_step,
+            layer="oprim_batch",
             callable_name="avatar_assembler",
             inputs_summary={"shots": len(shot_plans), "provider": config.face_animation_provider},
             outputs_summary={"videos": len(avatar_videos)},
@@ -365,7 +390,9 @@ async def _run_stages(
             output_dir=output_dir / "frames",
         )
         record_step(
-            trail_steps=trail_steps, on_step=on_step, layer="oprim_batch",
+            trail_steps=trail_steps,
+            on_step=on_step,
+            layer="oprim_batch",
             callable_name="frame_renderer",
             inputs_summary={"refs": len(refs)},
             outputs_summary={"frames": len(frames)},
@@ -376,10 +403,16 @@ async def _run_stages(
         if config.image_to_video_enabled:
             t0 = datetime.now(UTC)
             animated = await _stage_image_to_video(
-                config, frames, storyboard, output_dir, llm,
+                config,
+                frames,
+                storyboard,
+                output_dir,
+                llm,
             )
             record_step(
-                trail_steps=trail_steps, on_step=on_step, layer="oskill",
+                trail_steps=trail_steps,
+                on_step=on_step,
+                layer="oskill",
                 callable_name="_stage_image_to_video",
                 inputs_summary={"frames": len(frames)},
                 outputs_summary={"videos": len(animated)},
@@ -390,7 +423,9 @@ async def _run_stages(
             video_path.write_bytes(b"\x00" * 64)
 
     record_step(
-        trail_steps=trail_steps, on_step=on_step, layer="oskill",
+        trail_steps=trail_steps,
+        on_step=on_step,
+        layer="oskill",
         callable_name="video_assembler",
         inputs_summary={},
         outputs_summary={"path": str(video_path)},
@@ -453,10 +488,8 @@ async def _stage_image_to_video(
     """Convert rendered frames to animated videos via image_to_video_workflow."""
     from oskill.image_to_video_workflow import image_to_video_workflow
 
-    motion_prompts = [
-        shot.motion or "static" for shot in storyboard.shots[:len(frames)]
-    ]
-    durations = [shot.duration_s for shot in storyboard.shots[:len(frames)]]
+    motion_prompts = [shot.motion or "static" for shot in storyboard.shots[: len(frames)]]
+    durations = [shot.duration_s for shot in storyboard.shots[: len(frames)]]
 
     return await image_to_video_workflow(
         reference_images=frames,

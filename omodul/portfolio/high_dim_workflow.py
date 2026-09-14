@@ -1,4 +1,5 @@
 """High-Dimensional Portfolio Workflow — spectral cleaning + HRP v2 + SSD."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -35,24 +36,34 @@ def _fallback_rie(cov: np.ndarray, n_samples: int) -> dict[str, Any]:
 def _fallback_clustering(corr: np.ndarray) -> dict[str, Any]:
     N = corr.shape[0]
     labels = np.arange(N) % max(1, N // 5)
-    return {"cluster_labels": labels, "n_clusters_inferred": int(labels.max()) + 1,
-            "graph_edges": [], "modularity": 0.0}
+    return {
+        "cluster_labels": labels,
+        "n_clusters_inferred": int(labels.max()) + 1,
+        "graph_edges": [],
+        "modularity": 0.0,
+    }
 
 
 def _fallback_hrp(returns: np.ndarray) -> dict[str, Any]:
     N = returns.shape[1]
     w = np.ones(N) / N
-    return {"weights": w, "linkage_matrix": np.array([]), "cluster_order": list(range(N)),
-            "cov_used": np.cov(returns.T, ddof=1)}
+    return {
+        "weights": w,
+        "linkage_matrix": np.array([]),
+        "cluster_order": list(range(N)),
+        "cov_used": np.cov(returns.T, ddof=1),
+    }
 
 
-def _fallback_ssd(
-    asset_returns: np.ndarray, benchmark_returns: np.ndarray
-) -> dict[str, Any]:
+def _fallback_ssd(asset_returns: np.ndarray, benchmark_returns: np.ndarray) -> dict[str, Any]:
     N = asset_returns.shape[1]
     w = np.ones(N) / N
-    return {"weights": w, "ssd_constraint_active_states": [], "milp_objective": 0.0,
-            "dominance_certificate": np.zeros(5)}
+    return {
+        "weights": w,
+        "ssd_constraint_active_states": [],
+        "milp_objective": 0.0,
+        "dominance_certificate": np.zeros(5),
+    }
 
 
 def high_dim_portfolio_workflow(

@@ -29,14 +29,17 @@ class ProvenanceW3cConfig(BaseConfig):
 
 class ProvenanceW3cInput(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    entities: list[dict] = []      # [{id, type, value, attrs}]
-    activities: list[dict] = []    # [{id, type, started, ended, attrs}]
-    relations: list[dict] = []     # [{kind: used|wasGeneratedBy|wasDerivedFrom|wasAttributedTo, src, dst, attrs}]
-    format: str = "json"           # json | turtle
+    entities: list[dict] = []  # [{id, type, value, attrs}]
+    activities: list[dict] = []  # [{id, type, started, ended, attrs}]
+    relations: list[
+        dict
+    ] = []  # [{kind: used|wasGeneratedBy|wasDerivedFrom|wasAttributedTo, src, dst, attrs}]
+    format: str = "json"  # json | turtle
     backend: Any | None = None
 
 
 # ── RDF Turtle 导出 ───────────────────────────────────────────────────
+
 
 def _turtle_escape(s: str) -> str:
     s = s.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
@@ -82,6 +85,7 @@ def _to_turtle(inp: ProvenanceW3cInput) -> str:
 
 # ── operator 入口 ─────────────────────────────────────────────────────
 
+
 def provenance_w3c(
     config: ProvenanceW3cConfig,
     input_data: ProvenanceW3cInput,
@@ -122,7 +126,9 @@ def provenance_w3c(
     else:
         prov_entities = [
             {
-                "@id": f"veya:{e['id']}" if not str(e.get('id', '')).startswith(('veya:', 'prov:')) else e['id'],
+                "@id": f"veya:{e['id']}"
+                if not str(e.get("id", "")).startswith(("veya:", "prov:"))
+                else e["id"],
                 "@type": ["prov:Entity", f"veya:{e.get('type', 'Entity')}"],
                 "prov:value": e.get("value"),
                 **{f"veya:{k}": v for k, v in (e.get("attrs") or {}).items()},
@@ -131,7 +137,9 @@ def provenance_w3c(
         ]
         prov_activities = [
             {
-                "@id": f"veya:{a['id']}" if not str(a.get('id', '')).startswith(('veya:', 'prov:')) else a['id'],
+                "@id": f"veya:{a['id']}"
+                if not str(a.get("id", "")).startswith(("veya:", "prov:"))
+                else a["id"],
                 "@type": ["prov:Activity"],
                 **{f"veya:{k}": v for k, v in (a.get("attrs") or {}).items()},
             }
@@ -149,8 +157,12 @@ def provenance_w3c(
             __import__("json").dumps(payload, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
-    trail.record(event="provenance_export", format=fmt,
-                 entities=len(input_data.entities), relations=len(relations))
+    trail.record(
+        event="provenance_export",
+        format=fmt,
+        entities=len(input_data.entities),
+        relations=len(relations),
+    )
     trail_path = trail.write(out_dir)
     findings = {
         "path": str(path),
@@ -159,8 +171,11 @@ def provenance_w3c(
         "relations": len(relations),
     }
     return build_result(
-        status="completed", error=None,
+        status="completed",
+        error=None,
         fingerprint=compute_fingerprint(findings),
-        trail=trail, trail_path=trail_path,
-        cost_usd=0.0, findings=findings,
+        trail=trail,
+        trail_path=trail_path,
+        cost_usd=0.0,
+        findings=findings,
     )

@@ -6,6 +6,7 @@ subject 参数区分 english/chinese 两个引导语境。
 
 Added: omodul v1.30.7
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -29,7 +30,7 @@ class ReadingGuideConfig(BaseConfig):
 class ReadingGuideInput(BaseModel):
     article_text: str
     question: str
-    subject: str = "chinese"   # "english" or "chinese"
+    subject: str = "chinese"  # "english" or "chinese"
     student_messages: list[str] = []
     user_id: str = ""
 
@@ -70,9 +71,12 @@ async def reading_guide_workflow(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     try:
-        trail.record(event="start", user_id=input_data.user_id,
-                     subject=input_data.subject,
-                     n_messages=len(input_data.student_messages))
+        trail.record(
+            event="start",
+            user_id=input_data.user_id,
+            subject=input_data.subject,
+            n_messages=len(input_data.student_messages),
+        )
 
         messages = input_data.student_messages[: config.max_turns]
 
@@ -96,11 +100,13 @@ async def reading_guide_workflow(
         if result.answer_leaked:
             trail.record(event="redline_triggered")
 
-        fp = compute_fingerprint({
-            "question_hash": str(hash(input_data.question))[:12],
-            "user_id":       input_data.user_id,
-            "subject":       input_data.subject,
-        })
+        fp = compute_fingerprint(
+            {
+                "question_hash": str(hash(input_data.question))[:12],
+                "user_id": input_data.user_id,
+                "subject": input_data.subject,
+            }
+        )
 
         return build_result(
             status="ok",
@@ -117,8 +123,11 @@ async def reading_guide_workflow(
     except Exception as exc:
         trail.record(event="error", detail=str(exc))
         is_en = input_data.subject.lower() == "english"
-        fallback = "Can you tell me what this question is asking?" if is_en \
-                   else "这道题在考查什么？你先说说你的理解。"
+        fallback = (
+            "Can you tell me what this question is asking?"
+            if is_en
+            else "这道题在考查什么？你先说说你的理解。"
+        )
         return build_result(
             status="error",
             error={"type": type(exc).__name__, "message": str(exc)},
@@ -135,7 +144,13 @@ class _MockCaller:
         self.subject = subject
 
     async def __call__(self, **kwargs: Any) -> dict:
-        text = '{"assistant_text":"Can you find the paragraph that discusses this?","located_passage":false,"answer_leaked":false}' \
-               if self.subject.lower() == "english" else \
-               '{"assistant_text":"你能找到原文中和这道题最相关的段落吗？","located_passage":false,"answer_leaked":false}'
+        text = (
+            '{"assistant_text":"Can you find the paragraph that discusses this?",'
+            '"located_passage":false,"answer_leaked":false}'
+            if self.subject.lower() == "english"
+            else (
+                '{"assistant_text":"你能找到原文中和这道题最相关的段落吗？",'
+                '"located_passage":false,"answer_leaked":false}'
+            )
+        )
         return {"content": text, "usage": {"input_tokens": 0, "output_tokens": 0}}

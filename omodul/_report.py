@@ -81,6 +81,8 @@ def _section_cost_breakdown(cost_tracker: CostTracker) -> str:
 def _section_reproducibility(omodul_name: str, config: Any, fingerprint: str) -> str:
     return (
         f"## 6. Reproducibility\n\n"
-        f"To reproduce this analysis, use omodul `{omodul_name}` version `{getattr(config, '_omodul_version', '1.0.0')}` "
-        f"with the configuration provided above. Fingerprint `{fingerprint}` matches this specific execution."
+        f"To reproduce this analysis, use omodul `{omodul_name}` "
+        f"version `{getattr(config, '_omodul_version', '1.0.0')}` "
+        f"with the configuration provided above. Fingerprint `{fingerprint}` "
+        "matches this specific execution."
     )

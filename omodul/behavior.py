@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable, Literal, Optional
+from collections.abc import Callable
 
 import numpy as np
-import pandas as pd
-
 import oprim
 import oskill
+import pandas as pd
 
 
 def trade_journal_analyzer(
@@ -76,15 +75,24 @@ def trade_journal_analyzer(
         ci_low, ci_high = np.nan, np.nan
         if bootstrap_ci and total > 10:
             boot = oskill.bootstrap_distribution(
-                pnl[pnl != 0], statistic=lambda x: (x > 0).mean() - (x < 0).mean(),
-                n_bootstrap=n_bootstrap, random_state=random_state,
+                pnl[pnl != 0],
+                statistic=lambda x: (x > 0).mean() - (x < 0).mean(),
+                n_bootstrap=n_bootstrap,
+                random_state=random_state,
             )
             ci_low, ci_high = boot["ci_low"], boot["ci_high"]
 
         results["disposition"] = {
-            "pgr": float(pgr), "plr": float(plr), "de_score": float(de_score),
-            "ci_low": float(ci_low), "ci_high": float(ci_high),
-            "interpretation": "strong" if de_score > 0.1 else "moderate" if de_score > 0 else "none",
+            "pgr": float(pgr),
+            "plr": float(plr),
+            "de_score": float(de_score),
+            "ci_low": float(ci_low),
+            "ci_high": float(ci_high),
+            "interpretation": "strong"
+            if de_score > 0.1
+            else "moderate"
+            if de_score > 0
+            else "none",
             "n_trades_used": int(total),
             "note": "Simplified: full Odean 1998 requires paper_gains/paper_losses columns",
         }
@@ -93,8 +101,9 @@ def trade_journal_analyzer(
     if "overtrading" in diagnostics:
         daily_counts = trades.groupby(trades["timestamp"].dt.date).size()
         if len(daily_counts) > 20:
-            zscores = oprim.zscore_normalize(pd.Series(daily_counts.values.astype(float)),
-                                             window=None, min_periods=1)
+            zscores = oprim.zscore_normalize(
+                pd.Series(daily_counts.values.astype(float)), window=None, min_periods=1
+            )
             latest_z = float(zscores.iloc[-1]) if not np.isnan(zscores.iloc[-1]) else 0.0
         else:
             latest_z = 0.0
@@ -121,8 +130,13 @@ def trade_journal_analyzer(
             corr = np.nan
         results["chasing"] = {
             "momentum_correlation": corr,
-            "ci_low": np.nan, "ci_high": np.nan,
-            "interpretation": "chasing" if corr > 0.3 else "contrarian" if corr < -0.3 else "neutral",
+            "ci_low": np.nan,
+            "ci_high": np.nan,
+            "interpretation": "chasing"
+            if corr > 0.3
+            else "contrarian"
+            if corr < -0.3
+            else "neutral",
         }
 
     # Anchoring
@@ -133,7 +147,11 @@ def trade_journal_analyzer(
         results["anchoring"] = {
             "exit_price_concentration": concentration,
             "anchor_zones_identified": int((pnl_pct < 0.02).sum()),
-            "interpretation": "strong" if concentration > 0.6 else "moderate" if concentration > 0.4 else "weak",
+            "interpretation": "strong"
+            if concentration > 0.6
+            else "moderate"
+            if concentration > 0.4
+            else "weak",
         }
 
     # Outlier trades detection using oskill
@@ -151,8 +169,11 @@ def trade_journal_analyzer(
             "n_outlier_trades": n_outlier_trades,
         },
         "summary_report": {
-            "primary_biases": [k for k, v in results.items()
-                               if v.get("interpretation") in ("strong", "high", "chasing")],
+            "primary_biases": [
+                k
+                for k, v in results.items()
+                if v.get("interpretation") in ("strong", "high", "chasing")
+            ],
             "n_trades_analyzed": n_trades,
             "warnings": [],
         },
@@ -200,6 +221,7 @@ def shadow_account_simulator(
     has_pnl = "pnl" in actual_trades.columns
     if not has_pnl:
         import warnings
+
         warnings.warn("actual_trades has no 'pnl' column; actual PnL defaults to 0", stacklevel=2)
 
     # Simple simulation: track daily PnL
@@ -208,7 +230,8 @@ def shadow_account_simulator(
     for i, date in enumerate(dates[1:], 1):
         # Actual: use trades PnL if available
         day_trades = actual_trades_sorted[
-            pd.to_datetime(actual_trades_sorted["timestamp"]).dt.normalize() == pd.Timestamp(date).normalize()
+            pd.to_datetime(actual_trades_sorted["timestamp"]).dt.normalize()
+            == pd.Timestamp(date).normalize()
         ]
         if has_pnl and len(day_trades) > 0:
             actual_pnl = day_trades["pnl"].sum()
@@ -236,14 +259,18 @@ def shadow_account_simulator(
             # Both traded: check direction/quantity mismatch
             if shadow_side and actual_side and shadow_side != actual_side:
                 rule_violations += 1
-            elif shadow_qty > 0 and actual_qty > 0 and abs(shadow_qty - actual_qty) / max(shadow_qty, actual_qty) > 0.2:
+            elif (
+                shadow_qty > 0
+                and actual_qty > 0
+                and abs(shadow_qty - actual_qty) / max(shadow_qty, actual_qty) > 0.2
+            ):
                 rule_violations += 1
 
         actual_equity.append(actual_equity[-1] + actual_pnl)
         shadow_equity.append(shadow_equity[-1] + shadow_pnl)
 
-    actual_eq = pd.Series(actual_equity, index=dates[:len(actual_equity)])
-    shadow_eq = pd.Series(shadow_equity, index=dates[:len(shadow_equity)])
+    actual_eq = pd.Series(actual_equity, index=dates[: len(actual_equity)])
+    shadow_eq = pd.Series(shadow_equity, index=dates[: len(shadow_equity)])
 
     # Compute returns
     actual_ret = actual_eq.pct_change().dropna()
@@ -312,7 +339,7 @@ def monthly_trade_review(
     period: tuple[int, int],
     llm_client: Callable,
     prompt_builder: Callable[[dict, dict], str],
-    discipline_evaluator: Optional[Callable] = None,
+    discipline_evaluator: Callable | None = None,
 ) -> dict:
     """Generate a monthly trade review with statistics and LLM-narrated insights.
 
@@ -444,11 +471,13 @@ def training_task_recommend(
         targets = task.get("targets", [])
         matched = any(w in targets for w in weakness_identified)
         if matched:
-            recommended_tasks.append({
-                "task_type": task.get("task_type", ""),
-                "rationale": f"Targets: {', '.join(targets)}",
-                "expected_outcome": task.get("description", ""),
-            })
+            recommended_tasks.append(
+                {
+                    "task_type": task.get("task_type", ""),
+                    "rationale": f"Targets: {', '.join(targets)}",
+                    "expected_outcome": task.get("description", ""),
+                }
+            )
 
     summary_dict = {
         "weaknesses": weakness_identified,

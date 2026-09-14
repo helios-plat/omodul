@@ -1,4 +1,5 @@
 """Tests for robust_decision_workflow."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -30,7 +31,10 @@ class TestRobustDecisionWorkflow:
     def test_individual_keys(self, returns_60x4):
         result = robust_decision_workflow(returns_60x4)
         assert set(result["individual"].keys()) == {
-            "multiplier", "variational", "smooth_ambiguity", "maxmin"
+            "multiplier",
+            "variational",
+            "smooth_ambiguity",
+            "maxmin",
         }
 
     def test_robust_weights_shape(self, returns_60x4):

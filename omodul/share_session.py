@@ -3,6 +3,7 @@ omodul.share_session — Redact and share a session via an uploader or stub URL.
 
 Pillars: fingerprint
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -23,7 +24,7 @@ async def _call(fn: Any, **kwargs: Any) -> Any:
     return result
 
 
-def compute_fingerprint_for(config: "Config", input_data: "InputData") -> str:
+def compute_fingerprint_for(config: Config, input_data: InputData) -> str:
     """Fingerprint over session_id."""
     return compute_fingerprint({"session_id": input_data.session_id})
 
@@ -31,10 +32,7 @@ def compute_fingerprint_for(config: "Config", input_data: "InputData") -> str:
 def _redact(data: Any, keys: list[str]) -> Any:
     """Recursively mask sensitive keys in a dict/list structure."""
     if isinstance(data, dict):
-        return {
-            k: ("***REDACTED***" if k in keys else _redact(v, keys))
-            for k, v in data.items()
-        }
+        return {k: ("***REDACTED***" if k in keys else _redact(v, keys)) for k, v in data.items()}
     if isinstance(data, list):
         return [_redact(item, keys) for item in data]
     return data

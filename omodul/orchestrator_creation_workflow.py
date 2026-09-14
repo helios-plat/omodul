@@ -16,7 +16,9 @@ from pathlib import Path
 from typing import Any
 
 
-def orchestrator_creation_workflow(config: dict[str, Any], input_data: dict[str, Any], output_dir: Path) -> dict[str, Any]:
+def orchestrator_creation_workflow(
+    config: dict[str, Any], input_data: dict[str, Any], output_dir: Path
+) -> dict[str, Any]:
     """Create a multi-agent orchestrator.
 
     Input data keys:
@@ -32,8 +34,10 @@ def orchestrator_creation_workflow(config: dict[str, Any], input_data: dict[str,
     name = str(input_data.get("agent_name") or input_data.get("name") or "Orchestrator")
     desc = str(input_data.get("description") or input_data.get("goal") or "")
     subs = list(input_data.get("sub_agents") or [])
-    instructions = str(input_data.get("instructions") or f"你是 {name}。将用户任务分发给子 Agent 并汇总结果。")
-    goal = str(input_data.get("goal") or "")
+    instructions = str(
+        input_data.get("instructions") or f"你是 {name}。将用户任务分发给子 Agent 并汇总结果。"
+    )
+    str(input_data.get("goal") or "")
 
     if not subs:
         return {"status": "failed", "error": "sub_agents list is empty", "registered": False}
@@ -46,29 +50,28 @@ def orchestrator_creation_workflow(config: dict[str, Any], input_data: dict[str,
         sub_calls.append(f"#  step: call {n} → input: {inp}, output: {out}")
 
     safe_name = re.sub(r"[^a-zA-Z0-9_]", "_", name.lower()).strip("_")
-    source = f'''"""Auto-generated orchestrator: {name} (3O omodul.orchestrator_creation_workflow)."""
-from obase.agent_registry import register_agent
-
-SUB_AGENTS = {[s["name"] for s in subs]!r}
-
-def get_{safe_name}(model: str = {config.get("model", "claude-sonnet-4-6")!r}):
-    """{desc}"""
-    def instructions(context_variables):
-        return {instructions!r}
-    return {{
-        "name": {name!r},
-        "model": model,
-        "description": {desc!r},
-        "instructions": instructions,
-        "tools": [],
-        "handoffs": {{}},
-        "sub_agents": SUB_AGENTS,
-    }}
-
-@register_agent(name={name!r}, func_name="get_{safe_name}")
-def _factory(model: str = {config.get("model", "claude-sonnet-4-6")!r}):
-    return get_{safe_name}(model)
-'''
+    source = (
+        f'"""Auto-generated orchestrator: {name} '
+        ' (3O omodul.orchestrator_creation_workflow)."""\n'
+        "from obase.agent_registry import register_agent\n\n"
+        f"SUB_AGENTS = {[s['name'] for s in subs]!r}\n\n"
+        f"def get_{safe_name}(model: str = {config.get('model', 'claude-sonnet-4-6')!r}):\n"
+        f'    """{desc}"""\n'
+        "    def instructions(context_variables):\n"
+        f"        return {instructions!r}\n"
+        "    return {\n"
+        f'        "name": {name!r},\n'
+        '        "model": model,\n'
+        f'        "description": {desc!r},\n'
+        '        "instructions": instructions,\n'
+        '        "tools": [],\n'
+        '        "handoffs": {},\n'
+        '        "sub_agents": SUB_AGENTS,\n'
+        "    }\n\n"
+        f'@register_agent(name={name!r}, func_name="get_{safe_name}")\n'
+        f"def _factory(model: str = {config.get('model', 'claude-sonnet-4-6')!r}):\n"
+        f"    return get_{safe_name}(model)\n"
+    )
 
     # write
     agents_dir = output_dir / "agents"
@@ -92,7 +95,13 @@ def _factory(model: str = {config.get("model", "claude-sonnet-4-6")!r}):
         importlib.import_module(f"{safe_name}_orchestrator")
         registered = True
     except Exception as exc:
-        return {"status": "failed", "error": f"register: {exc}", "file_path": str(orch_file), "ast_valid": True, "registered": False}
+        return {
+            "status": "failed",
+            "error": f"register: {exc}",
+            "file_path": str(orch_file),
+            "ast_valid": True,
+            "registered": False,
+        }
 
     return {
         "status": "completed",

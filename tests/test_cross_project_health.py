@@ -1,8 +1,5 @@
-import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-
-import pytest
 
 from omodul.cross_project_health_aggregate import (
     CrossProjectHealthConfig,
@@ -22,11 +19,14 @@ def test_cross_project_health_happy(mock_probe, mock_list, tmp_path):
 
     # Mock health results
     def probe_side_effect(url):
-        if "svc1" in url: return MagicMock(healthy=True)
-        if "svc2" in url: return MagicMock(healthy=True)
-        if "svc3" in url: return MagicMock(healthy=True)
+        if "svc1" in url:
+            return MagicMock(healthy=True)
+        if "svc2" in url:
+            return MagicMock(healthy=True)
+        if "svc3" in url:
+            return MagicMock(healthy=True)
         return MagicMock(healthy=False)
-    
+
     mock_probe.side_effect = probe_side_effect
 
     config = CrossProjectHealthConfig(label_key="aegis.project")
@@ -47,9 +47,10 @@ def test_cross_project_health_degraded(mock_probe, mock_list, tmp_path):
     mock_list.return_value = [c1, c2]
 
     def probe_side_effect(url):
-        if "svc1" in url: return MagicMock(healthy=True)
+        if "svc1" in url:
+            return MagicMock(healthy=True)
         return MagicMock(healthy=False)
-    
+
     mock_probe.side_effect = probe_side_effect
 
     res = cross_project_health_aggregate(CrossProjectHealthConfig(), None, tmp_path / "out")
@@ -80,7 +81,7 @@ def test_cross_project_health_fingerprint():
     c1 = CrossProjectHealthConfig(label_key="proj", time_window_seconds=10)
     c2 = CrossProjectHealthConfig(label_key="proj", time_window_seconds=10)
     c3 = CrossProjectHealthConfig(label_key="proj", time_window_seconds=20)
-    
+
     assert compute_fingerprint_for(c1, None) == compute_fingerprint_for(c2, None)
     assert compute_fingerprint_for(c1, None) != compute_fingerprint_for(c3, None)
 
@@ -99,15 +100,22 @@ def test_cross_project_health_probe_error(mock_probe, mock_list, tmp_path):
 
 def test_cross_project_health_on_step(tmp_path):
     steps = []
-    def callback(s): steps.append(s)
-    
+
+    def callback(s):
+        steps.append(s)
+
     with patch("omodul.cross_project_health_aggregate.docker_container_list", return_value=[]):
-        cross_project_health_aggregate(CrossProjectHealthConfig(), None, tmp_path / "out", on_step=callback)
-    
+        cross_project_health_aggregate(
+            CrossProjectHealthConfig(), None, tmp_path / "out", on_step=callback
+        )
+
     assert len(steps) >= 2
 
 
-@patch("omodul.cross_project_health_aggregate.docker_container_list", side_effect=RuntimeError("docker down"))
+@patch(
+    "omodul.cross_project_health_aggregate.docker_container_list",
+    side_effect=RuntimeError("docker down"),
+)
 def test_cross_project_health_failed(mock_list, tmp_path):
     res = cross_project_health_aggregate(CrossProjectHealthConfig(), None, tmp_path / "out")
     assert res["status"] == "failed"
@@ -121,7 +129,7 @@ def test_cross_project_health_multi_project(mock_probe, mock_list, tmp_path):
     c2 = MagicMock(container_id="c2", name="p2-s1", labels={"aegis.project": "p2"})
     mock_list.return_value = [c1, c2]
     mock_probe.return_value = MagicMock(healthy=True)
-    
+
     res = cross_project_health_aggregate(CrossProjectHealthConfig(), None, tmp_path / "out")
     agg = res["findings"]["project_aggregation"]
     assert "p1" in agg

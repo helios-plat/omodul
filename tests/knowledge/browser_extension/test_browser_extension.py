@@ -2,17 +2,15 @@
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
 
-from omodul.knowledge.browser_extension.auth import init_token, get_token, verify_token, AuthError
+from omodul.knowledge.browser_extension.auth import AuthError, get_token, init_token, verify_token
 from omodul.knowledge.browser_extension.page_capture import extract_main_content
-from omodul.knowledge.browser_extension.url_dedup import normalize_url
 from omodul.knowledge.browser_extension.server import app
+from omodul.knowledge.browser_extension.url_dedup import normalize_url
 
 # ── Fixtures ─────────────────────────────────────────────────────────────────
 

@@ -7,6 +7,7 @@ Composes:
 Pillars: fingerprint + decision_trail + cost
 Red line: lesson_page diagram value == answer == last step value (同源自检).
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -99,13 +100,16 @@ async def generate_lesson_page(
             last_step_val = str(steps[-1].get("result", steps[-1].get("value", "")))
             if last_step_val and kernel_answer and last_step_val not in kernel_answer:
                 self_check_passed = False
-                trail.record(event="self_check_step_mismatch", last=last_step_val, ans=kernel_answer)
+                trail.record(
+                    event="self_check_step_mismatch", last=last_step_val, ans=kernel_answer
+                )
 
         trail.record(event="self_check", passed=self_check_passed)
 
-        q_hash = config.question_hash or hashlib.sha256(
-            input_data.question_text.encode()
-        ).hexdigest()[:16]
+        q_hash = (
+            config.question_hash
+            or hashlib.sha256(input_data.question_text.encode()).hexdigest()[:16]
+        )
         fp = compute_fingerprint({"kc_id": config.kc_id, "question_hash": q_hash})
         trail_path = trail.write(output_dir)
 

@@ -6,10 +6,10 @@ Tests cover all four risk_gate_status outcomes:
   ORANGE — daily loss breach, early-return with neutral signals
   RED    — weekly loss breach, early-return with zero positions
 """
+
 from __future__ import annotations
 
 import numpy as np
-import pytest
 
 from omodul.strategies import bocpd_trend_following
 
@@ -31,8 +31,8 @@ def _base_config(**overrides) -> dict:
         "max_position_pct": 0.20,
         "max_gross_leverage": 2.0,
         "rebalance_threshold": 0.01,
-        "daily_loss_halt_pct": -0.02,       # halt if daily loss < -2 %
-        "weekly_loss_halt_pct": -0.05,      # halt if weekly loss < -5 %
+        "daily_loss_halt_pct": -0.02,  # halt if daily loss < -2 %
+        "weekly_loss_halt_pct": -0.05,  # halt if weekly loss < -5 %
         "volatility_halt_multiplier": 3.0,  # halt (YELLOW) if vol_ratio > 3
         "baseline_realized_vol": 0.01,
         "daily_volume_usd": 1e9,
@@ -44,7 +44,7 @@ def _base_config(**overrides) -> dict:
 
 def _base_market_state(equity_curve: list[float], **overrides) -> dict:
     """Return a minimal valid market_state with optional field overrides."""
-    n = len(equity_curve)
+    len(equity_curve)
     features = {}
     for sym in _SYMBOLS:
         features[f"returns_{sym}"] = list(np.random.default_rng(42).normal(0.001, 0.01, 50))
@@ -70,7 +70,7 @@ def test_green_status() -> None:
     # Gently rising equity curve — no daily or weekly loss, low vol ratio
     equity = [100_000.0 + i * 100 for i in range(10)]  # monotonically increasing
     config = _base_config(
-        realized_vol_30d=0.005,        # well below baseline * multiplier = 0.03
+        realized_vol_30d=0.005,  # well below baseline * multiplier = 0.03
         baseline_realized_vol=0.01,
         volatility_halt_multiplier=3.0,
     )
@@ -102,11 +102,11 @@ def test_yellow_status() -> None:
     equity = [100_000.0] * 10
 
     config = _base_config(
-        realized_vol_30d=0.05,          # vol_ratio = 0.05 / 0.01 = 5 > multiplier 3
+        realized_vol_30d=0.05,  # vol_ratio = 0.05 / 0.01 = 5 > multiplier 3
         baseline_realized_vol=0.01,
         volatility_halt_multiplier=3.0,
-        daily_loss_halt_pct=-0.10,      # very loose — won't trigger
-        weekly_loss_halt_pct=-0.50,     # very loose — won't trigger
+        daily_loss_halt_pct=-0.10,  # very loose — won't trigger
+        weekly_loss_halt_pct=-0.50,  # very loose — won't trigger
     )
     market_state = _base_market_state(equity)
 
@@ -131,12 +131,12 @@ def test_orange_status() -> None:
     # Equity drops sharply on the last day: -5% daily loss (halt at -2%)
     base = 100_000.0
     # 9 prior days flat, then big drop
-    equity = [base] * 9 + [base * 0.94]   # daily loss ≈ -6 %
+    equity = [base] * 9 + [base * 0.94]  # daily loss ≈ -6 %
 
     config = _base_config(
-        daily_loss_halt_pct=-0.02,          # trigger if daily_loss < -2 %
-        weekly_loss_halt_pct=-0.50,         # loose — won't trigger RED
-        realized_vol_30d=0.005,             # low vol — won't trigger YELLOW
+        daily_loss_halt_pct=-0.02,  # trigger if daily_loss < -2 %
+        weekly_loss_halt_pct=-0.50,  # loose — won't trigger RED
+        realized_vol_30d=0.005,  # low vol — won't trigger YELLOW
         baseline_realized_vol=0.01,
         volatility_halt_multiplier=3.0,
     )
@@ -172,18 +172,18 @@ def test_red_status() -> None:
     # Build a curve where the last value is >> 5 % below 5 days ago
     base = 100_000.0
     # 5 days ago was 100k, today is 94k → weekly loss ≈ -6% (halt at -5%)
-    equity = [base * 0.94] * 5 + [base] + [base * 0.94]  # 7 points; last vs index -5
+    [base * 0.94] * 5 + [base] + [base * 0.94]  # 7 points; last vs index -5
 
     # Ensure weekly_loss < weekly_loss_halt_pct = -0.05
     # weekly_start = max(0, 7-5) = 2; equity[2] = 94k, equity[-1] = 94k → 0% loss
     # Need a different shape:
-    equity2 = [base] * 5 + [base * 0.94]   # 6 elements; weekly_start=1; equity[1]=100k, last=94k
+    equity2 = [base] * 5 + [base * 0.94]  # 6 elements; weekly_start=1; equity[1]=100k, last=94k
     # weekly_loss = (94k - 100k) / 100k = -0.06 < -0.05  → RED
 
     config = _base_config(
-        weekly_loss_halt_pct=-0.05,         # trigger if weekly_loss < -5 %
-        daily_loss_halt_pct=-0.50,          # loose — won't trigger ORANGE alone
-        realized_vol_30d=0.005,             # low vol — no YELLOW
+        weekly_loss_halt_pct=-0.05,  # trigger if weekly_loss < -5 %
+        daily_loss_halt_pct=-0.50,  # loose — won't trigger ORANGE alone
+        realized_vol_30d=0.005,  # low vol — no YELLOW
         baseline_realized_vol=0.01,
         volatility_halt_multiplier=3.0,
     )
@@ -191,9 +191,7 @@ def test_red_status() -> None:
 
     result = bocpd_trend_following(market_state, config)
 
-    assert result["risk_gate_status"] == "RED", (
-        f"Expected RED, got {result['risk_gate_status']}"
-    )
+    assert result["risk_gate_status"] == "RED", f"Expected RED, got {result['risk_gate_status']}"
     # RED early-returns with neutral signals and zero target positions
     for sym in _SYMBOLS:
         sig = result["signals"][sym]
@@ -201,6 +199,4 @@ def test_red_status() -> None:
             f"{sym}: expected direction='neutral' on RED, got {sig['direction']}"
         )
         pos = result["target_positions"][sym]
-        assert pos["target_notional_usd"] == 0.0, (
-            f"{sym}: expected target_notional_usd=0.0 on RED"
-        )
+        assert pos["target_notional_usd"] == 0.0, f"{sym}: expected target_notional_usd=0.0 on RED"

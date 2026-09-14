@@ -19,9 +19,7 @@ from pydantic import BaseModel
 from omodul._base import BaseConfig, Trail, build_result, compute_fingerprint
 
 
-def compute_fingerprint_for(
-    config: DeleteLineItemConfig, input_data: DeleteLineItemInput
-) -> str:
+def compute_fingerprint_for(config: DeleteLineItemConfig, input_data: DeleteLineItemInput) -> str:
     """Fingerprint over cart_id + batch_id。"""
     return compute_fingerprint(
         {

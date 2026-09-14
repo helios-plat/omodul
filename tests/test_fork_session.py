@@ -1,4 +1,5 @@
 """Tests for omodul.fork_session."""
+
 from __future__ import annotations
 
 import asyncio
@@ -7,7 +8,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from omodul.fork_session import Config, InputData, fork_session, compute_fingerprint_for
+from omodul.fork_session import Config, InputData, compute_fingerprint_for, fork_session
 
 
 # ---------------------------------------------------------------------------

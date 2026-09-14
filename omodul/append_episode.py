@@ -17,7 +17,7 @@ import json
 import os
 import uuid
 from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, ClassVar
 
 from pydantic import ConfigDict
@@ -133,7 +133,7 @@ def append_episode(
             "outcome": ep.get("outcome"),
             "context": {"env_fingerprint": env_fp, **ep.get("context", {})},
             "human_verdict": ep.get("human_verdict"),
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         }
 
         # 写入 Episodic（M0 用同一图存储，Episode 作为一类节点）
@@ -156,7 +156,7 @@ def append_episode(
             "episode_id": episode_id,
             "status": status,
             "steps": trail,
-            "ts": datetime.now(timezone.utc).isoformat(),
+            "ts": datetime.now(UTC).isoformat(),
         }
         if output_dir:
             os.makedirs(output_dir, exist_ok=True)

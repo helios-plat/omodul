@@ -69,11 +69,18 @@ class VideoEvalResult:
         )
 
     def to_dict(self) -> dict[str, Any]:
-        return {"passed": self.passed, "duration_s": self.duration_s,
-                "width": self.width, "height": self.height, "fps": self.fps,
-                "has_audio": self.has_audio, "size_mb": self.size_mb,
-                "issues": self.issues, "metrics": self.metrics,
-                "stderr": self.stderr}
+        return {
+            "passed": self.passed,
+            "duration_s": self.duration_s,
+            "width": self.width,
+            "height": self.height,
+            "fps": self.fps,
+            "has_audio": self.has_audio,
+            "size_mb": self.size_mb,
+            "issues": self.issues,
+            "metrics": self.metrics,
+            "stderr": self.stderr,
+        }
 
 
 @dataclass
@@ -95,20 +102,31 @@ class FailureSignature:
         summary = str(first.get("message") or f"质检失败: {code}")
         evidence = {
             "issues": issues[:10],
-            "duration_s": er.duration_s, "width": er.width, "height": er.height,
-            "has_audio": er.has_audio, "size_mb": er.size_mb,
+            "duration_s": er.duration_s,
+            "width": er.width,
+            "height": er.height,
+            "has_audio": er.has_audio,
+            "size_mb": er.size_mb,
             "stderr_tail": (er.stderr or "")[-1000:],
         }
         blob = f"{task_id}|{code}|{er.duration_s}|{er.width}x{er.height}|{er.has_audio}"
         fingerprint = hashlib.sha256(blob.encode()).hexdigest()[:16]
-        return cls(kind=kind, summary=summary, fingerprint=fingerprint,
-                   preferred_action=preferred, evidence=evidence)
+        return cls(
+            kind=kind,
+            summary=summary,
+            fingerprint=fingerprint,
+            preferred_action=preferred,
+            evidence=evidence,
+        )
 
     def as_dict(self) -> dict[str, Any]:
-        return {"kind": self.kind.value, "summary": self.summary,
-                "fingerprint": self.fingerprint,
-                "preferred_action": self.preferred_action,
-                "evidence": self.evidence}
+        return {
+            "kind": self.kind.value,
+            "summary": self.summary,
+            "fingerprint": self.fingerprint,
+            "preferred_action": self.preferred_action,
+            "evidence": self.evidence,
+        }
 
 
 def _map_issue(code: str, er: VideoEvalResult) -> tuple[FailureKind, str]:
@@ -118,11 +136,11 @@ def _map_issue(code: str, er: VideoEvalResult) -> tuple[FailureKind, str]:
         return FailureKind.FORMAT, "ADJUST_PROMPT"
     if code == "NO_AUDIO":
         return FailureKind.AUDIO, "REGENERATE"
-    if code.startswith("LOUDNESS_"):            # v2: 响度不合格
+    if code.startswith("LOUDNESS_"):  # v2: 响度不合格
         return FailureKind.AUDIO, "REGENERATE"
-    if code.startswith("BLACK_FRAMES_"):        # v2: 黑帧过多
+    if code.startswith("BLACK_FRAMES_"):  # v2: 黑帧过多
         return FailureKind.FORMAT, "ADJUST_PROMPT"
-    if code.startswith("OCR_"):                 # v2: 帧文字/违禁词
+    if code.startswith("OCR_"):  # v2: 帧文字/违禁词
         return FailureKind.POLICY, "CLARIFY"
     if code in ("PROBE_FAILED", "FILE_MISSING", "FILE_TOO_LARGE"):
         return FailureKind.ENV, "CLARIFY"
@@ -140,7 +158,7 @@ class VideoArtifact:
     video_id: str
     video_path: str
     parent_id: str | None = None
-    provider: str = "hevi"          # hevi / kling / jimeng / local ...
+    provider: str = "hevi"  # hevi / kling / jimeng / local ...
     note: str = ""
     failure_context: dict[str, Any] = field(default_factory=dict)
 
@@ -163,8 +181,7 @@ class VideoSpec:
         errors: list[str] = []
         if self.min_duration_s > self.max_duration_s:
             errors.append(
-                f"min_duration_s({self.min_duration_s}) > "
-                f"max_duration_s({self.max_duration_s})"
+                f"min_duration_s({self.min_duration_s}) > max_duration_s({self.max_duration_s})"
             )
         if self.min_width < 1 or self.min_height < 1:
             errors.append("min_width/min_height 必须 >= 1")
@@ -175,12 +192,16 @@ class VideoSpec:
         return errors
 
     def to_dict(self) -> dict[str, Any]:
-        return {"min_duration_s": self.min_duration_s,
-                "max_duration_s": self.max_duration_s,
-                "min_width": self.min_width, "min_height": self.min_height,
-                "aspect_ratios": self.aspect_ratios,
-                "require_audio": self.require_audio,
-                "max_size_mb": self.max_size_mb, "platform": self.platform}
+        return {
+            "min_duration_s": self.min_duration_s,
+            "max_duration_s": self.max_duration_s,
+            "min_width": self.min_width,
+            "min_height": self.min_height,
+            "aspect_ratios": self.aspect_ratios,
+            "require_audio": self.require_audio,
+            "max_size_mb": self.max_size_mb,
+            "platform": self.platform,
+        }
 
 
 @dataclass
@@ -191,14 +212,14 @@ class VideoTask:
     prompt: str
     spec: VideoSpec
     workspace: dict[str, str] = field(default_factory=dict)
-    max_repairs: int = 3                 # 硬限制: 禁止无预算死循环
+    max_repairs: int = 3  # 硬限制: 禁止无预算死循环
 
 
 @dataclass
 class VideoLoopResult:
     """闭环结果 (产品行为: merged_candidate | clarify | aborted)。"""
 
-    status: str                          # merged_candidate | clarify | aborted
+    status: str  # merged_candidate | clarify | aborted
     success: bool
     artifact: VideoArtifact | None = None
     signature: FailureSignature | None = None
@@ -207,16 +228,20 @@ class VideoLoopResult:
     repairs_used: int = 0
 
     def as_dict(self) -> dict[str, Any]:
-        return {"status": self.status, "success": self.success,
-                "video_id": self.artifact.video_id if self.artifact else None,
-                "signature": self.signature.as_dict() if self.signature else None,
-                "clarify_message": self.clarify_message,
-                "action_trace": self.action_trace,
-                "repairs_used": self.repairs_used}
+        return {
+            "status": self.status,
+            "success": self.success,
+            "video_id": self.artifact.video_id if self.artifact else None,
+            "signature": self.signature.as_dict() if self.signature else None,
+            "clarify_message": self.clarify_message,
+            "action_trace": self.action_trace,
+            "repairs_used": self.repairs_used,
+        }
 
 
-VideoGenerateFn = Callable[[VideoTask, FailureSignature | None, VideoArtifact | None],
-                           VideoArtifact]
+VideoGenerateFn = Callable[
+    [VideoTask, FailureSignature | None, VideoArtifact | None], VideoArtifact
+]
 VideoEvalFn = Callable[[VideoTask, VideoArtifact], VideoEvalResult]
 
 
@@ -243,91 +268,135 @@ def run_video_reliability_loop(
 
     trace: list[dict[str, Any]] = []
     repairs = 0
-    seen_fingerprints: dict[str, int] = {}   # 同类失败计数 → SWITCH_PROVIDER 升级
+    seen_fingerprints: dict[str, int] = {}  # 同类失败计数 → SWITCH_PROVIDER 升级
 
     def _step(action: str, **kw: Any) -> None:
         entry = {"ts": time.time(), "step": len(trace) + 1, "action": action, **kw}
         trace.append(entry)
-        emitter.emit("execute",
-                     execution={"primitive": f"video_loop:{action}",
-                                "status": "ok" if kw.get("passed", False) else "failed",
-                                "capability_nonce": None},
-                     context={"task_id": task.task_id,
-                              "video_id": kw.get("video_id")})
+        emitter.emit(
+            "execute",
+            execution={
+                "primitive": f"video_loop:{action}",
+                "status": "ok" if kw.get("passed", False) else "failed",
+                "capability_nonce": None,
+            },
+            context={"task_id": task.task_id, "video_id": kw.get("video_id")},
+        )
 
     # ── 0. 规格自检: 矛盾 → clarify, 不做无谓生成 ──────────────────
     spec_errors = task.spec.validate()
     if spec_errors:
         msg = "视频规格矛盾: " + "; ".join(spec_errors)
         _step("clarify", passed=False, reason="spec_contradiction")
-        return VideoLoopResult(status="clarify", success=False,
-                               clarify_message=msg, action_trace=trace)
+        return VideoLoopResult(
+            status="clarify", success=False, clarify_message=msg, action_trace=trace
+        )
 
     # ── 1. 初始生成 ─────────────────────────────────────────────────
     parent: VideoArtifact | None = None
     sig: FailureSignature | None = None
     artifact = generate_fn(task, None, None)
-    _step("generate", video_id=artifact.video_id, provider=artifact.provider,
-          note=artifact.note)
+    _step("generate", video_id=artifact.video_id, provider=artifact.provider, note=artifact.note)
 
     for round_i in range(task.max_repairs + 1):
         # ── 2. 沙箱质检 ─────────────────────────────────────────────
         try:
             eval_result = evaluate_fn(task, artifact)
-        except Exception as exc:                    # 沙箱挂 → env 签名, 不崩主进程
+        except Exception as exc:  # 沙箱挂 → env 签名, 不崩主进程
             eval_result = VideoEvalResult(
-                passed=False, issues=[{"code": "SANDBOX_ERROR",
-                                       "message": f"sandbox raised: {exc}",
-                                       "severity": "high"}],
-                stderr=f"sandbox raised: {exc}")
-        _step("evaluate", video_id=artifact.video_id, passed=eval_result.passed,
-              duration_s=round(eval_result.duration_s, 3),
-              issues=[i.get("code") for i in (eval_result.issues or [])[:5]])
+                passed=False,
+                issues=[
+                    {
+                        "code": "SANDBOX_ERROR",
+                        "message": f"sandbox raised: {exc}",
+                        "severity": "high",
+                    }
+                ],
+                stderr=f"sandbox raised: {exc}",
+            )
+        _step(
+            "evaluate",
+            video_id=artifact.video_id,
+            passed=eval_result.passed,
+            duration_s=round(eval_result.duration_s, 3),
+            issues=[i.get("code") for i in (eval_result.issues or [])[:5]],
+        )
 
         if eval_result.passed:
             # 通过 → 待发布候选 (人工发布; 本阶段不自动公开发布)。
             _step("merged_candidate", video_id=artifact.video_id, passed=True)
-            emitter.emit("learn", learning={"repairs_used": repairs,
-                                            "status": "merged_candidate"})
-            return VideoLoopResult(status="merged_candidate", success=True,
-                                   artifact=artifact, action_trace=trace,
-                                   repairs_used=repairs)
+            emitter.emit("learn", learning={"repairs_used": repairs, "status": "merged_candidate"})
+            return VideoLoopResult(
+                status="merged_candidate",
+                success=True,
+                artifact=artifact,
+                action_trace=trace,
+                repairs_used=repairs,
+            )
 
         # ── 3. 失败签名 → 返工轮 (预算检查) ─────────────────────────
         sig = FailureSignature.from_eval_result(eval_result, task.task_id)
         # 同类失败第二次 (同 fingerprint) 且属生成质量类 → 升级 SWITCH_PROVIDER:
         # 换生成器比继续改提示词更有效, 避免同 provider 无限空转。
         seen_fingerprints[sig.fingerprint] = seen_fingerprints.get(sig.fingerprint, 0) + 1
-        if (seen_fingerprints[sig.fingerprint] >= 2
-                and sig.kind in (FailureKind.FORMAT, FailureKind.AUDIO)):
+        if seen_fingerprints[sig.fingerprint] >= 2 and sig.kind in (
+            FailureKind.FORMAT,
+            FailureKind.AUDIO,
+        ):
             sig.preferred_action = "SWITCH_PROVIDER"
             sig.evidence["upgraded_to_switch_provider"] = True
             sig.evidence["repeat_count"] = seen_fingerprints[sig.fingerprint]
         if repairs >= task.max_repairs:
-            _step("aborted", video_id=artifact.video_id, passed=False,
-                  reason=f"max_repairs={task.max_repairs} 耗尽",
-                  fingerprint=sig.fingerprint)
-            emitter.emit("learn", learning={"repairs_used": repairs,
-                                            "status": "aborted",
-                                            "fingerprint": sig.fingerprint})
-            return VideoLoopResult(status="aborted", success=False,
-                                   signature=sig, action_trace=trace,
-                                   repairs_used=repairs)
+            _step(
+                "aborted",
+                video_id=artifact.video_id,
+                passed=False,
+                reason=f"max_repairs={task.max_repairs} 耗尽",
+                fingerprint=sig.fingerprint,
+            )
+            emitter.emit(
+                "learn",
+                learning={
+                    "repairs_used": repairs,
+                    "status": "aborted",
+                    "fingerprint": sig.fingerprint,
+                },
+            )
+            return VideoLoopResult(
+                status="aborted",
+                success=False,
+                signature=sig,
+                action_trace=trace,
+                repairs_used=repairs,
+            )
 
         repairs += 1
         parent = artifact
         artifact = generate_fn(task, sig, parent)
-        _step("repair", video_id=artifact.video_id, round=repairs,
-              fingerprint=sig.fingerprint, kind=sig.kind.value,
-              preferred_action=sig.preferred_action)
+        _step(
+            "repair",
+            video_id=artifact.video_id,
+            round=repairs,
+            fingerprint=sig.fingerprint,
+            kind=sig.kind.value,
+            preferred_action=sig.preferred_action,
+        )
 
     # 理论不可达 (预算循环已覆盖), 防御性兜底
-    return VideoLoopResult(status="aborted", success=False, signature=sig,
-                           action_trace=trace, repairs_used=repairs)
+    return VideoLoopResult(
+        status="aborted", success=False, signature=sig, action_trace=trace, repairs_used=repairs
+    )
 
 
 __all__ = [
-    "FailureKind", "FailureSignature", "VideoArtifact", "VideoEvalFn",
-    "VideoEvalResult", "VideoGenerateFn", "VideoLoopResult", "VideoSpec",
-    "VideoTask", "run_video_reliability_loop",
+    "FailureKind",
+    "FailureSignature",
+    "VideoArtifact",
+    "VideoEvalFn",
+    "VideoEvalResult",
+    "VideoGenerateFn",
+    "VideoLoopResult",
+    "VideoSpec",
+    "VideoTask",
+    "run_video_reliability_loop",
 ]

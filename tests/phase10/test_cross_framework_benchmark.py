@@ -1,4 +1,5 @@
 """Tests for cross_framework_benchmark_report."""
+
 from __future__ import annotations
 
 import numpy as np

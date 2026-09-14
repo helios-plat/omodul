@@ -143,16 +143,26 @@ def audience_data_workflow(
         status = "failed"
         error = {"type": type(exc).__name__, "message": str(exc)}
         record_step(
-            trail_steps=trail_steps, on_step=on_step, layer="oskill",
+            trail_steps=trail_steps,
+            on_step=on_step,
+            layer="oskill",
             callable_name="_pipeline_error",
-            inputs_summary={}, outputs_summary={},
-            started_at=datetime.now(UTC), status="failed", error=error,
+            inputs_summary={},
+            outputs_summary={},
+            started_at=datetime.now(UTC),
+            status="failed",
+            error=error,
         )
 
     decision_trail = build_decision_trail(
-        fingerprint=fingerprint, config=config, input_data=input_data,
-        trail_steps=trail_steps, cost_tracker=cost_tracker,
-        started_at=started_at, status=status, error=error,
+        fingerprint=fingerprint,
+        config=config,
+        input_data=input_data,
+        trail_steps=trail_steps,
+        cost_tracker=cost_tracker,
+        started_at=started_at,
+        status=status,
+        error=error,
     )
 
     trail_path = output_dir / "decision_trail.json"
@@ -161,9 +171,14 @@ def audience_data_workflow(
     report_path: Path | None = None
     try:
         report_path = write_markdown_report(
-            output_dir=output_dir, omodul_name="audience_data_workflow",
-            fingerprint=fingerprint, config=config, findings=findings,
-            decision_trail=decision_trail, cost_tracker=cost_tracker, status=status,
+            output_dir=output_dir,
+            omodul_name="audience_data_workflow",
+            fingerprint=fingerprint,
+            config=config,
+            findings=findings,
+            decision_trail=decision_trail,
+            cost_tracker=cost_tracker,
+            status=status,
         )
     except Exception:
         pass
@@ -200,7 +215,9 @@ async def _run_stages(
     stats_list = await _stage_fetch_stats(config, input_data)
     total_views = sum(s.get("views", 0) for s in stats_list)
     record_step(
-        trail_steps=trail_steps, on_step=on_step, layer="oprim",
+        trail_steps=trail_steps,
+        on_step=on_step,
+        layer="oprim",
         callable_name="_stage_fetch_stats",
         inputs_summary={"videos": len(config.video_ids)},
         outputs_summary={"total_views": total_views},
@@ -211,7 +228,9 @@ async def _run_stages(
     t0 = datetime.now(UTC)
     all_comments = await _stage_fetch_comments(config, input_data)
     record_step(
-        trail_steps=trail_steps, on_step=on_step, layer="oprim",
+        trail_steps=trail_steps,
+        on_step=on_step,
+        layer="oprim",
         callable_name="_stage_fetch_comments",
         inputs_summary={"videos": len(config.video_ids)},
         outputs_summary={"comments": len(all_comments)},
@@ -222,7 +241,9 @@ async def _run_stages(
     t0 = datetime.now(UTC)
     sentiment = await _stage_sentiment_analyze(all_comments, llm)
     record_step(
-        trail_steps=trail_steps, on_step=on_step, layer="oprim",
+        trail_steps=trail_steps,
+        on_step=on_step,
+        layer="oprim",
         callable_name="_stage_sentiment_analyze",
         inputs_summary={"comments": len(all_comments)},
         outputs_summary={"positive_pct": sentiment.positive_pct},
@@ -233,7 +254,9 @@ async def _run_stages(
     t0 = datetime.now(UTC)
     feedback = await _stage_feedback_extract(all_comments, llm)
     record_step(
-        trail_steps=trail_steps, on_step=on_step, layer="oprim",
+        trail_steps=trail_steps,
+        on_step=on_step,
+        layer="oprim",
         callable_name="_stage_feedback_extract",
         inputs_summary={"comments": len(all_comments)},
         outputs_summary={"suggestions": len(feedback.suggestions)},
@@ -244,7 +267,9 @@ async def _run_stages(
     t0 = datetime.now(UTC)
     learnings = await _stage_learnings(stats_list, sentiment, feedback, llm)
     record_step(
-        trail_steps=trail_steps, on_step=on_step, layer="oprim",
+        trail_steps=trail_steps,
+        on_step=on_step,
+        layer="oprim",
         callable_name="_stage_learnings",
         inputs_summary={},
         outputs_summary={"learnings": len(learnings)},
@@ -279,12 +304,15 @@ async def _stage_fetch_stats(
     for vid in config.video_ids:
         if config.platform == "youtube":
             from oprim.youtube_video_stats import youtube_video_stats
+
             yt_stats = await youtube_video_stats(
-                video_id=vid, oauth_token=input_data.oauth_token or "",
+                video_id=vid,
+                oauth_token=input_data.oauth_token or "",
             )
             results.append(yt_stats.model_dump())
         else:
             from oprim.bilibili_video_stats import bilibili_video_stats
+
             bili_stats = await bilibili_video_stats(bvid=vid, cookies=input_data.cookies or {})
             results.append(bili_stats.model_dump())
     return results
@@ -298,15 +326,19 @@ async def _stage_fetch_comments(
     for vid in config.video_ids:
         if config.platform == "youtube":
             from oprim.youtube_comments_fetch import youtube_comments_fetch
+
             yt_comments = await youtube_comments_fetch(
-                video_id=vid, oauth_token=input_data.oauth_token or "",
+                video_id=vid,
+                oauth_token=input_data.oauth_token or "",
                 max_count=config.max_comments_per_video,
             )
             all_texts.extend(c.text for c in yt_comments)
         else:
             from oprim.bilibili_comments_fetch import bilibili_comments_fetch
+
             bili_comments = await bilibili_comments_fetch(
-                bvid=vid, cookies=input_data.cookies or {},
+                bvid=vid,
+                cookies=input_data.cookies or {},
                 max_count=config.max_comments_per_video,
             )
             all_texts.extend(c.text for c in bili_comments)
@@ -328,30 +360,48 @@ async def _stage_feedback_extract(comments: list[str], llm: Any) -> Any:
 
     if not comments:
         return AudienceFeedback(
-            positive_points=[], negative_points=[], questions=[], suggestions=[],
+            positive_points=[],
+            negative_points=[],
+            questions=[],
+            suggestions=[],
         )
     return await audience_feedback_extract(comments=comments, llm=llm)
 
 
 async def _stage_learnings(
-    stats_list: list[dict[str, Any]], sentiment: Any, feedback: Any, llm: Any,
+    stats_list: list[dict[str, Any]],
+    sentiment: Any,
+    feedback: Any,
+    llm: Any,
 ) -> list[str]:
     """LLM extracts learnings from stats + sentiment + feedback."""
     import json as _json
 
     messages = [
-        {"role": "system", "content": (
-            "Based on video stats and audience feedback, extract 3-5 actionable learnings "
-            "about what makes high-retention videos. Return JSON: [str, str, ...]"
-        )},
-        {"role": "user", "content": _json.dumps({
-            "stats_summary": {
-                "videos": len(stats_list),
-                "total_views": sum(s.get("views", 0) for s in stats_list),
-            },
-            "sentiment": {"positive": sentiment.positive_pct, "negative": sentiment.negative_pct},
-            "top_suggestions": feedback.suggestions[:5],
-        }, default=str)},
+        {
+            "role": "system",
+            "content": (
+                "Based on video stats and audience feedback, extract 3-5 actionable learnings "
+                "about what makes high-retention videos. Return JSON: [str, str, ...]"
+            ),
+        },
+        {
+            "role": "user",
+            "content": _json.dumps(
+                {
+                    "stats_summary": {
+                        "videos": len(stats_list),
+                        "total_views": sum(s.get("views", 0) for s in stats_list),
+                    },
+                    "sentiment": {
+                        "positive": sentiment.positive_pct,
+                        "negative": sentiment.negative_pct,
+                    },
+                    "top_suggestions": feedback.suggestions[:5],
+                },
+                default=str,
+            ),
+        },
     ]
     result = llm(messages=messages)
     content = result.get("content", "[]")

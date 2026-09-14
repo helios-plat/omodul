@@ -3,6 +3,7 @@
 Pillars: decision_trail
 Composites: oprim.ohlcv_fetch + obase.persistence.write_one
 """
+
 from __future__ import annotations
 
 from typing import Any, ClassVar
@@ -42,8 +43,13 @@ async def ohlcv_backfill(
     from oprim.ohlcv_fetch import ohlcv_fetch  # noqa: PLC0415
 
     trail = Trail()
-    trail.record(event="fetch_start", symbol=config.symbol,
-                 interval=config.interval, limit=config.limit, venue=config.venue)
+    trail.record(
+        event="fetch_start",
+        symbol=config.symbol,
+        interval=config.interval,
+        limit=config.limit,
+        venue=config.venue,
+    )
 
     bars = await ohlcv_fetch(
         config.symbol,

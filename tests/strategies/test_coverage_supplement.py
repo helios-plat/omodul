@@ -1,10 +1,10 @@
 """Coverage supplement for omodul/strategies.py — green path + edge cases."""
+
 from __future__ import annotations
 
 import numpy as np
-import pytest
 
-from omodul.strategies import bocpd_trend_following, microstructure_scalper, funding_rate_arbitrage
+from omodul.strategies import bocpd_trend_following, funding_rate_arbitrage, microstructure_scalper
 
 
 def _make_returns(n, mu=0.002, sigma=0.01, seed=42):
@@ -141,7 +141,9 @@ class TestBocpdGreenPath:
         state = _bocpd_market_state(("BTC-USDT", "ETH-USDT", "SOL-USDT"))
         result = bocpd_trend_following(state, _green_config(max_gross_leverage=0.1))
         assert result["risk_gate_status"] == "GREEN"
-        total_gross = sum(abs(v["target_notional_usd"]) for v in result["target_positions"].values())
+        total_gross = sum(
+            abs(v["target_notional_usd"]) for v in result["target_positions"].values()
+        )
         assert total_gross <= 0.1 * 100_000.0 + 1.0
 
     def test_confidence_below_threshold_gives_neutral(self):
@@ -235,7 +237,9 @@ class TestMicrostructureScalperGreenPath:
             "capital_usd": 100_000.0,
             "equity_curve": _rising_equity(30),
         }
-        result = microstructure_scalper(state, _scalper_green_config(entry_threshold=0.1, rebalance_threshold=0.0))
+        result = microstructure_scalper(
+            state, _scalper_green_config(entry_threshold=0.1, rebalance_threshold=0.0)
+        )
         assert result["risk_gate_status"] == "GREEN"
 
 
@@ -277,7 +281,12 @@ class TestFundingArbitrageGreenPath:
     def test_arb_leverage_cap(self):
         state = self._arb_state(funding_val=0.005)
         cap = 0.5
-        result = funding_rate_arbitrage(state, _arb_green_config(max_gross_leverage=cap, funding_threshold_bps_short=1.0, rebalance_threshold=0.0))
+        result = funding_rate_arbitrage(
+            state,
+            _arb_green_config(
+                max_gross_leverage=cap, funding_threshold_bps_short=1.0, rebalance_threshold=0.0
+            ),
+        )
         total = sum(abs(v["target_notional_usd"]) for v in result["target_positions"].values())
         assert total <= cap * 100_000.0 + 1.0
 

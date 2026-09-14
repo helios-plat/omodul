@@ -3,6 +3,7 @@
 Pillars: cost, decision_trail
 Composites: oskill.cointegration_pairs + oskill.market_impact_sigmoid
 """
+
 from __future__ import annotations
 
 from typing import Any, ClassVar
@@ -54,39 +55,41 @@ def stat_arb(
     trail = Trail()
 
     pairs_result = cointegration_pairs(
-        series_a, series_b,
+        series_a,
+        series_b,
         entry_z=config.entry_z,
         exit_z=config.exit_z,
         lookback=config.lookback,
     )
-    trail.record(event="pairs_signal",
-                 signal=pairs_result["signal"],
-                 zscore=pairs_result["zscore"],
-                 cointegrated=pairs_result["cointegrated"])
-
-    impact_a = market_impact_sigmoid(
-        config.notional, adv=config.adv_a, params=config.impact_params
+    trail.record(
+        event="pairs_signal",
+        signal=pairs_result["signal"],
+        zscore=pairs_result["zscore"],
+        cointegrated=pairs_result["cointegrated"],
     )
+
+    impact_a = market_impact_sigmoid(config.notional, adv=config.adv_a, params=config.impact_params)
     impact_b = market_impact_sigmoid(
         config.notional * abs(pairs_result["hedge_ratio"]),
-        adv=config.adv_b, params=config.impact_params,
+        adv=config.adv_b,
+        params=config.impact_params,
     )
     total_impact_bps = (impact_a["impact_bps"] + impact_b["impact_bps"]) * 2
 
     series_b_list = list(series_b)
     mean_price = float(sum(series_b_list) / len(series_b_list)) if series_b_list else 1.0
     spread_std = pairs_result["zscore_result"].get("std", 1.0) or 1.0
-    expected_edge_bps = (
-        abs(pairs_result["zscore"]) * spread_std / max(mean_price, 1e-8) * 10_000
-    )
+    expected_edge_bps = abs(pairs_result["zscore"]) * spread_std / max(mean_price, 1e-8) * 10_000
 
     arb_viable = (
         pairs_result["signal"] in ("long_a_short_b", "short_a_long_b")
         and expected_edge_bps > total_impact_bps
     )
-    trail.record(event="impact_computed",
-                 total_impact_bps=total_impact_bps,
-                 expected_edge_bps=expected_edge_bps)
+    trail.record(
+        event="impact_computed",
+        total_impact_bps=total_impact_bps,
+        expected_edge_bps=expected_edge_bps,
+    )
 
     return build_result(
         status="ok",

@@ -11,18 +11,21 @@ Flow:
 db_writer is a plain callable(dict) injected by Layer4 (each project's DB differs).
 None=no persistence, result only.  Never raises.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
 from typing import Any, ClassVar
 
 from oprim._animation_types import AnimationInput, AnimationResult
+from oskill._generate_animation import generate_animation
 
 from omodul._base import (
-    BaseConfig, Trail, build_result, compute_fingerprint,
+    BaseConfig,
+    Trail,
+    build_result,
+    compute_fingerprint,
 )
-
-from oskill._generate_animation import generate_animation
 
 
 class AnimationConfig(BaseConfig):
@@ -55,10 +58,12 @@ async def animation_workflow(
     Never raises — exceptions are caught, trail-recorded, returned as status=failed.
     """
     trail = Trail()
-    fingerprint = compute_fingerprint({
-        "entity_id": config.entity_id,
-        "domain": config.domain,
-    })
+    fingerprint = compute_fingerprint(
+        {
+            "entity_id": config.entity_id,
+            "domain": config.domain,
+        }
+    )
 
     _notify(on_step, "animation_workflow", "start")
 
@@ -104,13 +109,15 @@ async def animation_workflow(
     # ------------------------------------------------------------------
     if db_writer is not None:
         try:
-            db_writer({
-                "entity_id": config.entity_id,
-                "domain": config.domain,
-                "html": anim.html,
-                "is_valid": anim.is_valid,
-                "fingerprint": fingerprint,
-            })
+            db_writer(
+                {
+                    "entity_id": config.entity_id,
+                    "domain": config.domain,
+                    "html": anim.html,
+                    "is_valid": anim.is_valid,
+                    "fingerprint": fingerprint,
+                }
+            )
             trail.record(event="db_written", entity_id=config.entity_id)
         except Exception as exc:
             trail.record(event="db_write_failed", error=str(exc))

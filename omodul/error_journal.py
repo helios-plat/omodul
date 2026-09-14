@@ -4,11 +4,15 @@
 """
 
 from __future__ import annotations
+
 import uuid
-from typing import ClassVar, List, Dict, Any, Optional
-from pydantic import BaseModel
-from omodul.base import BaseConfig, build_fingerprint, standard_return
+from typing import Any, ClassVar
+
 from obase.error_tag_store import get_error_distribution
+from pydantic import BaseModel
+
+from omodul.base import BaseConfig, build_fingerprint, standard_return
+
 
 class ErrorJournalConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "error_journal"
@@ -16,29 +20,29 @@ class ErrorJournalConfig(BaseConfig):
     _enabled_pillars: ClassVar[set] = {"fingerprint", "decision_trail"}
     _fingerprint_fields: ClassVar[set[str]] = {"student_id"}
 
+
 class ErrorJournalInput(BaseModel):
     student_id: uuid.UUID
-    kc_id: Optional[str] = None
+    kc_id: str | None = None
+
 
 async def error_journal_diagnostic(
     config: ErrorJournalConfig,
     input_data: ErrorJournalInput,
     *,
-    pool: Any # PgPool
+    pool: Any,  # PgPool
 ) -> dict:
     """错题诊断。"""
-    
+
     trail = []
-    
+
     # 1. Fingerprint
     fp = build_fingerprint(config, str(input_data.student_id))
     trail.append({"event": "fingerprint_computed", "fp": fp})
 
     # 2. 从 obase 提取数据 (Decision Trail)
     dist = await get_error_distribution(
-        pool=pool, 
-        student_id=input_data.student_id,
-        kc_id=input_data.kc_id
+        pool=pool, student_id=input_data.student_id, kc_id=input_data.kc_id
     )
     trail.append({"event": "data_extracted", "count": len(dist)})
 
@@ -48,22 +52,19 @@ async def error_journal_diagnostic(
     if dist:
         sorted_dist = sorted(dist, key=lambda x: x["count"], reverse=True)
         primary_reason = sorted_dist[0]["primary_tag"]
-    
+
     findings = {
         "distribution": dist,
         "primary_diagnostic": f"学生主要错误原因为: {primary_reason}",
-        "suggestion": "建议针对该类型错误进行专项练习。"
+        "suggestion": "建议针对该类型错误进行专项练习。",
     }
-    
+
     # 4. Cost - 纯数据库查询，成本极低
     cost_usd = 0.0001
-    
+
     return standard_return(
-        findings=findings,
-        status="success",
-        fingerprint=fp,
-        trail=trail,
-        cost_usd=cost_usd
+        findings=findings, status="success", fingerprint=fp, trail=trail, cost_usd=cost_usd
     )
+
 
 __version__ = "0.1.0"

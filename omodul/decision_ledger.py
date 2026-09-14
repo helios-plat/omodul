@@ -30,6 +30,7 @@ _RELATION_TYPES = {"CAUSED", "INFLUENCED", "PRECEDENT_FOR"}
 
 # ── 数据模型 ──────────────────────────────────────────────────────────
 
+
 @dataclass
 class Decision:
     decision_id: str
@@ -58,7 +59,7 @@ class Decision:
         }
 
     @classmethod
-    def from_dict(cls, d: dict) -> "Decision":
+    def from_dict(cls, d: dict) -> Decision:
         return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
 
 
@@ -78,11 +79,12 @@ class DecisionRelation:
         }
 
     @classmethod
-    def from_dict(cls, d: dict) -> "DecisionRelation":
+    def from_dict(cls, d: dict) -> DecisionRelation:
         return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
 
 
 # ── Config / Input ────────────────────────────────────────────────────
+
 
 class DecisionLedgerConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "decision_ledger"
@@ -147,6 +149,7 @@ def _similarity(a: str, b: str) -> float:
 
 # ── 存储协议 (backend 注入 或 output_dir JSON) ───────────────────────
 
+
 class FileLedgerBackend:
     """无 DB 落盘: output_dir/ledger.json (单测/本地可用)。"""
 
@@ -179,7 +182,9 @@ class FileLedgerBackend:
         return [DecisionRelation.from_dict(v) for v in self._data["relations"]]
 
     def _flush(self) -> None:
-        self._path.write_text(json.dumps(self._data, ensure_ascii=False, indent=2), encoding="utf-8")
+        self._path.write_text(
+            json.dumps(self._data, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
 
 
 def _resolve_backend(backend: Any, output_dir: Path) -> Any:
@@ -190,6 +195,7 @@ def _resolve_backend(backend: Any, output_dir: Path) -> Any:
 
 
 # ── 核心操作 ─────────────────────────────────────────────────────────
+
 
 def _record(ledger: Any, inp: DecisionLedgerInput, trail: Trail) -> dict:
     if not inp.scenario.strip() or not inp.outcome.strip():
@@ -222,7 +228,9 @@ def _link(ledger: Any, inp: DecisionLedgerInput, trail: Trail) -> dict:
         raise ValueError(f"src 决策不存在: {inp.src_id}")
     if ledger.get_decision(inp.dst_id) is None:
         raise ValueError(f"dst 决策不存在: {inp.dst_id}")
-    r = DecisionRelation(src_id=inp.src_id, dst_id=inp.dst_id, relationship_type=rtype, metadata=inp.metadata)
+    r = DecisionRelation(
+        src_id=inp.src_id, dst_id=inp.dst_id, relationship_type=rtype, metadata=inp.metadata
+    )
     ledger.put_relation(r)
     trail.record(event="link_causal", src=inp.src_id, dst=inp.dst_id, type=rtype)
     return {"relation": r.to_dict()}
@@ -231,7 +239,11 @@ def _link(ledger: Any, inp: DecisionLedgerInput, trail: Trail) -> dict:
 def _query_similar(ledger: Any, inp: DecisionLedgerInput, trail: Trail) -> dict:
     decisions = ledger.list_decisions()
     scored = [
-        ((_similarity(inp.query_text, d.scenario) + _similarity(inp.query_text, d.reasoning)) / 2, d)
+        (
+            (_similarity(inp.query_text, d.scenario) + _similarity(inp.query_text, d.reasoning))
+            / 2,
+            d,
+        )
         for d in decisions
     ]
     scored.sort(key=lambda x: x[0], reverse=True)  # 只按分数排序 (Decision 不可比)
@@ -275,7 +287,9 @@ def _trace(ledger: Any, inp: DecisionLedgerInput, trail: Trail) -> dict:
             for n in down:
                 if n not in seen:
                     queue.append((n, depth + 1))
-    chain = [{"decision_id": cid, "depth": dep} for cid, dep in sorted(seen.items(), key=lambda x: x[1])]
+    chain = [
+        {"decision_id": cid, "depth": dep} for cid, dep in sorted(seen.items(), key=lambda x: x[1])
+    ]
     trail.record(event="trace_chain", decision_id=inp.decision_id, nodes=len(chain))
     return {"decision_id": inp.decision_id, "chain": chain}
 
@@ -329,13 +343,15 @@ def _check_rules(ledger: Any, inp: DecisionLedgerInput, trail: Trail) -> dict:
                 allow = set(rule.get("allow", []) or [])
                 if allow and d.decision_maker not in allow:
                     violations.append(f"decision_maker '{d.decision_maker}' 不在允许集")
-        results.append({
-            "decision_id": d.decision_id,
-            "category": d.category,
-            "outcome": d.outcome,
-            "pass": len(violations) == 0,
-            "violations": violations,
-        })
+        results.append(
+            {
+                "decision_id": d.decision_id,
+                "category": d.category,
+                "outcome": d.outcome,
+                "pass": len(violations) == 0,
+                "violations": violations,
+            }
+        )
     passed = sum(1 for r in results if r["pass"])
     trail.record(event="check_rules", checked=len(results), passed=passed)
     return {"checked": len(results), "passed": passed, "results": results}
@@ -349,7 +365,9 @@ def _export(ledger: Any, inp: DecisionLedgerInput, output_dir: Path, trail: Trai
     if fmt == "csv":
         path = output_dir / "decisions.csv"
         with path.open("w", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=list(decisions[0].keys()) if decisions else ["decision_id"])
+            writer = csv.DictWriter(
+                f, fieldnames=list(decisions[0].keys()) if decisions else ["decision_id"]
+            )
             writer.writeheader()
             writer.writerows(decisions)
         rel_path = output_dir / "relations.csv"
@@ -357,12 +375,22 @@ def _export(ledger: Any, inp: DecisionLedgerInput, output_dir: Path, trail: Trai
             writer = csv.DictWriter(f, fieldnames=["src_id", "dst_id", "relationship_type"])
             writer.writeheader()
             writer.writerows(relations)
-        out = {"path": str(path), "relations_path": str(rel_path), "decisions": len(decisions), "relations": len(relations)}
+        out = {
+            "path": str(path),
+            "relations_path": str(rel_path),
+            "decisions": len(decisions),
+            "relations": len(relations),
+        }
     elif fmt == "prov_o":
         out = _export_prov_o(decisions, relations, output_dir)
     else:
         path = output_dir / "ledger_export.json"
-        path.write_text(json.dumps({"decisions": decisions, "relations": relations}, ensure_ascii=False, indent=2), encoding="utf-8")
+        path.write_text(
+            json.dumps(
+                {"decisions": decisions, "relations": relations}, ensure_ascii=False, indent=2
+            ),
+            encoding="utf-8",
+        )
         out = {"path": str(path), "decisions": len(decisions), "relations": len(relations)}
     trail.record(event="export", format=fmt, decisions=len(decisions))
     return out
@@ -386,20 +414,27 @@ def _export_prov_o(decisions: list[dict], relations: list[dict], output_dir: Pat
     ]
     activities = []
     for r in relations:
-        activities.append({
-            "@id": f"relation:{r['src_id']}->{r['dst_id']}",
-            "@type": "prov:Activity",
-            "prov:used": f"decision:{r['src_id']}",
-            "prov:wasInformedBy": f"decision:{r['dst_id']}",
-            "veya:relationshipType": r["relationship_type"],
-        })
+        activities.append(
+            {
+                "@id": f"relation:{r['src_id']}->{r['dst_id']}",
+                "@type": "prov:Activity",
+                "prov:used": f"decision:{r['src_id']}",
+                "prov:wasInformedBy": f"decision:{r['dst_id']}",
+                "veya:relationshipType": r["relationship_type"],
+            }
+        )
     path = output_dir / "provenance_prov-o.json"
-    payload = {"prefix": {"prov": "http://www.w3.org/ns/prov#", "veya": "https://veya.ai/ns#"}, "entities": entities, "activities": activities}
+    payload = {
+        "prefix": {"prov": "http://www.w3.org/ns/prov#", "veya": "https://veya.ai/ns#"},
+        "entities": entities,
+        "activities": activities,
+    }
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     return {"path": str(path), "entities": len(entities), "activities": len(activities)}
 
 
 # ── operator 入口 ─────────────────────────────────────────────────────
+
 
 def decision_ledger(
     config: DecisionLedgerConfig,
@@ -428,7 +463,12 @@ def decision_ledger(
 
     if action == "list":
         decisions = [d.to_dict() for d in ledger.list_decisions()]
-        return build_result(status="completed", error=None, trail=trail, findings={"decisions": decisions, "count": len(decisions)})
+        return build_result(
+            status="completed",
+            error=None,
+            trail=trail,
+            findings={"decisions": decisions, "count": len(decisions)},
+        )
     handlers = {
         "record": lambda: _record(ledger, input_data, trail),
         "link": lambda: _link(ledger, input_data, trail),
@@ -439,12 +479,17 @@ def decision_ledger(
         "export": lambda: _export(ledger, input_data, out_dir, trail),
     }
     if action not in handlers:
-        raise ValueError(f"action 非法: {action} (record/link/query_similar/trace/impact/rules/export/list)")
+        raise ValueError(
+            f"action 非法: {action} (record/link/query_similar/trace/impact/rules/export/list)"
+        )
     findings = handlers[action]()
     trail_path = trail.write(out_dir)
     return build_result(
-        status="completed", error=None,
+        status="completed",
+        error=None,
         fingerprint=compute_fingerprint({"action": action, **findings}),
-        trail=trail, trail_path=trail_path,
-        cost_usd=0.0, findings=findings,
+        trail=trail,
+        trail_path=trail_path,
+        cost_usd=0.0,
+        findings=findings,
     )

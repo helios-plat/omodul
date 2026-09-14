@@ -13,6 +13,7 @@ Mandates (CI-checked):
   - structure must be a list of dicts [{title, summary, children}]
   - is_synthesis=True + synthesis_note hardcoded
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -22,22 +23,28 @@ import uuid
 from pathlib import Path
 from typing import Any, ClassVar
 
+from obase.provider_registry import ProviderRegistry
 from pydantic import BaseModel, ConfigDict, field_validator
 
-from obase.provider_registry import ProviderRegistry
-
 from omodul._base import (
-    BaseConfig, CostTracker, Trail, build_result, compute_fingerprint,
+    BaseConfig,
+    CostTracker,
+    Trail,
+    build_result,
+    compute_fingerprint,
     write_report,
 )
-
 
 # ---------------------------------------------------------------------------
 # Grade helpers
 # ---------------------------------------------------------------------------
 
 _GRADE_RANKS: dict[str, int] = {
-    "unverified": 0, "low": 1, "medium": 2, "high": 3, "verified": 4,
+    "unverified": 0,
+    "low": 1,
+    "medium": 2,
+    "high": 3,
+    "verified": 4,
 }
 
 # doc_type caps (fallback when source_credibility not determined)
@@ -80,11 +87,13 @@ def _normalize_structure(raw: Any) -> list[dict]:
         result = []
         for item in raw:
             if isinstance(item, dict):
-                result.append({
-                    "title": str(item.get("title", "")),
-                    "summary": str(item.get("summary", item.get("description", ""))),
-                    "children": _normalize_structure(item.get("children", [])),
-                })
+                result.append(
+                    {
+                        "title": str(item.get("title", "")),
+                        "summary": str(item.get("summary", item.get("description", ""))),
+                        "children": _normalize_structure(item.get("children", [])),
+                    }
+                )
             elif isinstance(item, str):
                 result.append({"title": item, "summary": "", "children": []})
         return result
@@ -97,6 +106,7 @@ def _normalize_structure(raw: Any) -> list[dict]:
 # ---------------------------------------------------------------------------
 # Config / Findings
 # ---------------------------------------------------------------------------
+
 
 class BookUnderstandingConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "book_understanding_synthesize"
@@ -117,18 +127,18 @@ class BookUnderstandingFindings(BaseModel):
     is_synthesis: bool = True
     synthesis_note: str = "AII综合，非原文断言"
     # ── 来源可信度 (★新) ──
-    source_credibility: dict       # {book_type, credibility_level, credibility_note}
+    source_credibility: dict  # {book_type, credibility_level, credibility_note}
     # ── 组织性深度字段 (★新) ──
     problem_statement: str
     overview_oneline: str
     learning_thread: str
-    structure: list[dict]          # [{title, summary, children}] (★改:str→list)
-    knowledge_categories: dict     # {theoretical, empirical, normative, methodological}
+    structure: list[dict]  # [{title, summary, children}] (★改:str→list)
+    knowledge_categories: dict  # {theoretical, empirical, normative, methodological}
     applicability: str
     core_takeaways: list[str]
     # ── 原有字段 (★改良) ──
-    main_claims: list[dict]        # [{claim, stance, stance_marker, claim_grade}]
-    argument_structure: list[dict] # [{point, evidence:[{text,grade}], boundary}]
+    main_claims: list[dict]  # [{claim, stance, stance_marker, claim_grade}]
+    argument_structure: list[dict]  # [{point, evidence:[{text,grade}], boundary}]
     key_concept_ku_ids: list[str]
     doc_type: str
 
@@ -147,6 +157,7 @@ class BookUnderstandingFindings(BaseModel):
 # Fingerprint helper
 # ---------------------------------------------------------------------------
 
+
 def compute_fingerprint_for_book_understanding_synthesize(
     book_substrate_id: str, doc_type: str
 ) -> str:
@@ -157,9 +168,10 @@ def compute_fingerprint_for_book_understanding_synthesize(
 # Workflow
 # ---------------------------------------------------------------------------
 
+
 async def book_understanding_synthesize(
     config: BookUnderstandingConfig,
-    input_data: Any,   # BookUnderstandingInput (oprim._aii_graph_types)
+    input_data: Any,  # BookUnderstandingInput (oprim._aii_graph_types)
     output_dir: Path,
     *,
     on_step=None,
@@ -219,7 +231,11 @@ async def book_understanding_synthesize(
         }.get(config.doc_type, "文献")
 
         # 书名行：有书名则明确展示，无则用 substrate_id
-        book_title_line = f"书名：{config.book_title}" if config.book_title else f"文献标识：{config.book_substrate_id}"
+        book_title_line = (
+            f"书名：{config.book_title}"
+            if config.book_title
+            else f"文献标识：{config.book_substrate_id}"
+        )
 
         prompt = f"""\
 你是一位学术分析专家。基于以下书籍知识单元（KU），对该书做组织性深度理解。
@@ -234,7 +250,9 @@ async def book_understanding_synthesize(
 - popular_science：面向大众的科普读物，简化专业知识，强调可读性
 - bestseller：商业类畅销书、管理方法论、自我提升、投资心理学等，作者多为顾问/记者/博主，观点个人化
 - controversial：争议性、边缘领域、强烈意识形态立场的书籍
-★判断保守：拿不准的偏低（popular_science/bestseller 优于错标 textbook）；DK出版社大图鉴/Big Ideas系列=popular_science；商业方法论/投资心理学=bestseller
+★判断保守：拿不准的偏低（popular_science/bestseller 优于错标 textbook）；\
+DK出版社大图鉴/Big Ideas系列=popular_science；\
+商业方法论/投资心理学=bestseller
 
 知识单元（每条含可信度grade供参考）：
 {ku_block}
@@ -449,27 +467,26 @@ def _build_report(
 ) -> str:
     sc = findings.source_credibility
     claims_md = "\n".join(
-        f"- [{c.get('claim_grade','?')}|{c.get('stance','')}] {c.get('stance_marker','')} {c.get('claim','')}"
+        f"- [{c.get('claim_grade', '?')}|{c.get('stance', '')}] "
+        f"{c.get('stance_marker', '')} {c.get('claim', '')}"
         for c in findings.main_claims
     )
     args_md = "\n".join(
-        f"- **{a.get('point','')}**"
+        f"- **{a.get('point', '')}**"
         + (f" _(边界: {a['boundary']})_" if a.get("boundary") else "")
-        + "\n  " + "; ".join(
-            f"[{e.get('grade','?')}] {e.get('text','')}"
-            for e in a.get("evidence", [])
-        )
+        + "\n  "
+        + "; ".join(f"[{e.get('grade', '?')}] {e.get('text', '')}" for e in a.get("evidence", []))
         for a in findings.argument_structure
     )
     struct_md = "\n".join(
-        f"{'  ' * 0}- **{s.get('title','')}**: {s.get('summary','')}"
-        for s in findings.structure
+        f"{'  ' * 0}- **{s.get('title', '')}**: {s.get('summary', '')}" for s in findings.structure
     )
     kc = findings.knowledge_categories
     return (
         f"# Book Understanding: {config.book_substrate_id}\n\n"
         f"**doc_type**: {config.doc_type} | **grade_cap**: {grade_cap}  \n"
-        f"**source**: {sc.get('book_type','')} ({sc.get('credibility_level','')}) — {sc.get('credibility_note','')}  \n"
+        f"**source**: {sc.get('book_type', '')} "
+        f"({sc.get('credibility_level', '')}) — {sc.get('credibility_note', '')}  \n"
         f"**synthesis_note**: {findings.synthesis_note}\n\n"
         f"## 核心问题\n\n{findings.problem_statement}\n\n"
         f"## 一句话总览\n\n{findings.overview_oneline}\n\n"
@@ -477,15 +494,14 @@ def _build_report(
         f"## Summary\n\n{findings.summary}\n\n"
         f"## 章节结构\n\n{struct_md or '(none)'}\n\n"
         f"## 知识分类\n\n"
-        f"- 理论：{kc.get('theoretical','')}\n"
-        f"- 实证：{kc.get('empirical','')}\n"
-        f"- 规范：{kc.get('normative','')}\n"
-        f"- 方法：{kc.get('methodological','')}\n\n"
+        f"- 理论：{kc.get('theoretical', '')}\n"
+        f"- 实证：{kc.get('empirical', '')}\n"
+        f"- 规范：{kc.get('normative', '')}\n"
+        f"- 方法：{kc.get('methodological', '')}\n\n"
         f"## Main Claims\n\n{claims_md or '(none)'}\n\n"
         f"## Argument Structure\n\n{args_md or '(none)'}\n\n"
         f"## 适用边界\n\n{findings.applicability}\n\n"
-        f"## Core Takeaways\n\n"
-        + "\n".join(f"- {t}" for t in findings.core_takeaways) + "\n"
+        f"## Core Takeaways\n\n" + "\n".join(f"- {t}" for t in findings.core_takeaways) + "\n"
     )
 
 

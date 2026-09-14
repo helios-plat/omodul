@@ -16,7 +16,9 @@ from pathlib import Path
 from typing import Any
 
 
-def agent_creation_workflow(config: dict[str, Any], input_data: dict[str, Any], output_dir: Path) -> dict[str, Any]:
+def agent_creation_workflow(
+    config: dict[str, Any], input_data: dict[str, Any], output_dir: Path
+) -> dict[str, Any]:
     """Create an agent from a form spec and register it.
 
     Config keys:
@@ -39,6 +41,7 @@ def agent_creation_workflow(config: dict[str, Any], input_data: dict[str, Any], 
     if isinstance(input_data, dict) and "goal" in input_data and not form.get("description"):
         try:
             from oskill.agent_form_synthesize import agent_form_synthesize
+
             user_request = str(input_data.get("goal", ""))
             form = agent_form_synthesize(user_request, llm_caller=user_llm, context={})
         except Exception:
@@ -47,6 +50,7 @@ def agent_creation_workflow(config: dict[str, Any], input_data: dict[str, Any], 
     # 2. codegen
     try:
         from oprim.agent_codegen import agent_codegen
+
         source = agent_codegen(form)
     except Exception as exc:
         return {"status": "failed", "error": f"codegen: {exc}", "registered": False}
@@ -55,7 +59,10 @@ def agent_creation_workflow(config: dict[str, Any], input_data: dict[str, Any], 
     agents_dir = output_dir / "agents"
     agents_dir.mkdir(parents=True, exist_ok=True)
     import re
-    safe_name = "auto_agent_" + (re.sub(r"[^a-zA-Z0-9_]", "_", form.get("name", "agent")).lower().strip("_") or "agent")
+
+    safe_name = "auto_agent_" + (
+        re.sub(r"[^a-zA-Z0-9_]", "_", form.get("name", "agent")).lower().strip("_") or "agent"
+    )
     agent_file = agents_dir / f"{safe_name}.py"
     try:
         agent_file.write_text(source, encoding="utf-8")
@@ -68,7 +75,12 @@ def agent_creation_workflow(config: dict[str, Any], input_data: dict[str, Any], 
         ast.parse(source)
         ast_valid = True
     except SyntaxError as exc:
-        return {"status": "failed", "error": f"syntax error: {exc}", "registered": False, "ast_valid": False}
+        return {
+            "status": "failed",
+            "error": f"syntax error: {exc}",
+            "registered": False,
+            "ast_valid": False,
+        }
 
     # 5. register — dynamic import (add agents_dir to sys.path temporarily)
     registered = False
@@ -79,7 +91,13 @@ def agent_creation_workflow(config: dict[str, Any], input_data: dict[str, Any], 
         importlib.import_module(safe_name)
         registered = True
     except Exception as exc:
-        return {"status": "failed", "error": f"registration: {exc}", "registered": False, "file_path": str(agent_file), "ast_valid": True}
+        return {
+            "status": "failed",
+            "error": f"registration: {exc}",
+            "registered": False,
+            "file_path": str(agent_file),
+            "ast_valid": True,
+        }
 
     return {
         "status": "completed",

@@ -1,10 +1,5 @@
-import sys
-from unittest.mock import MagicMock, patch
-
-sys.modules["docker"] = MagicMock()
-sys.modules["docker.errors"] = MagicMock()
-
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 

@@ -3,6 +3,7 @@ omodul.undo_changes — Restore a project snapshot by ID.
 
 Pillars: decision_trail
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -48,30 +49,31 @@ async def undo_changes(
     trail = Trail()
 
     try:
-        trail.record(event="find_snapshot", step_no=0,
-                     snap_id=input_data.snap_id, cwd=input_data.cwd)
+        trail.record(
+            event="find_snapshot", step_no=0, snap_id=input_data.snap_id, cwd=input_data.cwd
+        )
 
         if input_data.snapshot_lister is not None:
             snaps = await _call(input_data.snapshot_lister, cwd=input_data.cwd)
             snap_ids = [s.get("id") for s in (snaps or [])]
             if input_data.snap_id not in snap_ids:
                 loop = asyncio.get_event_loop()
-                await asyncio.shield(
-                    loop.run_in_executor(None, trail.write, output_dir)
-                )
+                await asyncio.shield(loop.run_in_executor(None, trail.write, output_dir))
                 return build_result(
                     status="failed",
-                    error={"type": "SnapshotNotFound",
-                           "message": f"snapshot '{input_data.snap_id}' not found"},
+                    error={
+                        "type": "SnapshotNotFound",
+                        "message": f"snapshot '{input_data.snap_id}' not found",
+                    },
                     trail=trail,
                 )
 
         trail.record(event="restore_snapshot", step_no=1)
 
         if input_data.snapshot_restorer is not None:
-            await _call(input_data.snapshot_restorer,
-                        snap_id=input_data.snap_id,
-                        cwd=input_data.cwd)
+            await _call(
+                input_data.snapshot_restorer, snap_id=input_data.snap_id, cwd=input_data.cwd
+            )
 
         trail.record(event="restored", step_no=2, snap_id=input_data.snap_id)
 

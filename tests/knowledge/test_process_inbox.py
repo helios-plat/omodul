@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
-import pytest
-
-from omodul.knowledge.process_inbox import ProcessInboxResult, _move_to_archive, process_inbox
-from oskill.knowledge.classify_inbox_file import ClassifyResult
 from oskill.ingest_substrate import IngestResult
+from oskill.knowledge.classify_inbox_file import ClassifyResult
+
+from omodul.knowledge.process_inbox import _move_to_archive, process_inbox
 
 
 def _make_classify(layer="extension", medium="markdown_note", confidence=0.95):

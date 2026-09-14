@@ -1,15 +1,15 @@
 """Agent run trace — persisted to DuckDB via oprim.meta_db."""
+
 from __future__ import annotations
 
 import json
 from datetime import datetime
-from pathlib import Path
 from typing import Any
 
 from oprim.meta_db import MetaDB, open_meta_db
 from oskill.knowledge._context import meta_db_path
 
-from .base import AgentResult, AgentStep, Citation
+from .base import AgentStep, Citation
 
 
 def _step_to_dict(step: AgentStep) -> dict:
@@ -106,16 +106,24 @@ class AgentTracer:
 
     def get_run(self, run_id: str) -> dict | None:
         db = self._get_db()
-        rows = db.fetchall(
-            "SELECT * FROM agent_runs WHERE id = ?", [run_id]
-        )
+        rows = db.fetchall("SELECT * FROM agent_runs WHERE id = ?", [run_id])
         if not rows:
             return None
         # DuckDB returns tuples; build dict from column names
         cols = [
-            "id", "user_id", "agent_name", "params", "status",
-            "trace", "citations", "output", "total_input_tokens",
-            "total_output_tokens", "cost_usd", "started_at", "completed_at",
+            "id",
+            "user_id",
+            "agent_name",
+            "params",
+            "status",
+            "trace",
+            "citations",
+            "output",
+            "total_input_tokens",
+            "total_output_tokens",
+            "cost_usd",
+            "started_at",
+            "completed_at",
             "error_message",
         ]
         return dict(zip(cols, rows[0]))

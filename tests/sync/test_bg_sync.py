@@ -1,19 +1,18 @@
 """Tests for BackgroundSyncDaemon."""
+
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
-from omodul.sync.bg_sync import BackgroundSyncDaemon
 from oprim.meta_db.duckdb import open_meta_db
 
+from omodul.sync.bg_sync import BackgroundSyncDaemon
+
 _MIGRATIONS_DIR = (
-    Path(__file__).parent.parent.parent.parent
-    / "oprim" / "oprim" / "meta_db" / "migrations"
+    Path(__file__).parent.parent.parent.parent / "oprim" / "oprim" / "meta_db" / "migrations"
 )
 
 
@@ -71,6 +70,7 @@ class TestDaemonStatus:
 
         async def mock_apply(*args, **kwargs):
             from oskill.sync.apply_remote_events import ApplyResult
+
             return ApplyResult(
                 applied_count=0, skipped_count=0, conflict_count=0, last_applied_seq=0
             )
@@ -95,10 +95,12 @@ class TestDaemonShutdown:
 
         async def fast_flush(*args, **kwargs):
             from oskill.sync.flush_outbox import FlushResult
+
             return FlushResult(0, 0, 0)
 
         async def fast_apply(*args, **kwargs):
             from oskill.sync.apply_remote_events import ApplyResult
+
             return ApplyResult(0, 0, 0, 0)
 
         with (
@@ -123,8 +125,20 @@ class TestDaemonShutdown:
         d = _make_daemon(db, storage)
 
         with (
-            patch("omodul.sync.bg_sync.flush_outbox", side_effect=AsyncMock(return_value=MagicMock(flushed_count=0, last_flushed_seq=0, failed_count=0))),
-            patch("omodul.sync.bg_sync.apply_remote_events", side_effect=AsyncMock(return_value=MagicMock(applied_count=0, skipped_count=0, conflict_count=0, last_applied_seq=0))),
+            patch(
+                "omodul.sync.bg_sync.flush_outbox",
+                side_effect=AsyncMock(
+                    return_value=MagicMock(flushed_count=0, last_flushed_seq=0, failed_count=0)
+                ),
+            ),
+            patch(
+                "omodul.sync.bg_sync.apply_remote_events",
+                side_effect=AsyncMock(
+                    return_value=MagicMock(
+                        applied_count=0, skipped_count=0, conflict_count=0, last_applied_seq=0
+                    )
+                ),
+            ),
         ):
             task = asyncio.create_task(d.run())
             await asyncio.sleep(0.02)
@@ -143,10 +157,12 @@ class TestFlushLoop:
             nonlocal call_count
             call_count += 1
             from oskill.sync.flush_outbox import FlushResult
+
             return FlushResult(1, 0, call_count)
 
         async def mock_apply(*args, **kwargs):
             from oskill.sync.apply_remote_events import ApplyResult
+
             return ApplyResult(0, 0, 0, 0)
 
         with (
@@ -170,10 +186,12 @@ class TestFlushLoop:
             if call_count == 1:
                 raise RuntimeError("network timeout")
             from oskill.sync.flush_outbox import FlushResult
+
             return FlushResult(0, 0, 0)
 
         async def mock_apply(*args, **kwargs):
             from oskill.sync.apply_remote_events import ApplyResult
+
             return ApplyResult(0, 0, 0, 0)
 
         with (
@@ -196,12 +214,14 @@ class TestPullLoop:
 
         async def mock_flush(*args, **kwargs):
             from oskill.sync.flush_outbox import FlushResult
+
             return FlushResult(0, 0, 0)
 
         async def mock_apply(*args, **kwargs):
             nonlocal applied_calls
             applied_calls += 1
             from oskill.sync.apply_remote_events import ApplyResult
+
             return ApplyResult(2, 0, 0, 5)
 
         with (
@@ -221,6 +241,7 @@ class TestPullLoop:
 
         async def mock_flush(*args, **kwargs):
             from oskill.sync.flush_outbox import FlushResult
+
             return FlushResult(0, 0, 0)
 
         call_count = 0
@@ -231,6 +252,7 @@ class TestPullLoop:
             if call_count == 1:
                 raise RuntimeError("storage unreachable")
             from oskill.sync.apply_remote_events import ApplyResult
+
             return ApplyResult(0, 0, 0, 0)
 
         with (
@@ -250,10 +272,12 @@ class TestSnapshotLoop:
 
         async def mock_flush(*args, **kwargs):
             from oskill.sync.flush_outbox import FlushResult
+
             return FlushResult(0, 0, 0)
 
         async def mock_apply(*args, **kwargs):
             from oskill.sync.apply_remote_events import ApplyResult
+
             return ApplyResult(0, 0, 0, 0)
 
         async def mock_snapshot(*args, **kwargs):
@@ -280,10 +304,12 @@ class TestSnapshotLoop:
 
         async def mock_flush(*args, **kwargs):
             from oskill.sync.flush_outbox import FlushResult
+
             return FlushResult(0, 0, 0)
 
         async def mock_apply(*args, **kwargs):
             from oskill.sync.apply_remote_events import ApplyResult
+
             return ApplyResult(0, 0, 0, 0)
 
         async def mock_snapshot(*args, **kwargs):

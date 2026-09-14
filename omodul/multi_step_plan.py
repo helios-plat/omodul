@@ -12,24 +12,23 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
 
-import networkx as nx
 import numpy as np
-
 from oprim._audit_emit import AuditEmitter, JsonlSink
 
 try:
     from obase.causal_graph_store import CausalGraphStore, get_runtime_causal_store
     from oprim._counterfactual_rollout import (
         OBSERVE_ACTION,
-        RolloutAction,
         RolloutPlan,
         counterfactual_rollout,
     )
     from oprim._do_calculus_intervention import build_binary_failure_cpd_map
     from oskill._strategy_evolve import STRATEGY_NAMES, StrategyEvolver
+
     from omodul.causal_fault_diagnose import (
         CausalDiagnosisReport,
         causal_fault_diagnose,
@@ -43,12 +42,12 @@ except ImportError:  # pragma: no cover - exercised only in minimal envs
     from obase.causal_graph_store import CausalGraphStore, get_runtime_causal_store
     from oprim._counterfactual_rollout import (
         OBSERVE_ACTION,
-        RolloutAction,
         RolloutPlan,
         counterfactual_rollout,
     )
     from oprim._do_calculus_intervention import build_binary_failure_cpd_map
     from oskill._strategy_evolve import STRATEGY_NAMES, StrategyEvolver
+
     from omodul.causal_fault_diagnose import (
         CausalDiagnosisReport,
         causal_fault_diagnose,
@@ -73,18 +72,18 @@ class MultiStepPlanReport:
     threat_level: float
     plan: RolloutPlan
     executed: bool
-    execution: Optional[ExecutionResult] = None
-    cpd_updated: List[str] = field(default_factory=list)
+    execution: ExecutionResult | None = None
+    cpd_updated: list[str] = field(default_factory=list)
     strategy_value_after: float = 0.0
-    recommended_actions: List[str] = field(default_factory=list)
-    audit_trace_id: Optional[str] = None
+    recommended_actions: list[str] = field(default_factory=list)
+    audit_trace_id: str | None = None
 
 
 def update_cpd_from_repair(
-    cpd_map: Dict[str, Any],
+    cpd_map: dict[str, Any],
     node: str,
     effectiveness: float,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """在线更新: 把修复有效性折入节点 CPD 的故障概率 (浅拷贝, 不污染原图).
 
     effectiveness ∈ [0, 1] — 修复后该节点故障概率的收缩比例。
@@ -111,21 +110,21 @@ def update_cpd_from_repair(
 def multi_step_plan(
     failure_log: str,
     *,
-    store: Optional[CausalGraphStore] = None,
+    store: CausalGraphStore | None = None,
     failure_node: str = "task_outcome",
-    strategy: Optional[str] = None,
-    evolver: Optional[StrategyEvolver] = None,
+    strategy: str | None = None,
+    evolver: StrategyEvolver | None = None,
     threat_level: float = 0.0,
-    cpd_map: Optional[Dict[str, Any]] = None,
+    cpd_map: dict[str, Any] | None = None,
     auto_build_cpds: bool = True,
-    action_cost: Optional[Dict[str, float]] = None,
-    horizon_override: Optional[int] = None,
-    uncertainty: Optional[Dict[str, float]] = None,
+    action_cost: dict[str, float] | None = None,
+    horizon_override: int | None = None,
+    uncertainty: dict[str, float] | None = None,
     execute: bool = False,
-    repair_callback: Optional[Callable[[str], float]] = None,
-    rng: Optional[np.random.Generator] = None,
-    audit_path: Optional[str] = None,
-    capability_nonce: Optional[str] = None,
+    repair_callback: Callable[[str], float] | None = None,
+    rng: np.random.Generator | None = None,
+    audit_path: str | None = None,
+    capability_nonce: str | None = None,
     notes: str = "",
 ) -> MultiStepPlanReport:
     """
@@ -202,12 +201,17 @@ def multi_step_plan(
             inputs={"graph_version": store.version, "threat_level": round(threat_level, 6)},
             decision={
                 "chosen_strategy": strategy,
-                "strategy_params": {k: round(float(v), 6) for k, v in params.items()
-                                     if isinstance(v, (int, float))},
+                "strategy_params": {
+                    k: round(float(v), 6) for k, v in params.items() if isinstance(v, (int, float))
+                },
                 "planned_actions": [
-                    {"node": a.node, "action_type": a.action_type,
-                     "delta_p": round(a.delta_p, 6), "cost": round(a.cost, 6),
-                     "utility_step": round(a.utility_step, 6)}
+                    {
+                        "node": a.node,
+                        "action_type": a.action_type,
+                        "delta_p": round(a.delta_p, 6),
+                        "cost": round(a.cost, 6),
+                        "utility_step": round(a.utility_step, 6),
+                    }
                     for a in plan.planned_actions
                 ],
                 "total_utility": round(plan.total_utility, 6),
@@ -217,17 +221,15 @@ def multi_step_plan(
             inputs={"graph_version": store.version, "threat_level": round(threat_level, 6)},
             decision={
                 "chosen_strategy": strategy,
-                "utilities": {a.node: round(a.utility_step, 6)
-                               for a in plan.planned_actions},
-                "first_action": plan.planned_actions[0].node
-                if plan.planned_actions else None,
+                "utilities": {a.node: round(a.utility_step, 6) for a in plan.planned_actions},
+                "first_action": plan.planned_actions[0].node if plan.planned_actions else None,
             },
         )
 
     # 4) 执行首步
     executed = False
-    execution: Optional[ExecutionResult] = None
-    cpd_updated: List[str] = []
+    execution: ExecutionResult | None = None
+    cpd_updated: list[str] = []
     reward = plan.total_utility  # 未执行时用规划效用做弱学习信号
 
     if execute and repair_callback is not None and plan.planned_actions:
@@ -277,12 +279,10 @@ def multi_step_plan(
         )
 
     # 建议动作
-    actions: List[str] = []
+    actions: list[str] = []
     for a in plan.planned_actions:
         if a.action_type == OBSERVE_ACTION:
-            actions.append(
-                f"[observe] 先观察 '{failure_node}' 的运行时证据 (成本 {a.cost:.3f})"
-            )
+            actions.append(f"[observe] 先观察 '{failure_node}' 的运行时证据 (成本 {a.cost:.3f})")
         else:
             actions.append(
                 f"[step {a.step}] 干预 '{a.node}' (do({a.node}=ok): ΔP={a.delta_p:.3f}, "

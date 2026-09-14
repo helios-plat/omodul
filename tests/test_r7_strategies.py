@@ -5,24 +5,28 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
+from omodul.strategies.spot_trend import spot_trend
 from omodul.strategies.trend_dual import trend_dual
 from omodul.strategies.vwap_mr_dual import vwap_mr_dual
-from omodul.strategies.spot_trend import spot_trend
-
 
 # ──────────────────── Fixtures ────────────────────
+
 
 @pytest.fixture
 def uptrend_market_state():
     n = 300
     close = np.linspace(100, 200, n)
     ohlcv = {
-        "high": close + 2.0, "low": close - 2.0,
-        "close": close, "volume": np.ones(n) * 500.0,
+        "high": close + 2.0,
+        "low": close - 2.0,
+        "close": close,
+        "volume": np.ones(n) * 500.0,
     }
     return {
-        "ohlcv": ohlcv, "instrument": "BTC-USDT-SWAP",
-        "current_positions": {}, "capital_usd": 1000.0,
+        "ohlcv": ohlcv,
+        "instrument": "BTC-USDT-SWAP",
+        "current_positions": {},
+        "capital_usd": 1000.0,
     }
 
 
@@ -32,12 +36,16 @@ def sine_market_state():
     t = np.arange(n, dtype=float)
     close = 100.0 + 10.0 * np.sin(t * 0.1)
     ohlcv = {
-        "high": close + 1.5, "low": close - 1.5,
-        "close": close, "volume": np.ones(n) * 200.0,
+        "high": close + 1.5,
+        "low": close - 1.5,
+        "close": close,
+        "volume": np.ones(n) * 200.0,
     }
     return {
-        "ohlcv": ohlcv, "instrument": "SOL-USDT-SWAP",
-        "current_positions": {}, "capital_usd": 1000.0,
+        "ohlcv": ohlcv,
+        "instrument": "SOL-USDT-SWAP",
+        "current_positions": {},
+        "capital_usd": 1000.0,
     }
 
 
@@ -46,9 +54,9 @@ def trend_config():
     return {
         "indicators": {
             "supertrend": {"enabled": True, "period": 10, "multiplier": 3.0},
-            "ema":        {"enabled": True, "fast": 20, "slow": 50},
-            "adx":        {"enabled": True, "period": 14, "threshold": 25.0},
-            "macd":       {"enabled": True, "fast": 12, "slow": 26, "signal": 9},
+            "ema": {"enabled": True, "fast": 20, "slow": 50},
+            "adx": {"enabled": True, "period": 14, "threshold": 25.0},
+            "macd": {"enabled": True, "fast": 12, "slow": 26, "signal": 9},
         },
         "signal_logic": {"min_confluence": 2, "direction": "both"},
         "risk": {"cost_bps": 10.0},
@@ -59,11 +67,17 @@ def trend_config():
 def mr_config():
     return {
         "indicators": {
-            "vwap":        {"enabled": True, "window": 4, "z_threshold": 2.0},
-            "bollinger":   {"enabled": True, "window": 20, "num_std": 2.0},
-            "rsi":         {"enabled": True, "period": 14, "oversold": 0.3, "overbought": 0.7},
-            "stochastic":  {"enabled": True, "k_period": 14, "d_period": 3, "smooth_k": 3,
-                            "oversold": 0.2, "overbought": 0.8},
+            "vwap": {"enabled": True, "window": 4, "z_threshold": 2.0},
+            "bollinger": {"enabled": True, "window": 20, "num_std": 2.0},
+            "rsi": {"enabled": True, "period": 14, "oversold": 0.3, "overbought": 0.7},
+            "stochastic": {
+                "enabled": True,
+                "k_period": 14,
+                "d_period": 3,
+                "smooth_k": 3,
+                "oversold": 0.2,
+                "overbought": 0.8,
+            },
         },
         "signal_logic": {"min_confluence": 2, "direction": "both"},
         "risk": {"cost_bps": 10.0},
@@ -80,8 +94,8 @@ def spot_config():
 
 # ──────────────────── trend_dual ────────────────────
 
-class TestTrendDual:
 
+class TestTrendDual:
     def test_returns_required_keys(self, uptrend_market_state, trend_config):
         result = trend_dual(uptrend_market_state, trend_config)
         for key in ("signals", "n_signals", "cost_bps", "audit_evidence"):
@@ -122,13 +136,15 @@ class TestTrendDual:
         cfg2["risk"] = {"cost_bps": 5.0}
         r2 = trend_dual(uptrend_market_state, cfg2)
         # Different configs produce different fingerprints
-        assert r1["audit_evidence"]["config_fingerprint"] != r2["audit_evidence"]["config_fingerprint"]
+        assert (
+            r1["audit_evidence"]["config_fingerprint"] != r2["audit_evidence"]["config_fingerprint"]
+        )
 
 
 # ──────────────────── vwap_mr_dual ────────────────────
 
-class TestVwapMrDual:
 
+class TestVwapMrDual:
     def test_returns_required_keys(self, sine_market_state, mr_config):
         result = vwap_mr_dual(sine_market_state, mr_config)
         for key in ("signals", "n_signals", "cost_bps", "audit_evidence"):
@@ -150,13 +166,13 @@ class TestVwapMrDual:
     def test_sine_produces_some_signals(self, sine_market_state, mr_config):
         result = vwap_mr_dual(sine_market_state, mr_config)
         # Sine wave with tight bands should produce some mean-reversion signals
-        assert result["n_signals"] >= 0   # at minimum non-negative
+        assert result["n_signals"] >= 0  # at minimum non-negative
 
 
 # ──────────────────── spot_trend ────────────────────
 
-class TestSpotTrend:
 
+class TestSpotTrend:
     def test_returns_required_keys(self, uptrend_market_state, spot_config):
         result = spot_trend(uptrend_market_state, spot_config)
         for key in ("signals", "n_signals", "cost_bps", "audit_evidence"):
@@ -176,12 +192,16 @@ class TestSpotTrend:
         n = 400
         close = np.linspace(200, 50, n)  # strong downtrend
         ohlcv = {
-            "high": close + 2.0, "low": close - 2.0,
-            "close": close, "volume": np.ones(n) * 500.0,
+            "high": close + 2.0,
+            "low": close - 2.0,
+            "close": close,
+            "volume": np.ones(n) * 500.0,
         }
         ms = {
-            "ohlcv": ohlcv, "instrument": "BTC-USDT",
-            "current_positions": {}, "capital_usd": 1000.0,
+            "ohlcv": ohlcv,
+            "instrument": "BTC-USDT",
+            "current_positions": {},
+            "capital_usd": 1000.0,
         }
         cfg_bear = {
             "donchian": {"n_enter": 20, "n_exit": 10},

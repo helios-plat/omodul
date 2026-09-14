@@ -15,7 +15,7 @@ import traceback
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, ClassVar, Literal, Set
+from typing import Any, ClassVar, Literal
 
 from obase.cost_tracker import CostTracker
 from pydantic import BaseModel, Field
@@ -29,8 +29,8 @@ from omodul._report import write_markdown_report
 class MonthlyReviewConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "monthly_review_cron_orchestrator"
     _omodul_version: ClassVar[str] = "1.0.0"
-    _enabled_pillars: ClassVar[Set[str]] = {"fingerprint", "decision_trail", "report", "cost"}
-    _fingerprint_fields: ClassVar[Set[str]] = {"user_id_hash", "year_month"}
+    _enabled_pillars: ClassVar[set[str]] = {"fingerprint", "decision_trail", "report", "cost"}
+    _fingerprint_fields: ClassVar[set[str]] = {"user_id_hash", "year_month"}
 
     user_id_hash: str
     year_month: str  # "2026-05"
@@ -84,11 +84,11 @@ def monthly_review_cron_orchestrator(
     Returns dict with: findings, fingerprint, decision_trail, report_path,
     cost_usd, status, error.
     """
+    import oprim
     from oskill.discipline_vs_violation_winrate_compute import (
         TradeRecord,
         discipline_vs_violation_winrate_compute,
     )
-    import oprim
 
     started_at = datetime.now(UTC)
     if output_dir:

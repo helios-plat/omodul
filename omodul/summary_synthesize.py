@@ -13,6 +13,7 @@ Mandates (CI-checked):
   - synthesis_note="AII综合，非原文断言" hardcoded
   - grade = min(max_source_grade, "high")
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -20,21 +21,28 @@ import uuid
 from pathlib import Path
 from typing import Any, ClassVar
 
+from obase.provider_registry import ProviderRegistry
 from pydantic import BaseModel, ConfigDict, field_validator
 
-from obase.provider_registry import ProviderRegistry
-
 from omodul._base import (
-    BaseConfig, CostTracker, Trail, build_result, compute_fingerprint,
+    BaseConfig,
+    CostTracker,
+    Trail,
+    build_result,
+    compute_fingerprint,
 )
-
 
 # ---------------------------------------------------------------------------
 # Grade helpers
 # ---------------------------------------------------------------------------
 
 _GRADE_RANKS: dict[str, int] = {
-    "unverified": 0, "low": 1, "medium": 2, "high": 3, "verified": 4, "proven": 5,
+    "unverified": 0,
+    "low": 1,
+    "medium": 2,
+    "high": 3,
+    "verified": 4,
+    "proven": 5,
 }
 _GRADE_BY_RANK = {v: k for k, v in _GRADE_RANKS.items()}
 
@@ -54,6 +62,7 @@ def _cap_grade(grade: str, cap: str) -> str:
 # ---------------------------------------------------------------------------
 # Config / Findings
 # ---------------------------------------------------------------------------
+
 
 class SummarySynthesizeConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "summary_synthesize"
@@ -90,6 +99,7 @@ class SummarySynthesizeFindings(BaseModel):
 # Fingerprint helper
 # ---------------------------------------------------------------------------
 
+
 def compute_fingerprint_for_summary_synthesize(community_label: str) -> str:
     return compute_fingerprint({"community_label": community_label})
 
@@ -98,9 +108,10 @@ def compute_fingerprint_for_summary_synthesize(community_label: str) -> str:
 # Workflow
 # ---------------------------------------------------------------------------
 
+
 async def summary_synthesize(
     config: SummarySynthesizeConfig,
-    input_data: Any,   # SummarySynthesizeInput (oprim._aii_graph_types)
+    input_data: Any,  # SummarySynthesizeInput (oprim._aii_graph_types)
     output_dir: Path,
     *,
     on_step=None,

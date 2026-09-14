@@ -12,19 +12,13 @@ enabled; cost_tracker ContextVar unused. Awaiting Owner confirmation.
 from __future__ import annotations
 
 import hashlib
-import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, ClassVar, Set
+from typing import Any, ClassVar
 
 from obase.cost_tracker import CostTracker
-from omodul._base_config import BaseConfig
-from omodul._decision_trail import build_decision_trail, record_step
-from omodul._fingerprint import compute_fingerprint as _compute_fp_generic
-from oprim._exceptions import OprimError
-from oprim.apply_screen_filter import ScreenRule, apply_screen_filter
 from oprim.beneish_m_score import BeneishInput, beneish_m_score
 from oprim.dcf_valuation import dcf_valuation
 from oprim.dupont_decomposition import dupont_decomposition
@@ -36,13 +30,16 @@ from oprim.policy_event_extraction import PolicyNews, policy_event_extraction
 from oprim.volume_ratio import volume_ratio
 from pydantic import BaseModel, Field, field_validator
 
+from omodul._base_config import BaseConfig
+from omodul._decision_trail import build_decision_trail, record_step
+
 _VERSION = "1.0.0"
 _FALLBACK_SCORE = 50.0
 _INSUFFICIENT = "insufficient_data"
 _SEVERITY_WEIGHT = {"minor": 0.5, "moderate": 1.0, "major": 1.5, "critical": 2.0}
 
 
-def compute_fingerprint_for(config: "SymbolDimScoreConfig", input_data: Any) -> str:
+def compute_fingerprint_for(config: SymbolDimScoreConfig, input_data: Any) -> str:
     """公开 fingerprint API. 只依赖 {symbol, trade_date} — 不含 input_data."""
     raw = f"{config.symbol}|{config.trade_date.isoformat()}|{_VERSION}"
     return hashlib.sha256(raw.encode()).hexdigest()
@@ -51,11 +48,11 @@ def compute_fingerprint_for(config: "SymbolDimScoreConfig", input_data: Any) -> 
 class SymbolDimScoreConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "symbol_dim_score"
     _omodul_version: ClassVar[str] = _VERSION
-    _enabled_pillars: ClassVar[Set[str]] = {"fingerprint", "decision_trail"}
-    _fingerprint_fields: ClassVar[Set[str]] = {"symbol", "trade_date"}
+    _enabled_pillars: ClassVar[set[str]] = {"fingerprint", "decision_trail"}
+    _fingerprint_fields: ClassVar[set[str]] = {"symbol", "trade_date"}
 
     symbol: str
-    trade_date: "date"
+    trade_date: date
 
     @field_validator("symbol")
     @classmethod
@@ -254,7 +251,6 @@ def symbol_dim_score(
     Returns:
         dict: scores, evidence, fingerprint, decision_trail, status, error.
     """
-    from datetime import date as _date  # avoid shadowing at module level
 
     started_at = datetime.now(UTC)
     fingerprint = compute_fingerprint_for(config, input_data)

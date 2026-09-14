@@ -13,24 +13,26 @@ Flow:
 LLM is obtained from obase.ProviderRegistry.get().llm(config.llm_provider).
 cost: local ASR = 0; dashscope ASR and LLM structuring have cost tracked via CostTracker.
 """
+
 from __future__ import annotations
 
 import asyncio
-import tempfile
-import uuid
 from pathlib import Path
 from typing import Any, ClassVar
-
-from pydantic import BaseModel, ConfigDict
 
 from obase.provider_registry import ProviderRegistry
 from oprim._media_extract import media_extract
 from oprim._transcribe_audio import transcribe_audio
 from oskill._media_to_structured_md import media_to_structured_md
 from oskill.ingest_substrate import ingest_substrate
+from pydantic import BaseModel, ConfigDict
 
 from omodul._base import (
-    BaseConfig, CostTracker, Trail, build_result, compute_fingerprint,
+    BaseConfig,
+    CostTracker,
+    Trail,
+    build_result,
+    compute_fingerprint,
     write_report,
 )
 
@@ -146,7 +148,11 @@ async def process_media_substrate(
             _notify(on_step, "ingest", "started")
             ingest_result = await ingest_substrate(
                 path=md_path,
-                source={"type": "web_video", "source_path": config.video_url, "url": config.video_url},
+                source={
+                    "type": "web_video",
+                    "source_path": config.video_url,
+                    "url": config.video_url,
+                },
                 user_id_hash=config.user_id_hash,
             )
             substrate_id = ingest_result.substrate_id

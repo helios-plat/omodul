@@ -23,8 +23,8 @@ from oskill.sub_agent import SubAgent
 
 _log = logging.getLogger(__name__)
 
-MASTER_SYNTHESIS_PROMPT = (
-    """You are the Master Architect. Your swarm has completed their individual sub-tasks for
+MASTER_SYNTHESIS_PROMPT = """You are the Master Architect. Your swarm has completed
+their individual sub-tasks for
     the following goal:
 [GOAL]: {overarching_goal}
 
@@ -38,7 +38,6 @@ YOUR MISSION:
 3. Synthesize this into a cohesive final output (e.g., a complete file
    structure, or a combined Veya Artifact).
 """
-)
 
 
 class SwarmOrchestrator:
@@ -134,8 +133,7 @@ class SwarmOrchestrator:
             _log.error("swarm synthesis failed: %s", exc)
             return (
                 f"[MASTER SYNTHESIS FAILED: {exc}]\n\n"
-                "Raw swarm outputs (unmodified):\n"
-                + raw_outputs
+                "Raw swarm outputs (unmodified):\n" + raw_outputs
             )
 
     async def _run_and_notify(self, agent: SubAgent, instruction: str, index: int) -> str:

@@ -134,7 +134,10 @@ class AutomataScheduler:
 
     # ── task management ──────────────────────────────────────────────
     def register_cron_task(
-        self, cron_expr: str, task_prompt: str, task_id: str | None = None,
+        self,
+        cron_expr: str,
+        task_prompt: str,
+        task_id: str | None = None,
         user_id: str = "",
     ) -> str:
         """Register a Cron-scheduled background task (set an alarm).

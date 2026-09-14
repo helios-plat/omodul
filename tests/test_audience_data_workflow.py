@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Any
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -41,15 +41,19 @@ def bili_input() -> AudienceDataInput:
 def _mock_stages_success(tmp_path: Path):
     async def _fake(*args: Any, **kw: Any) -> AudienceDataFindings:
         return AudienceDataFindings(
-            videos_analyzed=2, total_views=1000, total_comments=50,
+            videos_analyzed=2,
+            total_views=1000,
+            total_comments=50,
             learnings=["Use shorter intros"],
         )
+
     return patch("omodul.audience_data_workflow._run_stages", side_effect=_fake)
 
 
 def _mock_stages_failure():
     async def _fail(*args: Any, **kw: Any) -> None:
         raise RuntimeError("YouTube API quota exceeded")
+
     return patch("omodul.audience_data_workflow._run_stages", side_effect=_fail)
 
 
@@ -111,7 +115,7 @@ class TestPipelineSuccess:
         self, yt_config: AudienceDataConfig, yt_input: AudienceDataInput, tmp_path: Path
     ) -> None:
         with _mock_stages_success(tmp_path):
-            result = audience_data_workflow(yt_config, yt_input, tmp_path)
+            audience_data_workflow(yt_config, yt_input, tmp_path)
         trail_file = tmp_path / "decision_trail.json"
         assert trail_file.exists()
         trail = json.loads(trail_file.read_text())
@@ -174,7 +178,15 @@ class TestOutputStructure:
     ) -> None:
         with _mock_stages_success(tmp_path):
             result = audience_data_workflow(yt_config, yt_input, tmp_path)
-        expected = {"findings", "fingerprint", "decision_trail", "report_path", "cost_usd", "status", "error"}
+        expected = {
+            "findings",
+            "fingerprint",
+            "decision_trail",
+            "report_path",
+            "cost_usd",
+            "status",
+            "error",
+        }
         assert set(result.keys()) == expected
 
     def test_on_step_callback(

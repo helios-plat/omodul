@@ -1,4 +1,5 @@
 """Tests for omodul.portfolio_construction.vol_target."""
+
 from __future__ import annotations
 
 import pytest
@@ -9,8 +10,10 @@ _DEFAULT_VOLS = {"BTC-USDT": 0.8, "ETH-USDT": 0.9}
 
 
 def _make_signals(
-    btc_dir="long", btc_str=0.7,
-    eth_dir="long", eth_str=0.5,
+    btc_dir="long",
+    btc_str=0.7,
+    eth_dir="long",
+    eth_str=0.5,
 ):
     return {
         "BTC-USDT": {"direction": btc_dir, "strength": btc_str, "confidence": 0.8},
@@ -87,8 +90,7 @@ class TestVolTargetRebalance:
         )
         # First pass: both should need rebalance (from 0)
         first_targets = {
-            sym: pos["target_notional_usd"]
-            for sym, pos in result["target_positions"].items()
+            sym: pos["target_notional_usd"] for sym, pos in result["target_positions"].items()
         }
 
         # Second pass: with current = targets → no rebalance
@@ -137,8 +139,10 @@ class TestVolTargetOutputKeys:
             instrument_vols=_DEFAULT_VOLS,
         )
         assert set(result.keys()) == {
-            "target_positions", "rebalance_count",
-            "total_gross_exposure", "vol_contribution_estimate",
+            "target_positions",
+            "rebalance_count",
+            "total_gross_exposure",
+            "vol_contribution_estimate",
         }
 
     def test_vol_target_position_entry_keys(self):

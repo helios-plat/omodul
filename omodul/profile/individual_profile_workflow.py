@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import uuid
-from typing import Any, Callable, Literal, Optional
+from collections.abc import Callable
+from typing import Any, Literal
 
 STABILITY = "experimental"
 
@@ -15,9 +16,9 @@ async def individual_profile_workflow(
     industry_context: dict,
     llm_client: Callable,
     prompt_builder: Callable,
-    cache: Optional[Any] = None,
-    bust_rules: Optional[list[Callable]] = None,
-    cost_tracker: Optional[Any] = None,
+    cache: Any | None = None,
+    bust_rules: list[Callable] | None = None,
+    cost_tracker: Any | None = None,
     tier: Literal["fast", "deep"] = "fast",
 ) -> dict:
     """Generate an LLM-driven security profile with caching and bust triggers.
@@ -95,13 +96,15 @@ async def individual_profile_workflow(
     if cached_profile is not None:
         profile = cached_profile
     else:
-        prompt = prompt_builder({
-            "symbol": symbol,
-            "facts": facts,
-            "user_context": user_context,
-            "industry_context": industry_context,
-            "tier": tier,
-        })
+        prompt = prompt_builder(
+            {
+                "symbol": symbol,
+                "facts": facts,
+                "user_context": user_context,
+                "industry_context": industry_context,
+                "tier": tier,
+            }
+        )
 
         try:
             if inspect.iscoroutinefunction(llm_client):
@@ -119,7 +122,8 @@ async def individual_profile_workflow(
             "strengths": facts.get("strengths", []),
             "weaknesses": facts.get("weaknesses", []),
             "key_metrics": {
-                k: v for k, v in facts.items()
+                k: v
+                for k, v in facts.items()
                 if k not in ("strengths", "weaknesses") and isinstance(v, (int, float))
             },
             "comparison_peers": industry_context.get("peers", []),
@@ -134,12 +138,14 @@ async def individual_profile_workflow(
 
     if cost_tracker is not None:
         try:
-            cost_tracker({
-                "trail_id": trail_id,
-                "symbol": symbol,
-                "cost": generation_cost,
-                "tier": tier,
-            })
+            cost_tracker(
+                {
+                    "trail_id": trail_id,
+                    "symbol": symbol,
+                    "cost": generation_cost,
+                    "tier": tier,
+                }
+            )
         except Exception:
             pass
 

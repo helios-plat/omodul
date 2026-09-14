@@ -1,4 +1,5 @@
 """Tests for apply_changeset.compute_fingerprint_for."""
+
 from __future__ import annotations
 
 import pytest

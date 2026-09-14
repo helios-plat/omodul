@@ -1,4 +1,5 @@
 """Systemic Risk Dashboard — full systemic risk analysis workflow."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -94,9 +95,7 @@ def systemic_risk_dashboard(
     # 1. Systemic risk metrics (CoVaR, MES)
     if systemic_risk_metrics is not None:
         try:
-            sys_metrics = systemic_risk_metrics(
-                returns, market_returns, metrics=["covar", "mes"]
-            )
+            sys_metrics = systemic_risk_metrics(returns, market_returns, metrics=["covar", "mes"])
         except Exception:
             sys_metrics = _fallback_systemic_metrics(returns, market_returns)
     else:

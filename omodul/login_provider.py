@@ -3,6 +3,7 @@ omodul.login_provider — Authenticate with an LLM provider via API key or OAuth
 
 Pillars: decision_trail
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -48,23 +49,25 @@ async def login_provider(
     trail = Trail()
 
     try:
-        trail.record(event="start_login", step_no=0, provider=input_data.provider,
-                     auth_mode=input_data.auth_mode)
+        trail.record(
+            event="start_login",
+            step_no=0,
+            provider=input_data.provider,
+            auth_mode=input_data.auth_mode,
+        )
 
         if input_data.auth_mode == "api_key":
             if input_data.validator is not None:
-                valid = await _call(input_data.validator,
-                                    key=input_data.api_key,
-                                    provider=input_data.provider)
+                valid = await _call(
+                    input_data.validator, key=input_data.api_key, provider=input_data.provider
+                )
             else:
                 valid = bool(input_data.api_key)
 
             if not valid:
                 trail.record(event="api_key_rejected", step_no=1)
                 loop = asyncio.get_event_loop()
-                await asyncio.shield(
-                    loop.run_in_executor(None, trail.write, output_dir)
-                )
+                await asyncio.shield(loop.run_in_executor(None, trail.write, output_dir))
                 return build_result(
                     status="failed",
                     error={"type": "AuthError", "message": "invalid api key"},
@@ -74,11 +77,13 @@ async def login_provider(
             trail.record(event="api_key_validated", step_no=1)
 
         elif input_data.auth_mode == "oauth":
-            trail.record(event="oauth_initiated", step_no=1,
-                         oauth_url=f"https://auth.{input_data.provider}.com/oauth")
+            trail.record(
+                event="oauth_initiated",
+                step_no=1,
+                oauth_url=f"https://auth.{input_data.provider}.com/oauth",
+            )
         else:
-            trail.record(event="unknown_auth_mode", step_no=1,
-                         auth_mode=input_data.auth_mode)
+            trail.record(event="unknown_auth_mode", step_no=1, auth_mode=input_data.auth_mode)
 
         loop = asyncio.get_event_loop()
         await asyncio.shield(loop.run_in_executor(None, trail.write, output_dir))

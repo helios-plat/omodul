@@ -3,6 +3,7 @@ omodul.compact_session — Compact a session history when it exceeds the token t
 
 Pillars: fingerprint, decision_trail
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -22,12 +23,14 @@ async def _call(fn: Any, **kwargs: Any) -> Any:
     return result
 
 
-def compute_fingerprint_for(config: "Config", input_data: "InputData") -> str:
+def compute_fingerprint_for(config: Config, input_data: InputData) -> str:
     """Fingerprint over session_id + history length."""
-    return compute_fingerprint({
-        "session_id": input_data.session_id,
-        "history_len": len(input_data.history),
-    })
+    return compute_fingerprint(
+        {
+            "session_id": input_data.session_id,
+            "history_len": len(input_data.history),
+        }
+    )
 
 
 class Config(BaseConfig):
@@ -59,14 +62,16 @@ async def compact_session(
     fp = compute_fingerprint_for(config, input_data)
 
     try:
-        trail.record(event="check_should_compact", step_no=0,
-                     session_id=input_data.session_id,
-                     history_len=len(input_data.history),
-                     threshold=config.token_threshold)
+        trail.record(
+            event="check_should_compact",
+            step_no=0,
+            session_id=input_data.session_id,
+            history_len=len(input_data.history),
+            threshold=config.token_threshold,
+        )
 
         should_compact = (
-            len(input_data.history) > config.token_threshold
-            or input_data.compactor is not None
+            len(input_data.history) > config.token_threshold or input_data.compactor is not None
         )
 
         if not should_compact:
@@ -82,8 +87,7 @@ async def compact_session(
         if new_history is None:
             new_history = input_data.history
 
-        trail.record(event="compact_done", step_no=1,
-                     new_history_len=len(new_history))
+        trail.record(event="compact_done", step_no=1, new_history_len=len(new_history))
 
         loop = asyncio.get_event_loop()
         await asyncio.shield(loop.run_in_executor(None, trail.write, output_dir))

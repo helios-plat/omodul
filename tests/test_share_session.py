@@ -1,4 +1,5 @@
 """Tests for omodul.share_session."""
+
 from __future__ import annotations
 
 import asyncio
@@ -6,7 +7,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from omodul.share_session import Config, InputData, share_session, compute_fingerprint_for
+from omodul.share_session import Config, InputData, compute_fingerprint_for, share_session
 
 
 # ---------------------------------------------------------------------------

@@ -26,9 +26,13 @@ class TestIndividualProfileWorkflow:
     async def test_basic_async_llm(self):
         result = await individual_profile_workflow(
             symbol="AAPL",
-            facts={"revenue_growth": 0.15, "pe_ratio": 25.0,
-                   "strengths": ["brand"], "weaknesses": ["valuation"],
-                   "risk_factors": ["macro"]},
+            facts={
+                "revenue_growth": 0.15,
+                "pe_ratio": 25.0,
+                "strengths": ["brand"],
+                "weaknesses": ["valuation"],
+                "risk_factors": ["macro"],
+            },
             user_context={"risk_tolerance": "moderate"},
             industry_context={"peers": ["MSFT", "GOOGL"]},
             llm_client=_simple_llm,
@@ -77,8 +81,10 @@ class TestIndividualProfileWorkflow:
         class DictCache:
             def __init__(self):
                 self._s = {}
+
             def get(self, k):
                 return self._s.get(k)
+
             def set(self, k, v):
                 self._s[k] = v
 
@@ -102,8 +108,10 @@ class TestIndividualProfileWorkflow:
         class DictCache:
             def __init__(self):
                 self._s = {}
+
             def get(self, k):
                 return self._s.get(k)
+
             def set(self, k, v):
                 self._s[k] = v
 
@@ -121,9 +129,7 @@ class TestIndividualProfileWorkflow:
         r1 = await individual_profile_workflow(**kwargs)
         assert r1["cache_status"] == "miss"
         # bust rule: always bust
-        r2 = await individual_profile_workflow(
-            **kwargs, bust_rules=[lambda cached, facts: True]
-        )
+        r2 = await individual_profile_workflow(**kwargs, bust_rules=[lambda cached, facts: True])
         assert r2["cache_status"] == "bust"
 
     @pytest.mark.asyncio
@@ -169,8 +175,12 @@ class TestIndividualProfileWorkflow:
         results = []
         for _ in range(3):
             r = await individual_profile_workflow(
-                symbol="NVDA", facts={}, user_context={}, industry_context={},
-                llm_client=_sync_llm, prompt_builder=_prompt_builder,
+                symbol="NVDA",
+                facts={},
+                user_context={},
+                industry_context={},
+                llm_client=_sync_llm,
+                prompt_builder=_prompt_builder,
             )
             results.append(r["trail_id"])
         assert len(set(results)) == 3
@@ -195,8 +205,9 @@ class TestIndividualProfileWorkflow:
         class BadCache:
             def get(self, k):
                 return None
+
             def set(self, k, v):
-                raise IOError("disk full")
+                raise OSError("disk full")
 
         result = await individual_profile_workflow(
             symbol="ORCL",
@@ -212,9 +223,11 @@ class TestIndividualProfileWorkflow:
     @pytest.mark.asyncio
     async def test_cache_get_error_graceful(self):
         """Cover lines 79-80: cache.get() raises, treated as miss."""
+
         class ErrorCache:
             def get(self, k):
-                raise IOError("cache unavailable")
+                raise OSError("cache unavailable")
+
             def set(self, k, v):
                 pass
 
@@ -233,11 +246,14 @@ class TestIndividualProfileWorkflow:
     @pytest.mark.asyncio
     async def test_bust_rule_exception_graceful(self):
         """Cover lines 91-92: bust_rule raises, bust not triggered."""
+
         class DictCache:
             def __init__(self):
                 self._s = {}
+
             def get(self, k):
                 return self._s.get(k)
+
             def set(self, k, v):
                 self._s[k] = v
 
@@ -253,6 +269,7 @@ class TestIndividualProfileWorkflow:
         )
         # First call → miss, populate cache
         await individual_profile_workflow(**kwargs)
+
         # Second call with bad bust_rule → should not bust
         def bad_bust_rule(cached, facts):
             raise RuntimeError("bust rule error")
@@ -263,6 +280,7 @@ class TestIndividualProfileWorkflow:
     @pytest.mark.asyncio
     async def test_cost_tracker_exception_graceful(self):
         """Cover lines 143-144: cost_tracker raises, no crash."""
+
         def bad_tracker(info):
             raise RuntimeError("tracker down")
 
@@ -284,8 +302,13 @@ class TestIndividualProfileWorkflow:
         framework of Kim et al. (2024) 'Large Language Models as Financial Analysts'."""
         result = await individual_profile_workflow(
             symbol="BRK",
-            facts={"pe_ratio": 15.0, "roe": 0.18, "strengths": ["diversified"],
-                   "weaknesses": ["complexity"], "risk_factors": ["succession"]},
+            facts={
+                "pe_ratio": 15.0,
+                "roe": 0.18,
+                "strengths": ["diversified"],
+                "weaknesses": ["complexity"],
+                "risk_factors": ["succession"],
+            },
             user_context={"experience": "expert"},
             industry_context={"peers": ["JPM", "GS"]},
             llm_client=_sync_llm,

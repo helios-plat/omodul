@@ -1,10 +1,9 @@
 """Tests for ScheduledJobRunner."""
+
 from __future__ import annotations
 
-import asyncio
-from datetime import datetime
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -14,12 +13,17 @@ from omodul.knowledge.scheduler.runner import ScheduledJobRunner
 
 def _make_store_and_runner(tmp_path: Path):
     from oprim.meta_db import MetaDB
+
     from omodul.knowledge.scheduler.job_store import JobStore
+
     db_path = tmp_path / "test.duckdb"
     db = MetaDB(db_path)
     migrations_dir = (
         Path(__file__).parent.parent.parent.parent.parent.parent
-        / "oprim" / "oprim" / "meta_db" / "migrations"
+        / "oprim"
+        / "oprim"
+        / "meta_db"
+        / "migrations"
     )
     if migrations_dir.exists():
         db.migrate(migrations_dir)
@@ -72,14 +76,16 @@ class TestScheduledJobRunner:
         from omodul.knowledge.agents.base import AgentResult
 
         store, runner = _make_store_and_runner(tmp_path)
-        job = store.create({
-            "user_id": "u1",
-            "name": "test_run_job",
-            "agent_name": "lint_bot",
-            "cron_expression": "0 7 * * 1",
-            "notify_on_completion": False,
-            "notify_on_failure": False,
-        })
+        job = store.create(
+            {
+                "user_id": "u1",
+                "name": "test_run_job",
+                "agent_name": "lint_bot",
+                "cron_expression": "0 7 * * 1",
+                "notify_on_completion": False,
+                "notify_on_failure": False,
+            }
+        )
 
         fake_result = AgentResult(
             success=True,
@@ -98,18 +104,19 @@ class TestScheduledJobRunner:
     @pytest.mark.asyncio
     async def test_run_failed_job_records_error(self, tmp_path):
         store, runner = _make_store_and_runner(tmp_path)
-        job = store.create({
-            "user_id": "u1",
-            "name": "fail_job",
-            "agent_name": "lint_bot",
-            "cron_expression": "0 7 * * 1",
-            "notify_on_completion": False,
-            "notify_on_failure": False,
-        })
+        job = store.create(
+            {
+                "user_id": "u1",
+                "name": "fail_job",
+                "agent_name": "lint_bot",
+                "cron_expression": "0 7 * * 1",
+                "notify_on_completion": False,
+                "notify_on_failure": False,
+            }
+        )
 
         with patch.object(
-            runner._agent_runner, "run",
-            new=AsyncMock(side_effect=RuntimeError("agent exploded"))
+            runner._agent_runner, "run", new=AsyncMock(side_effect=RuntimeError("agent exploded"))
         ):
             await runner.run(job["id"])
 
@@ -121,11 +128,13 @@ class TestScheduledJobRunner:
     @pytest.mark.asyncio
     async def test_run_unknown_agent_is_noop(self, tmp_path):
         store, runner = _make_store_and_runner(tmp_path)
-        job = store.create({
-            "user_id": "u1",
-            "name": "unknown_agent_job",
-            "agent_name": "no_such_agent_xyz",
-            "cron_expression": "0 7 * * 1",
-        })
+        job = store.create(
+            {
+                "user_id": "u1",
+                "name": "unknown_agent_job",
+                "agent_name": "no_such_agent_xyz",
+                "cron_expression": "0 7 * * 1",
+            }
+        )
         # Should not raise
         await runner.run(job["id"])

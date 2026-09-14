@@ -8,41 +8,48 @@ routing via omodul.compute_fingerprint_for.
 from __future__ import annotations
 
 from datetime import date
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 import omodul
-from omodul.macro_daily_report import (
-    MacroDailyReportConfig,
-    MacroDailyReportInput,
-    compute_fingerprint_for as fp_macro,
-    macro_daily_report,
+from omodul.discipline_banner_toast_data import (
+    DisciplineBannerConfig,
+    DisciplineBannerInput,
+    discipline_banner_toast_data,
+)
+from omodul.discipline_banner_toast_data import (
+    compute_fingerprint_for as fp_banner,
 )
 from omodul.lhb_institution_vs_hotmoney_panel import (
     LhbPanelConfig,
     LhbPanelInput,
-    compute_fingerprint_for as fp_lhb,
     lhb_institution_vs_hotmoney_panel,
 )
-from omodul.plan_card_render import (
-    PlanCardConfig,
-    PlanCardInput,
-    compute_fingerprint_for as fp_plan,
-    plan_card_render,
+from omodul.lhb_institution_vs_hotmoney_panel import (
+    compute_fingerprint_for as fp_lhb,
 )
-from omodul.discipline_banner_toast_data import (
-    DisciplineBannerConfig,
-    DisciplineBannerInput,
-    compute_fingerprint_for as fp_banner,
-    discipline_banner_toast_data,
+from omodul.macro_daily_report import (
+    MacroDailyReportConfig,
+    MacroDailyReportInput,
+    macro_daily_report,
+)
+from omodul.macro_daily_report import (
+    compute_fingerprint_for as fp_macro,
 )
 from omodul.monthly_review_cron_orchestrator import (
     MonthlyReviewConfig,
     MonthlyReviewInput,
-    compute_fingerprint_for as fp_monthly,
     monthly_review_cron_orchestrator,
+)
+from omodul.monthly_review_cron_orchestrator import (
+    compute_fingerprint_for as fp_monthly,
+)
+from omodul.plan_card_render import (
+    PlanCardConfig,
+    PlanCardInput,
+    plan_card_render,
+)
+from omodul.plan_card_render import (
+    compute_fingerprint_for as fp_plan,
 )
 
 # ── shared fixtures ────────────────────────────────────────────────────────────

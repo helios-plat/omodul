@@ -1,9 +1,11 @@
 """Test 3-agent orchestration with mocked agents."""
-import pytest
+
 from unittest.mock import AsyncMock, patch
 
-from omodul.llm_workflows.multi_agent_consensus import multi_agent_consensus
+import pytest
 from oskill.llm_client import LLMTimeout
+
+from omodul.llm_workflows.multi_agent_consensus import multi_agent_consensus
 
 
 def _bull_output(confidence=70, reasons=None):
@@ -77,15 +79,19 @@ def _market_state():
 
 @pytest.mark.asyncio
 async def test_consensus_happy():
-    with patch(
-        "omodul.llm_workflows.multi_agent_consensus.bull_analyst",
-        new=AsyncMock(return_value=_bull_output(70)),
-    ), patch(
-        "omodul.llm_workflows.multi_agent_consensus.bear_analyst",
-        new=AsyncMock(return_value=_bear_output(30)),
-    ), patch(
-        "omodul.llm_workflows.multi_agent_consensus.referee",
-        new=AsyncMock(return_value=_ref_output(0.6, "long", 80)),
+    with (
+        patch(
+            "omodul.llm_workflows.multi_agent_consensus.bull_analyst",
+            new=AsyncMock(return_value=_bull_output(70)),
+        ),
+        patch(
+            "omodul.llm_workflows.multi_agent_consensus.bear_analyst",
+            new=AsyncMock(return_value=_bear_output(30)),
+        ),
+        patch(
+            "omodul.llm_workflows.multi_agent_consensus.referee",
+            new=AsyncMock(return_value=_ref_output(0.6, "long", 80)),
+        ),
     ):
         result = await multi_agent_consensus(
             symbol="BTC-USDT",
@@ -105,15 +111,19 @@ async def test_consensus_happy():
 @pytest.mark.asyncio
 async def test_consensus_propagates_bull_fail():
     """If bull fails, whole consensus fails (no partial success)."""
-    with patch(
-        "omodul.llm_workflows.multi_agent_consensus.bull_analyst",
-        new=AsyncMock(side_effect=LLMTimeout("bull")),
-    ), patch(
-        "omodul.llm_workflows.multi_agent_consensus.bear_analyst",
-        new=AsyncMock(return_value=_bear_output(40)),
-    ), patch(
-        "omodul.llm_workflows.multi_agent_consensus.referee",
-        new=AsyncMock(return_value=_ref_output()),
+    with (
+        patch(
+            "omodul.llm_workflows.multi_agent_consensus.bull_analyst",
+            new=AsyncMock(side_effect=LLMTimeout("bull")),
+        ),
+        patch(
+            "omodul.llm_workflows.multi_agent_consensus.bear_analyst",
+            new=AsyncMock(return_value=_bear_output(40)),
+        ),
+        patch(
+            "omodul.llm_workflows.multi_agent_consensus.referee",
+            new=AsyncMock(return_value=_ref_output()),
+        ),
     ):
         with pytest.raises(LLMTimeout):
             await multi_agent_consensus(
@@ -126,15 +136,19 @@ async def test_consensus_propagates_bull_fail():
 
 @pytest.mark.asyncio
 async def test_consensus_propagates_referee_fail():
-    with patch(
-        "omodul.llm_workflows.multi_agent_consensus.bull_analyst",
-        new=AsyncMock(return_value=_bull_output()),
-    ), patch(
-        "omodul.llm_workflows.multi_agent_consensus.bear_analyst",
-        new=AsyncMock(return_value=_bear_output()),
-    ), patch(
-        "omodul.llm_workflows.multi_agent_consensus.referee",
-        new=AsyncMock(side_effect=LLMTimeout("referee")),
+    with (
+        patch(
+            "omodul.llm_workflows.multi_agent_consensus.bull_analyst",
+            new=AsyncMock(return_value=_bull_output()),
+        ),
+        patch(
+            "omodul.llm_workflows.multi_agent_consensus.bear_analyst",
+            new=AsyncMock(return_value=_bear_output()),
+        ),
+        patch(
+            "omodul.llm_workflows.multi_agent_consensus.referee",
+            new=AsyncMock(side_effect=LLMTimeout("referee")),
+        ),
     ):
         with pytest.raises(LLMTimeout):
             await multi_agent_consensus(
@@ -147,15 +161,19 @@ async def test_consensus_propagates_referee_fail():
 
 @pytest.mark.asyncio
 async def test_consensus_audit_evidence_structure():
-    with patch(
-        "omodul.llm_workflows.multi_agent_consensus.bull_analyst",
-        new=AsyncMock(return_value=_bull_output(60, ["reason1"])),
-    ), patch(
-        "omodul.llm_workflows.multi_agent_consensus.bear_analyst",
-        new=AsyncMock(return_value=_bear_output(40, ["bear_reason"])),
-    ), patch(
-        "omodul.llm_workflows.multi_agent_consensus.referee",
-        new=AsyncMock(return_value=_ref_output(0.3, "long", 65)),
+    with (
+        patch(
+            "omodul.llm_workflows.multi_agent_consensus.bull_analyst",
+            new=AsyncMock(return_value=_bull_output(60, ["reason1"])),
+        ),
+        patch(
+            "omodul.llm_workflows.multi_agent_consensus.bear_analyst",
+            new=AsyncMock(return_value=_bear_output(40, ["bear_reason"])),
+        ),
+        patch(
+            "omodul.llm_workflows.multi_agent_consensus.referee",
+            new=AsyncMock(return_value=_ref_output(0.3, "long", 65)),
+        ),
     ):
         result = await multi_agent_consensus(
             symbol="BTC-USDT",
@@ -200,15 +218,19 @@ async def test_consensus_parallel_bull_bear():
         call_order.append("bear_end")
         return _bear_output()
 
-    with patch(
-        "omodul.llm_workflows.multi_agent_consensus.bull_analyst",
-        new=slow_bull,
-    ), patch(
-        "omodul.llm_workflows.multi_agent_consensus.bear_analyst",
-        new=slow_bear,
-    ), patch(
-        "omodul.llm_workflows.multi_agent_consensus.referee",
-        new=AsyncMock(return_value=_ref_output()),
+    with (
+        patch(
+            "omodul.llm_workflows.multi_agent_consensus.bull_analyst",
+            new=slow_bull,
+        ),
+        patch(
+            "omodul.llm_workflows.multi_agent_consensus.bear_analyst",
+            new=slow_bear,
+        ),
+        patch(
+            "omodul.llm_workflows.multi_agent_consensus.referee",
+            new=AsyncMock(return_value=_ref_output()),
+        ),
     ):
         await multi_agent_consensus(
             symbol="BTC-USDT",

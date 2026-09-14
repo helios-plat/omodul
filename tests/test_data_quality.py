@@ -46,31 +46,37 @@ class TestCrossSourceConsistencyCheck:
     def test_consistent_sources(self):
         rng = np.random.default_rng(42)
         base = rng.normal(100, 10, 200)
-        data = pd.DataFrame({
-            "source_a": base + rng.normal(0, 0.5, 200),
-            "source_b": base + rng.normal(0, 0.5, 200),
-            "source_c": base + rng.normal(0, 0.5, 200),
-        })
+        data = pd.DataFrame(
+            {
+                "source_a": base + rng.normal(0, 0.5, 200),
+                "source_b": base + rng.normal(0, 0.5, 200),
+                "source_c": base + rng.normal(0, 0.5, 200),
+            }
+        )
         result = cross_source_consistency_check(data, consistency_threshold_corr=0.8)
         assert result["summary"]["all_consistent"]
         assert result["recommended_source"] is not None
 
     def test_inconsistent_source(self):
         rng = np.random.default_rng(42)
-        data = pd.DataFrame({
-            "good_a": rng.normal(100, 10, 200),
-            "good_b": rng.normal(100, 10, 200),
-            "bad": rng.normal(500, 50, 200),  # very different
-        })
+        data = pd.DataFrame(
+            {
+                "good_a": rng.normal(100, 10, 200),
+                "good_b": rng.normal(100, 10, 200),
+                "bad": rng.normal(500, 50, 200),  # very different
+            }
+        )
         result = cross_source_consistency_check(data)
         assert not result["summary"]["all_consistent"]
 
     def test_with_outlier_detection(self):
         rng = np.random.default_rng(42)
-        data = pd.DataFrame({
-            "a": rng.normal(0, 1, 100),
-            "b": rng.normal(0, 1, 100),
-        })
+        data = pd.DataFrame(
+            {
+                "a": rng.normal(0, 1, 100),
+                "b": rng.normal(0, 1, 100),
+            }
+        )
         result = cross_source_consistency_check(data, include_outlier_detection=True)
         assert "outlier_periods" in result
 

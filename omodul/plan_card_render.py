@@ -14,7 +14,7 @@ import traceback
 from collections.abc import Callable
 from datetime import UTC, date, datetime
 from pathlib import Path
-from typing import Any, ClassVar, Set
+from typing import Any, ClassVar
 
 from obase.cost_tracker import CostTracker
 from pydantic import BaseModel, Field
@@ -27,8 +27,8 @@ from omodul._fingerprint import compute_fingerprint
 class PlanCardConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "plan_card_render"
     _omodul_version: ClassVar[str] = "1.0.0"
-    _enabled_pillars: ClassVar[Set[str]] = {"fingerprint", "decision_trail"}
-    _fingerprint_fields: ClassVar[Set[str]] = {"symbol", "trade_date"}
+    _enabled_pillars: ClassVar[set[str]] = {"fingerprint", "decision_trail"}
+    _fingerprint_fields: ClassVar[set[str]] = {"symbol", "trade_date"}
 
     symbol: str
     trade_date: date

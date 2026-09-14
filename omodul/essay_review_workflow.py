@@ -5,19 +5,21 @@ Pillars: fingerprint, report, decision_trail
 Composes: oskill.essay_assessment
 Report content: rubric scores + guidance questions (NO model essay).
 """
+
 from __future__ import annotations
 
 import asyncio
-import hashlib
-import json
-import uuid
 from pathlib import Path
 from typing import Any, ClassVar
 
 from pydantic import BaseModel, ConfigDict
 
 from omodul._base import (
-    BaseConfig, CostTracker, Trail, build_result, compute_fingerprint,
+    BaseConfig,
+    CostTracker,
+    Trail,
+    build_result,
+    compute_fingerprint,
     write_report,
 )
 
@@ -39,13 +41,17 @@ class InputData(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
-def compute_fingerprint_for_essay_review_workflow(essay_text: str, grade_level: str, essay_type: str) -> str:
+def compute_fingerprint_for_essay_review_workflow(
+    essay_text: str, grade_level: str, essay_type: str
+) -> str:
     """Compute deterministic fingerprint for an essay review request."""
-    return compute_fingerprint({
-        "essay_text": essay_text,
-        "grade_level": grade_level,
-        "essay_type": essay_type,
-    })
+    return compute_fingerprint(
+        {
+            "essay_text": essay_text,
+            "grade_level": grade_level,
+            "essay_type": essay_type,
+        }
+    )
 
 
 async def essay_review_workflow(
@@ -71,7 +77,9 @@ async def essay_review_workflow(
         from oprim._mneme_speech_types import EssayAssessmentInput
         from oskill._essay_assessment import essay_assessment
 
-        trail.record(event="review_start", fingerprint=fingerprint, grade_level=input_data.grade_level)
+        trail.record(
+            event="review_start", fingerprint=fingerprint, grade_level=input_data.grade_level
+        )
 
         inp = EssayAssessmentInput(
             essay_text=input_data.essay_text,
@@ -137,11 +145,11 @@ async def essay_review_workflow(
 
 def _build_report(result, input_data: InputData) -> str:
     lines = [
-        f"# 作文评测报告",
-        f"",
+        "# 作文评测报告",
+        "",
         f"**年级**：{input_data.grade_level}  **文体**：{input_data.essay_type}",
         f"**是否需要修改**：{'是' if result.revision_needed else '否'}",
-        f"",
+        "",
         "## 各维度得分",
         "",
     ]

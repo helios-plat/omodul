@@ -1,11 +1,14 @@
-"""Tests for omodul.generative_video_pipeline — 4 pillars: fingerprint, decision_trail, report, cost."""
+"""Tests for omodul.generative_video_pipeline.
+
+The workflow exposes fingerprint, decision-trail, report, and cost pillars.
+"""
 
 from __future__ import annotations
 
 import json
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -17,7 +20,6 @@ from omodul.generative_video_pipeline import (
     compute_fingerprint_for,
     generative_video_pipeline,
 )
-
 
 # --- Fixtures ---
 
@@ -73,9 +75,7 @@ class TestFingerprint:
         c2 = GenerativeVideoConfig(topic="dogs")
         assert compute_fingerprint_for(c1, input_data) != compute_fingerprint_for(c2, input_data)
 
-    def test_change_non_fingerprint_field_no_change(
-        self, input_data: GenerativeVideoInput
-    ) -> None:
+    def test_change_non_fingerprint_field_no_change(self, input_data: GenerativeVideoInput) -> None:
         c1 = GenerativeVideoConfig(topic="cats", burn_subtitles=True)
         c2 = GenerativeVideoConfig(topic="cats", burn_subtitles=False)
         assert compute_fingerprint_for(c1, input_data) == compute_fingerprint_for(c2, input_data)
@@ -212,7 +212,15 @@ class TestOutputStructure:
     ) -> None:
         with _mock_pipeline_success(tmp_path):
             result = generative_video_pipeline(config, input_data, tmp_path)
-        expected_keys = {"findings", "fingerprint", "decision_trail", "report_path", "cost_usd", "status", "error"}
+        expected_keys = {
+            "findings",
+            "fingerprint",
+            "decision_trail",
+            "report_path",
+            "cost_usd",
+            "status",
+            "error",
+        }
         assert set(result.keys()) == expected_keys
 
     def test_findings_model(
@@ -239,12 +247,19 @@ class TestV2TemplateLoading:
         # Create a template file
         tmpl_path = tmp_path / "configs" / "templates" / "finance.yaml"
         tmpl_path.parent.mkdir(parents=True)
-        tmpl_path.write_text(yaml.dump({
-            "name": "finance", "version": "1.0.0",
-            "system_prompt": "You are a quant expert.", "metadata": {},
-        }))
+        tmpl_path.write_text(
+            yaml.dump(
+                {
+                    "name": "finance",
+                    "version": "1.0.0",
+                    "system_prompt": "You are a quant expert.",
+                    "metadata": {},
+                }
+            )
+        )
 
         import os
+
         old_cwd = os.getcwd()
         os.chdir(tmp_path)
         try:
@@ -268,7 +283,8 @@ class TestV2ImageToVideo:
     def test_image_to_video_enabled_triggers_stage(self) -> None:
         """image_to_video_enabled=True adds the field to config."""
         config = GenerativeVideoConfig(
-            topic="test", image_to_video_enabled=True,
+            topic="test",
+            image_to_video_enabled=True,
             image_to_video_provider="wan22_cloud",
         )
         assert config.image_to_video_enabled is True
@@ -295,9 +311,7 @@ class TestV2Fingerprint:
         fp2 = compute_fingerprint_for(c2, input_data)
         assert fp1 != fp2
 
-    def test_v2_fingerprint_face_animation_provider(
-        self, input_data: GenerativeVideoInput
-    ) -> None:
+    def test_v2_fingerprint_face_animation_provider(self, input_data: GenerativeVideoInput) -> None:
         """Changing face_animation_provider changes fingerprint."""
         c1 = GenerativeVideoConfig(topic="cats", face_animation_provider="wav2lip")
         c2 = GenerativeVideoConfig(topic="cats", face_animation_provider="sadtalker")
@@ -312,7 +326,6 @@ class TestV2Fingerprint:
         assert len(fp) == 64
         # Verify version is embedded (by checking config version)
         assert config._omodul_version == "2.0.0"
-
 
     def test_template_not_found_raises(self, tmp_path: Path) -> None:
         """_stage_load_template raises when template doesn't exist."""

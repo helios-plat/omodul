@@ -9,13 +9,11 @@ from __future__ import annotations
 import asyncio
 import base64
 import json
-import tempfile
+from dataclasses import dataclass
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
-from dataclasses import dataclass
 
 
 @dataclass
@@ -30,12 +28,15 @@ class PronunciationResult:
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _b64(text: str = "audio") -> str:
     return base64.b64encode(text.encode()).decode()
 
 
 def _pron(overall: float = 0.8) -> PronunciationResult:
-    return PronunciationResult(overall_score=overall, fluency_score=0.75, accuracy_score=0.85, word_scores=[])
+    return PronunciationResult(
+        overall_score=overall, fluency_score=0.75, accuracy_score=0.85, word_scores=[]
+    )
 
 
 def _make_tts():
@@ -53,15 +54,24 @@ def _make_pron_eval(overall: float = 0.8):
 def _make_llm(text: str = "Well done! What else？"):
     async def caller(*, messages, max_tokens=256, **kwargs):
         return {"content": [{"type": "text", "text": text}], "usage": {}}
+
     return caller
 
 
 def _make_essay_llm(questions=None):
     if questions is None:
-        questions = ["你认为论点还可以如何加强？", "例子是否足够有说服力？", "结尾传达了什么核心信息？"]
+        questions = [
+            "你认为论点还可以如何加强？",
+            "例子是否足够有说服力？",
+            "结尾传达了什么核心信息？",
+        ]
 
     async def caller(*, messages, max_tokens=512, **kwargs):
-        return {"content": [{"type": "text", "text": json.dumps(questions, ensure_ascii=False)}], "usage": {}}
+        return {
+            "content": [{"type": "text", "text": json.dumps(questions, ensure_ascii=False)}],
+            "usage": {},
+        }
+
     return caller
 
 
@@ -78,13 +88,16 @@ _SAMPLE_ESSAY = """\
 # M-1: speaking_practice_workflow
 # ===========================================================================
 
+
 class TestSpeakingPracticeWorkflow:
     def _make_config(self, turns=1):
         from omodul.speaking_practice_workflow import Config
+
         return Config(max_turns=turns)
 
     def _make_input(self, topic="Sports", db_pool=None):
         from omodul.speaking_practice_workflow import InputData
+
         return InputData(
             topic=topic,
             user_id="u001",
@@ -98,35 +111,27 @@ class TestSpeakingPracticeWorkflow:
     async def test_returns_completed_status(self, tmp_path):
         from omodul.speaking_practice_workflow import speaking_practice_workflow
 
-        result = await speaking_practice_workflow(
-            self._make_config(), self._make_input(), tmp_path
-        )
+        result = await speaking_practice_workflow(self._make_config(), self._make_input(), tmp_path)
         assert result["status"] == "completed"
 
     async def test_result_has_session_id(self, tmp_path):
         from omodul.speaking_practice_workflow import speaking_practice_workflow
 
-        result = await speaking_practice_workflow(
-            self._make_config(), self._make_input(), tmp_path
-        )
+        result = await speaking_practice_workflow(self._make_config(), self._make_input(), tmp_path)
         assert "session_id" in result
         assert len(result["session_id"]) == 16
 
     async def test_result_has_cost_usd(self, tmp_path):
         from omodul.speaking_practice_workflow import speaking_practice_workflow
 
-        result = await speaking_practice_workflow(
-            self._make_config(), self._make_input(), tmp_path
-        )
+        result = await speaking_practice_workflow(self._make_config(), self._make_input(), tmp_path)
         assert "cost_usd" in result
         assert isinstance(result["cost_usd"], float)
 
     async def test_result_has_decision_trail(self, tmp_path):
         from omodul.speaking_practice_workflow import speaking_practice_workflow
 
-        result = await speaking_practice_workflow(
-            self._make_config(), self._make_input(), tmp_path
-        )
+        result = await speaking_practice_workflow(self._make_config(), self._make_input(), tmp_path)
         assert "decision_trail" in result
         assert result["decision_trail"]["steps"] >= 2
 
@@ -147,7 +152,7 @@ class TestSpeakingPracticeWorkflow:
         assert 0.0 <= result["overall_progress"] <= 1.0
 
     async def test_cancelled_error_propagates(self, tmp_path):
-        from omodul.speaking_practice_workflow import speaking_practice_workflow, Config, InputData
+        from omodul.speaking_practice_workflow import Config, InputData, speaking_practice_workflow
 
         async def failing_tts(**kwargs):
             raise asyncio.CancelledError()
@@ -163,7 +168,7 @@ class TestSpeakingPracticeWorkflow:
             await speaking_practice_workflow(Config(max_turns=1), inp, tmp_path)
 
     async def test_exception_returns_failed_status(self, tmp_path):
-        from omodul.speaking_practice_workflow import speaking_practice_workflow, Config, InputData
+        from omodul.speaking_practice_workflow import Config, InputData, speaking_practice_workflow
 
         async def broken_tts(**kwargs):
             raise RuntimeError("provider down")
@@ -205,13 +210,16 @@ class TestSpeakingPracticeWorkflow:
 # M-2: essay_review_workflow
 # ===========================================================================
 
+
 class TestEssayReviewWorkflow:
     def _make_config(self):
         from omodul.essay_review_workflow import Config
+
         return Config()
 
     def _make_input(self, essay=_SAMPLE_ESSAY):
         from omodul.essay_review_workflow import InputData
+
         return InputData(
             essay_text=essay,
             grade_level="高中",
@@ -275,7 +283,7 @@ class TestEssayReviewWorkflow:
         assert result["decision_trail"]["steps"] >= 2
 
     async def test_cancelled_error_propagates(self, tmp_path):
-        from omodul.essay_review_workflow import essay_review_workflow, Config, InputData
+        from omodul.essay_review_workflow import Config, InputData, essay_review_workflow
 
         async def cancel_llm(*, messages, max_tokens=512, **kwargs):
             raise asyncio.CancelledError()

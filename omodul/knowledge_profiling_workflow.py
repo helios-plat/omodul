@@ -5,6 +5,7 @@ a KC mastery map with peer comparison summary.
 
 Pillars: fingerprint + decision_trail + report
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -33,9 +34,7 @@ class KnowledgeProfilingInput(BaseModel):
     kc_labels: dict[str, str] = {}
 
 
-def _compute_mastery_map(
-    attempt_history: list[dict], min_attempts: int
-) -> dict[str, float]:
+def _compute_mastery_map(attempt_history: list[dict], min_attempts: int) -> dict[str, float]:
     by_kc: dict[str, list[bool]] = {}
     for rec in attempt_history:
         kc = rec.get("kc_id", "")
@@ -74,6 +73,7 @@ async def knowledge_profiling_workflow(
         if input_data.peer_mastery_map:
             try:
                 from oprim.compute_peer_percentile import compute_peer_percentile
+
                 for kc, student_val in mastery_map.items():
                     peer_val = input_data.peer_mastery_map.get(kc, student_val)
                     peer_percentile[kc] = compute_peer_percentile(

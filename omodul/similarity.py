@@ -5,11 +5,10 @@ from __future__ import annotations
 from typing import Literal
 
 import numpy as np
-import pandas as pd
-from sklearn.cluster import DBSCAN
-
 import oprim
 import oskill
+import pandas as pd
+from sklearn.cluster import DBSCAN
 
 
 def smart_peer_finder(
@@ -59,13 +58,14 @@ def smart_peer_finder(
 
     if ts_methods and not has_ts:
         import warnings
+
         warnings.warn(
             f"methods {ts_methods} require 'timeseries' in query but none provided; skipped",
             stacklevel=2,
         )
 
     # Compute signature-based distances
-    scores = np.zeros(n_candidates)
+    np.zeros(n_candidates)
     method_scores: dict[str, np.ndarray] = {}
 
     if "cosine" in sig_methods:
@@ -96,8 +96,11 @@ def smart_peer_finder(
                 candidate_ts.append(query_arr)  # fallback
 
         matches = oskill.historical_analogy_search(
-            query_arr, candidate_ts, methods=ts_methods,
-            ensemble=ensemble, top_k=n_candidates,
+            query_arr,
+            candidate_ts,
+            methods=ts_methods,
+            ensemble=ensemble,
+            top_k=n_candidates,
         )
         for match in matches:
             idx = match["historical_idx"]
@@ -108,6 +111,7 @@ def smart_peer_finder(
 
     # Ensemble ranking
     from scipy.stats import rankdata
+
     ranks = {m: rankdata(d, method="average") for m, d in method_scores.items()}
 
     if ensemble == "mean_rank":
@@ -135,7 +139,9 @@ def smart_peer_finder(
         }
         if include_explanation:
             best_method = min(method_scores.keys(), key=lambda m: ranks[m][idx])
-            entry["explanation"] = f"Most similar on {best_method} (rank {int(ranks[best_method][idx])})"
+            entry["explanation"] = (
+                f"Most similar on {best_method} (rank {int(ranks[best_method][idx])})"
+            )
         matches_result.append(entry)
 
     return {
@@ -143,8 +149,11 @@ def smart_peer_finder(
         "summary": {
             "n_candidates": n_candidates,
             "methods_used": list(method_scores.keys()),
-            "primary_similarity_dimension": min(method_scores.keys(),
-                                                 key=lambda m: np.min(method_scores[m])) if method_scores else None,
+            "primary_similarity_dimension": min(
+                method_scores.keys(), key=lambda m: np.min(method_scores[m])
+            )
+            if method_scores
+            else None,
         },
         "warnings": [],
     }
@@ -217,15 +226,19 @@ def event_cascade_clusterer(
         dists_to_centroid = np.linalg.norm(cluster_embeddings - centroid_emb, axis=1)
         centroid_idx = member_indices[np.argmin(dists_to_centroid)]
 
-        clusters.append({
-            "cluster_id": int(cluster_id),
-            "member_event_ids": member_ids,
-            "n_members": len(member_ids),
-            "first_ts": timestamps_cluster.min(),
-            "last_ts": timestamps_cluster.max(),
-            "span_hours": float((timestamps_cluster.max() - timestamps_cluster.min()).total_seconds() / 3600),
-            "centroid_event_id": df.iloc[centroid_idx]["event_id"],
-        })
+        clusters.append(
+            {
+                "cluster_id": int(cluster_id),
+                "member_event_ids": member_ids,
+                "n_members": len(member_ids),
+                "first_ts": timestamps_cluster.min(),
+                "last_ts": timestamps_cluster.max(),
+                "span_hours": float(
+                    (timestamps_cluster.max() - timestamps_cluster.min()).total_seconds() / 3600
+                ),
+                "centroid_event_id": df.iloc[centroid_idx]["event_id"],
+            }
+        )
 
     noise_mask = labels == -1
     noise_events = df.iloc[np.where(noise_mask)[0]]["event_id"].tolist()

@@ -1,10 +1,10 @@
 """DuckDB-backed scheduled job persistence."""
+
 from __future__ import annotations
 
 import json
 import uuid
 from datetime import datetime
-from typing import Any
 
 from oprim.meta_db import MetaDB, open_meta_db
 from oskill.knowledge._context import meta_db_path
@@ -56,9 +56,7 @@ class JobStore:
 
     def get(self, job_id: str) -> dict:
         db = self._get_db()
-        rows = db.fetchall(
-            "SELECT * FROM scheduled_jobs WHERE id = ?", [job_id]
-        )
+        rows = db.fetchall("SELECT * FROM scheduled_jobs WHERE id = ?", [job_id])
         if not rows:
             raise JobNotFoundError(f"Scheduled job not found: {job_id!r}")
         return self._row_to_dict(rows[0])
@@ -73,9 +71,7 @@ class JobStore:
 
     def list_enabled_jobs(self) -> list[dict]:
         db = self._get_db()
-        rows = db.fetchall(
-            "SELECT * FROM scheduled_jobs WHERE enabled = TRUE"
-        )
+        rows = db.fetchall("SELECT * FROM scheduled_jobs WHERE enabled = TRUE")
         return [self._row_to_dict(r) for r in rows]
 
     def list_jobs(self, user_id: str) -> list[dict]:
@@ -90,8 +86,13 @@ class JobStore:
         db = self._get_db()
         updates["updated_at"] = datetime.utcnow().isoformat()
         allowed = {
-            "enabled", "cron_expression", "timezone", "agent_params",
-            "notify_on_completion", "notify_on_failure", "max_runtime_seconds",
+            "enabled",
+            "cron_expression",
+            "timezone",
+            "agent_params",
+            "notify_on_completion",
+            "notify_on_failure",
+            "max_runtime_seconds",
             "updated_at",
         }
         fields = {k: v for k, v in updates.items() if k in allowed}
@@ -111,9 +112,7 @@ class JobStore:
 
     # --- Run history ---
 
-    def create_run(
-        self, run_id: str, job_id: str, status: str, started_at: datetime
-    ) -> None:
+    def create_run(self, run_id: str, job_id: str, status: str, started_at: datetime) -> None:
         db = self._get_db()
         db.execute(
             """
@@ -150,19 +149,35 @@ class JobStore:
     def list_runs(self, job_id: str, limit: int = 50) -> list[dict]:
         db = self._get_db()
         rows = db.fetchall(
-            "SELECT * FROM scheduled_job_runs WHERE job_id = ? "
-            "ORDER BY started_at DESC LIMIT ?",
+            "SELECT * FROM scheduled_job_runs WHERE job_id = ? ORDER BY started_at DESC LIMIT ?",
             [job_id, limit],
         )
-        cols = ["id", "job_id", "agent_run_id", "status", "started_at", "completed_at", "error_message"]
+        cols = [
+            "id",
+            "job_id",
+            "agent_run_id",
+            "status",
+            "started_at",
+            "completed_at",
+            "error_message",
+        ]
         return [dict(zip(cols, r)) for r in rows]
 
     @staticmethod
     def _row_to_dict(row: tuple) -> dict:
         cols = [
-            "id", "user_id", "name", "agent_name", "agent_params",
-            "cron_expression", "timezone", "enabled",
-            "notify_on_completion", "notify_on_failure",
-            "max_runtime_seconds", "created_at", "updated_at",
+            "id",
+            "user_id",
+            "name",
+            "agent_name",
+            "agent_params",
+            "cron_expression",
+            "timezone",
+            "enabled",
+            "notify_on_completion",
+            "notify_on_failure",
+            "max_runtime_seconds",
+            "created_at",
+            "updated_at",
         ]
         return dict(zip(cols, row))

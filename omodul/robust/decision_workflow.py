@@ -1,4 +1,5 @@
 """Robust Decision Workflow — multi-criterion robust portfolio selection."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -154,15 +155,8 @@ def robust_decision_workflow(
 
     # Compute pairwise L2 dispersion
     all_weights = [w_mult, w_var, w_smooth, w_maxmin]
-    pairs = [
-        (i, j)
-        for i in range(4)
-        for j in range(i + 1, 4)
-    ]
-    pairwise_dists = [
-        float(np.linalg.norm(all_weights[i] - all_weights[j]))
-        for i, j in pairs
-    ]
+    pairs = [(i, j) for i in range(4) for j in range(i + 1, 4)]
+    pairwise_dists = [float(np.linalg.norm(all_weights[i] - all_weights[j])) for i, j in pairs]
     weight_dispersion = float(np.mean(pairwise_dists))
 
     return {

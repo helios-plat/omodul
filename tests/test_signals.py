@@ -11,11 +11,13 @@ class TestAlertCalibrationEngine:
     def test_basic_calibration(self):
         rng = np.random.default_rng(42)
         n = 200
-        df = pd.DataFrame({
-            "alert_type": rng.choice(["price", "volume"], n),
-            "predicted_prob": rng.uniform(0, 1, n),
-            "actual_outcome": rng.choice([0.0, 1.0], n),
-        })
+        df = pd.DataFrame(
+            {
+                "alert_type": rng.choice(["price", "volume"], n),
+                "predicted_prob": rng.uniform(0, 1, n),
+                "actual_outcome": rng.choice([0.0, 1.0], n),
+            }
+        )
         result = alert_calibration_engine(df)
         assert "overall" in result
         assert "per_group" in result
@@ -23,11 +25,13 @@ class TestAlertCalibrationEngine:
 
     def test_with_bandit_state(self):
         rng = np.random.default_rng(42)
-        df = pd.DataFrame({
-            "alert_type": ["A"] * 100,
-            "predicted_prob": rng.uniform(0, 1, 100),
-            "actual_outcome": rng.choice([0.0, 1.0], 100),
-        })
+        df = pd.DataFrame(
+            {
+                "alert_type": ["A"] * 100,
+                "predicted_prob": rng.uniform(0, 1, 100),
+                "actual_outcome": rng.choice([0.0, 1.0], 100),
+            }
+        )
         result = alert_calibration_engine(df, include_bandit_state=True)
         assert result["per_group"]["A"]["bandit_state"] is not None
 
@@ -43,22 +47,26 @@ class TestAlertCalibrationEngine:
         """Cover lines 41-42: time_window filters by timestamp."""
         rng = np.random.default_rng(42)
         n = 100
-        df = pd.DataFrame({
-            "alert_type": ["A"] * n,
-            "predicted_prob": rng.uniform(0, 1, n),
-            "actual_outcome": rng.choice([0.0, 1.0], n),
-            "ts": pd.date_range("2024-01-01", periods=n, freq="D"),
-        })
+        df = pd.DataFrame(
+            {
+                "alert_type": ["A"] * n,
+                "predicted_prob": rng.uniform(0, 1, n),
+                "actual_outcome": rng.choice([0.0, 1.0], n),
+                "ts": pd.date_range("2024-01-01", periods=n, freq="D"),
+            }
+        )
         result = alert_calibration_engine(df, time_window=pd.Timedelta(days=30))
         assert result["summary"]["n_alerts_total"] <= n
 
     def test_small_group_skipped(self):
         """Cover line 59: groups with < 5 records are skipped."""
-        df = pd.DataFrame({
-            "alert_type": ["A"] * 100 + ["B"] * 3,  # B has < 5 records
-            "predicted_prob": np.random.default_rng(42).uniform(0, 1, 103),
-            "actual_outcome": np.random.default_rng(42).choice([0.0, 1.0], 103),
-        })
+        df = pd.DataFrame(
+            {
+                "alert_type": ["A"] * 100 + ["B"] * 3,  # B has < 5 records
+                "predicted_prob": np.random.default_rng(42).uniform(0, 1, 103),
+                "actual_outcome": np.random.default_rng(42).choice([0.0, 1.0], 103),
+            }
+        )
         result = alert_calibration_engine(df)
         assert "B" not in result["per_group"]  # skipped due to < 5 records
         assert "A" in result["per_group"]
@@ -67,11 +75,13 @@ class TestAlertCalibrationEngine:
 class TestThesisInvalidationMonitor:
     def test_basic_monitoring(self):
         rng = np.random.default_rng(42)
-        df = pd.DataFrame({
-            "thesis_id": ["T1"] * 50 + ["T2"] * 50,
-            "predicted_prob": rng.uniform(0.3, 0.7, 100),
-            "actual_outcome": rng.choice([0.0, 1.0], 100),
-        })
+        df = pd.DataFrame(
+            {
+                "thesis_id": ["T1"] * 50 + ["T2"] * 50,
+                "predicted_prob": rng.uniform(0.3, 0.7, 100),
+                "actual_outcome": rng.choice([0.0, 1.0], 100),
+            }
+        )
         result = thesis_invalidation_monitor(df, rolling_window=20)
         assert "per_thesis" in result
         assert "summary" in result
@@ -79,17 +89,21 @@ class TestThesisInvalidationMonitor:
 
     def test_invalidated_thesis(self):
         # Create a thesis with terrible predictions
-        df = pd.DataFrame({
-            "thesis_id": ["BAD"] * 50,
-            "predicted_prob": np.ones(50) * 0.9,  # always predicts 0.9
-            "actual_outcome": np.zeros(50),  # always wrong
-        })
+        df = pd.DataFrame(
+            {
+                "thesis_id": ["BAD"] * 50,
+                "predicted_prob": np.ones(50) * 0.9,  # always predicts 0.9
+                "actual_outcome": np.zeros(50),  # always wrong
+            }
+        )
         result = thesis_invalidation_monitor(df, rolling_window=20, brier_threshold=0.25)
         assert result["per_thesis"]["BAD"]["status"] in ("AT_RISK", "INVALIDATED")
 
     def test_empty_raises(self):
         with pytest.raises(ValueError, match="empty"):
-            thesis_invalidation_monitor(pd.DataFrame(columns=["thesis_id", "predicted_prob", "actual_outcome"]))
+            thesis_invalidation_monitor(
+                pd.DataFrame(columns=["thesis_id", "predicted_prob", "actual_outcome"])
+            )
 
     def test_missing_group_by_raises(self):
         with pytest.raises(ValueError, match="group_by"):
@@ -101,42 +115,51 @@ class TestThesisInvalidationMonitor:
     def test_missing_columns_raises(self):
         """Cover line 108: raise ValueError for missing required columns."""
         with pytest.raises(ValueError, match="columns"):
-            thesis_invalidation_monitor(
-                pd.DataFrame({"thesis_id": ["T1"], "x": [1.0]})
-            )
+            thesis_invalidation_monitor(pd.DataFrame({"thesis_id": ["T1"], "x": [1.0]}))
 
     def test_small_group_skipped(self):
         """Cover line 120: groups with < 5 records are skipped."""
         rng = np.random.default_rng(42)
-        df = pd.DataFrame({
-            "thesis_id": ["T1"] * 50 + ["T2"] * 3,  # T2 < 5
-            "predicted_prob": rng.uniform(0, 1, 53),
-            "actual_outcome": rng.choice([0.0, 1.0], 53),
-        })
+        df = pd.DataFrame(
+            {
+                "thesis_id": ["T1"] * 50 + ["T2"] * 3,  # T2 < 5
+                "predicted_prob": rng.uniform(0, 1, 53),
+                "actual_outcome": rng.choice([0.0, 1.0], 53),
+            }
+        )
         result = thesis_invalidation_monitor(df, rolling_window=20)
         assert "T2" not in result["per_thesis"]  # skipped
 
     def test_warning_state(self):
         """Cover line 148-149: WARNING state when trend increasing but below threshold."""
         rng = np.random.default_rng(100)
-        df = pd.DataFrame({
-            "thesis_id": ["WARN"] * 80,
-            "predicted_prob": rng.uniform(0.4, 0.6, 80),
-            "actual_outcome": rng.choice([0.0, 1.0], 80),
-        })
+        df = pd.DataFrame(
+            {
+                "thesis_id": ["WARN"] * 80,
+                "predicted_prob": rng.uniform(0.4, 0.6, 80),
+                "actual_outcome": rng.choice([0.0, 1.0], 80),
+            }
+        )
         result = thesis_invalidation_monitor(df, rolling_window=30, brier_threshold=0.5)
-        assert result["per_thesis"]["WARN"]["status"] in ("VALID", "WARNING", "AT_RISK", "INVALIDATED")
+        assert result["per_thesis"]["WARN"]["status"] in (
+            "VALID",
+            "WARNING",
+            "AT_RISK",
+            "INVALIDATED",
+        )
 
     def test_valid_state(self):
         """Cover line 151: VALID state when below threshold and no trend."""
         # Perfect predictor → very low Brier score → VALID
         n = 60
         # Use near-perfect predictions to ensure VALID
-        df = pd.DataFrame({
-            "thesis_id": ["PERFECT"] * n,
-            "predicted_prob": np.array([0.95 if i % 2 == 0 else 0.05 for i in range(n)]),
-            "actual_outcome": np.array([1.0 if i % 2 == 0 else 0.0 for i in range(n)]),
-        })
+        df = pd.DataFrame(
+            {
+                "thesis_id": ["PERFECT"] * n,
+                "predicted_prob": np.array([0.95 if i % 2 == 0 else 0.05 for i in range(n)]),
+                "actual_outcome": np.array([1.0 if i % 2 == 0 else 0.0 for i in range(n)]),
+            }
+        )
         result = thesis_invalidation_monitor(df, rolling_window=20, brier_threshold=0.25)
         assert result["per_thesis"]["PERFECT"]["status"] == "VALID"
 
@@ -144,6 +167,7 @@ class TestThesisInvalidationMonitor:
 # ──────────────────────────────────────────────
 # Sprint 0: buy_sell_analysis
 # ──────────────────────────────────────────────
+
 
 def _provider(key_or_tier):
     return lambda prompt: f"buy recommendation for {prompt[:10]}"
@@ -192,8 +216,10 @@ class TestBuySellAnalysis:
         class DictCache:
             def __init__(self):
                 self._store = {}
+
             def get(self, k):
                 return self._store.get(k)
+
             def set(self, k, v):
                 self._store[k] = v
 
@@ -276,7 +302,7 @@ class TestBuySellAnalysis:
     @pytest.mark.asyncio
     async def test_cost_tracker_called(self):
         tracked = []
-        result = await buy_sell_analysis(
+        await buy_sell_analysis(
             signal_data={"symbol": "META"},
             fundamentals={},
             technicals={"close": 500.0},
@@ -322,9 +348,11 @@ class TestBuySellAnalysis:
     @pytest.mark.asyncio
     async def test_cache_get_error_graceful(self):
         """Cover lines 252-253: cache.get() raises, treated as miss."""
+
         class BadGetCache:
             def get(self, k):
-                raise IOError("cache read error")
+                raise OSError("cache read error")
+
             def set(self, k, v):
                 pass
 
@@ -343,9 +371,11 @@ class TestBuySellAnalysis:
     @pytest.mark.asyncio
     async def test_llm_callable_raises_graceful(self):
         """Cover lines 283-284: llm_client(prompt) raises, graceful fallback."""
+
         def provider_with_raising_client(k):
             def bad_client(prompt):
                 raise ConnectionError("network error")
+
             return bad_client
 
         result = await buy_sell_analysis(
@@ -361,11 +391,13 @@ class TestBuySellAnalysis:
     @pytest.mark.asyncio
     async def test_cache_set_error_graceful(self):
         """Cover lines 310-311: cache.set() raises, no crash."""
+
         class BadSetCache:
             def get(self, k):
                 return None
+
             def set(self, k, v):
-                raise IOError("disk full")
+                raise OSError("disk full")
 
         result = await buy_sell_analysis(
             signal_data={"symbol": "SETERR"},
@@ -381,6 +413,7 @@ class TestBuySellAnalysis:
     @pytest.mark.asyncio
     async def test_cost_tracker_exception_graceful(self):
         """Cover lines 321-322: cost_tracker raises, no crash."""
+
         def bad_tracker(info):
             raise RuntimeError("tracker down")
 
@@ -400,6 +433,7 @@ class TestBuySellAnalysis:
     async def test_academic_reference_action_suggestion(self):
         """Action extraction follows keyword-based NLP classification
         (Pang & Lee 2008 sentiment analysis pattern adapted for trading signals)."""
+
         def wait_provider(k):
             return lambda p: "wait for better entry conditions"
 

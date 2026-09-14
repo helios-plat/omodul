@@ -1,4 +1,5 @@
 """Tests for omodul.compact_session."""
+
 from __future__ import annotations
 
 import asyncio
@@ -24,7 +25,9 @@ async def test_no_compact_when_below_threshold(tmp_path):
 # ---------------------------------------------------------------------------
 async def test_compactor_called_returns_compacted(tmp_path):
     compactor = AsyncMock(return_value=[{"role": "summary", "content": "..."}])
-    inp = InputData(session_id="s2", history=[{"role": "user", "content": "x"}], compactor=compactor)
+    inp = InputData(
+        session_id="s2", history=[{"role": "user", "content": "x"}], compactor=compactor
+    )
     result = await compact_session(Config(), inp, tmp_path)
     assert result["status"] == "completed"
     assert result["compacted"] is True

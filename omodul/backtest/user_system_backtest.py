@@ -2,11 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import date
-from typing import Callable
-
-import oprim
-import oskill
 
 STABILITY = "experimental"
 
@@ -76,11 +73,13 @@ def user_system_backtest(
                         sig_date = sig.get("date", date.min)
                         regime = regime_lookup.get(sig_date, "unknown")
                         size_fraction = position_size_by_regime.get(regime, default_size)
-                        all_signals.append({
-                            **sig,
-                            "symbol": symbol,
-                            "size_fraction": size_fraction,
-                        })
+                        all_signals.append(
+                            {
+                                **sig,
+                                "symbol": symbol,
+                                "size_fraction": size_fraction,
+                            }
+                        )
             except Exception:
                 pass
 

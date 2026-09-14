@@ -3,6 +3,7 @@ omodul.index_codebase — Scan, embed, and vector-write codebase files concurren
 
 Pillars: fingerprint, cost
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -25,12 +26,14 @@ async def _call(fn: Any, **kwargs: Any) -> Any:
     return result
 
 
-def compute_fingerprint_for(config: "Config", input_data: "InputData") -> str:
+def compute_fingerprint_for(config: Config, input_data: InputData) -> str:
     """Fingerprint over root_path + sorted extensions."""
-    return compute_fingerprint({
-        "root_path": input_data.root_path,
-        "extensions": sorted(config.extensions),
-    })
+    return compute_fingerprint(
+        {
+            "root_path": input_data.root_path,
+            "extensions": sorted(config.extensions),
+        }
+    )
 
 
 class Config(BaseConfig):
@@ -67,9 +70,9 @@ async def index_codebase(
         fp = compute_fingerprint_for(config, input_data)
 
         if input_data.scanner is not None:
-            files: list[str] = await _call(input_data.scanner,
-                                           root=input_data.root_path,
-                                           extensions=config.extensions)
+            files: list[str] = await _call(
+                input_data.scanner, root=input_data.root_path, extensions=config.extensions
+            )
         else:
             files = []
 
@@ -92,19 +95,16 @@ async def index_codebase(
                     results["skipped"] += 1
                     return
 
-                file_fp = compute_fingerprint(
-                    {"path": f, "mtime": str(p.stat().st_mtime)}
-                )
+                compute_fingerprint({"path": f, "mtime": str(p.stat().st_mtime)})
 
                 embedding: list = []
                 if input_data.embedder is not None:
                     embedding = await _call(input_data.embedder, text=content)
 
                 if input_data.vector_writer is not None:
-                    await _call(input_data.vector_writer,
-                                path=f,
-                                embedding=embedding,
-                                content=content)
+                    await _call(
+                        input_data.vector_writer, path=f, embedding=embedding, content=content
+                    )
 
                 results["indexed"] += 1
 

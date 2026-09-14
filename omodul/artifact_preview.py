@@ -27,20 +27,59 @@ _STYLE_ON_RE = re.compile(r"(<[^>]+)\s+style\s*=\s*\"[^\"]*\"", re.IGNORECASE)
 _EVENT_ATTR_RE = re.compile(r"\s+on\w+\s*=\s*(\"[^\"]*\"|'[^']*')", re.IGNORECASE)
 _JAVASCRIPT_URL_RE = re.compile(r"(?i)\b(href|src|action)\s*=\s*['\"]\s*javascript:")
 _DATA_HTML_RE = re.compile(r"(?i)\b(src)\s*=\s*['\"]\s*data:text/html")
-_FOREIGN_OBJECT_RE = re.compile(r"<\s*foreignObject\b[^>]*>.*?<\s*/\s*foreignObject\s*>",
-                                re.IGNORECASE | re.DOTALL)
+_FOREIGN_OBJECT_RE = re.compile(
+    r"<\s*foreignObject\b[^>]*>.*?<\s*/\s*foreignObject\s*>", re.IGNORECASE | re.DOTALL
+)
 
 # 允许的 HTML 标签 (其余剥离)
 _ALLOWED_TAGS = {
-    "p", "div", "span", "h1", "h2", "h3", "h4", "ul", "ol", "li", "table",
-    "thead", "tbody", "tr", "td", "th", "a", "img", "pre", "code", "blockquote",
-    "strong", "em", "b", "i", "br", "hr", "svg", "path", "rect", "circle",
-    "g", "text", "defs", "linearGradient", "stop", "polygon", "line", "polyline",
+    "p",
+    "div",
+    "span",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "ul",
+    "ol",
+    "li",
+    "table",
+    "thead",
+    "tbody",
+    "tr",
+    "td",
+    "th",
+    "a",
+    "img",
+    "pre",
+    "code",
+    "blockquote",
+    "strong",
+    "em",
+    "b",
+    "i",
+    "br",
+    "hr",
+    "svg",
+    "path",
+    "rect",
+    "circle",
+    "g",
+    "text",
+    "defs",
+    "linearGradient",
+    "stop",
+    "polygon",
+    "line",
+    "polyline",
 }
 
 _SNAPSHOT_EXT: dict[str, str] = {
-    "markdown": "md", "html": "html", "svg": "svg",
-    "echarts_json": "json", "code": "txt",
+    "markdown": "md",
+    "html": "html",
+    "svg": "svg",
+    "echarts_json": "json",
+    "code": "txt",
 }
 
 
@@ -109,8 +148,13 @@ def artifact_preview(
     atype = str(artifact.get("type", "")).lower()
     content = str(artifact.get("content", ""))
     if atype not in ARTIFACT_TYPES:
-        return {"renderable": False, "sanitized_content": content,
-                "snapshot_id": "", "issues": [f"未知类型: {atype}"], "type": atype}
+        return {
+            "renderable": False,
+            "sanitized_content": content,
+            "snapshot_id": "",
+            "issues": [f"未知类型: {atype}"],
+            "type": atype,
+        }
 
     issues: list[str] = []
     sanitized = content

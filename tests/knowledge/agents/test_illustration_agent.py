@@ -13,7 +13,6 @@ from omodul.knowledge.agents.base import AgentContext
 from omodul.knowledge.agents.builtin.illustration_agent import IllustrationAgent
 from omodul.knowledge.agents.registry import get_registry
 
-
 # ---------------------------------------------------------------------------
 # fixtures / helpers
 # ---------------------------------------------------------------------------

@@ -1,4 +1,5 @@
 """Tests for state_dependent_market_making_strategy."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -28,7 +29,10 @@ class TestStateMmStrategy:
             times, types, ob, mid_price=100.0, sigma=0.01
         )
         assert set(result.keys()) == {
-            "hawkes_params", "base_quotes", "state_adjusted_quotes", "adjustment_factor"
+            "hawkes_params",
+            "base_quotes",
+            "state_adjusted_quotes",
+            "adjustment_factor",
         }
 
     def test_adjusted_quotes_keys(self, basic_mm_inputs):
@@ -86,25 +90,19 @@ class TestStateMmStrategy:
         types = rng.integers(0, 2, 50)
         ob = rng.uniform(0, 1, 50)
         with pytest.raises(ValueError, match="strictly increasing"):
-            state_dependent_market_making_strategy(
-                times, types, ob, mid_price=100.0, sigma=0.01
-            )
+            state_dependent_market_making_strategy(times, types, ob, mid_price=100.0, sigma=0.01)
 
     def test_raises_too_few_events(self, rng):
         times = np.cumsum(rng.exponential(0.1, 5))
         types = rng.integers(0, 2, 5)
         ob = rng.uniform(0, 1, 5)
         with pytest.raises(ValueError, match="10"):
-            state_dependent_market_making_strategy(
-                times, types, ob, mid_price=100.0, sigma=0.01
-            )
+            state_dependent_market_making_strategy(times, types, ob, mid_price=100.0, sigma=0.01)
 
     def test_raises_invalid_mid_price(self, basic_mm_inputs):
         times, types, ob = basic_mm_inputs
         with pytest.raises(ValueError, match="mid_price"):
-            state_dependent_market_making_strategy(
-                times, types, ob, mid_price=-1.0, sigma=0.01
-            )
+            state_dependent_market_making_strategy(times, types, ob, mid_price=-1.0, sigma=0.01)
 
     def test_raises_mismatched_lengths(self, basic_mm_inputs):
         times, types, ob = basic_mm_inputs

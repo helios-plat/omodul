@@ -32,13 +32,16 @@ class TestTradeJournalAnalyzer:
         assert "turnover_ratio" in result["diagnostics"]["overtrading"]
 
     def test_with_benchmark(self, sample_trades, spy_returns):
-        result = trade_journal_analyzer(sample_trades, benchmark_returns=spy_returns,
-                                        diagnostics=["chasing"])
+        result = trade_journal_analyzer(
+            sample_trades, benchmark_returns=spy_returns, diagnostics=["chasing"]
+        )
         assert "chasing" in result["diagnostics"]
 
     def test_empty_raises(self):
         with pytest.raises(ValueError, match="empty"):
-            trade_journal_analyzer(pd.DataFrame(columns=["timestamp", "symbol", "side", "quantity", "price"]))
+            trade_journal_analyzer(
+                pd.DataFrame(columns=["timestamp", "symbol", "side", "quantity", "price"])
+            )
 
     def test_missing_columns_raises(self):
         with pytest.raises(ValueError, match="columns"):
@@ -54,12 +57,23 @@ class TestTradeJournalAnalyzer:
 class TestShadowAccountSimulator:
     def test_basic_simulation(self):
         dates = pd.date_range("2023-01-01", periods=50, freq="B")
-        trades = pd.DataFrame({
-            "timestamp": dates[:20], "symbol": "SPY", "side": "buy",
-            "quantity": 100, "price": 400.0, "pnl": np.random.default_rng(42).normal(50, 100, 20),
-        })
-        market = pd.DataFrame({"SPY": np.cumsum(np.random.default_rng(42).normal(0, 1, 50)) + 400}, index=dates)
-        rule_fn = lambda ts, ctx: {"pnl": 10.0}
+        trades = pd.DataFrame(
+            {
+                "timestamp": dates[:20],
+                "symbol": "SPY",
+                "side": "buy",
+                "quantity": 100,
+                "price": 400.0,
+                "pnl": np.random.default_rng(42).normal(50, 100, 20),
+            }
+        )
+        market = pd.DataFrame(
+            {"SPY": np.cumsum(np.random.default_rng(42).normal(0, 1, 50)) + 400}, index=dates
+        )
+
+        def rule_fn(ts, ctx):
+            return {"pnl": 10.0}
+
         result = shadow_account_simulator(trades, market, rule_fn)
         assert "actual_performance" in result
         assert "shadow_performance" in result
@@ -75,24 +89,38 @@ class TestShadowAccountSimulator:
 
     def test_with_regime_labels(self):
         dates = pd.date_range("2023-01-01", periods=60, freq="B")
-        trades = pd.DataFrame({
-            "timestamp": dates[:10], "symbol": "SPY", "side": "buy",
-            "quantity": 100, "price": 400.0, "pnl": np.ones(10) * 50,
-        })
+        trades = pd.DataFrame(
+            {
+                "timestamp": dates[:10],
+                "symbol": "SPY",
+                "side": "buy",
+                "quantity": 100,
+                "price": 400.0,
+                "pnl": np.ones(10) * 50,
+            }
+        )
         market = pd.DataFrame({"SPY": np.arange(60) + 400.0}, index=dates)
         labels = pd.Series(["BULL"] * 30 + ["BEAR"] * 30, index=dates)
-        result = shadow_account_simulator(trades, market, lambda ts, ctx: {"pnl": 5}, regime_labels=labels)
+        result = shadow_account_simulator(
+            trades, market, lambda ts, ctx: {"pnl": 5}, regime_labels=labels
+        )
         assert "regime_breakdown" in result
 
     def test_no_pnl_column_warns(self):
         """Missing pnl column warns."""
         dates = pd.date_range("2023-01-01", periods=30, freq="B")
-        trades = pd.DataFrame({
-            "timestamp": dates[:5], "symbol": "SPY", "side": "buy",
-            "quantity": 100, "price": 400.0,
-        })
+        trades = pd.DataFrame(
+            {
+                "timestamp": dates[:5],
+                "symbol": "SPY",
+                "side": "buy",
+                "quantity": 100,
+                "price": 400.0,
+            }
+        )
         market = pd.DataFrame({"SPY": np.arange(30) + 400.0}, index=dates)
         import warnings
+
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             shadow_account_simulator(trades, market, lambda ts, ctx: None)
@@ -101,10 +129,16 @@ class TestShadowAccountSimulator:
     def test_empty_market_data_raises(self):
         """Cover line 193: empty market_data raises ValueError."""
         dates = pd.date_range("2023-01-01", periods=5, freq="B")
-        trades = pd.DataFrame({
-            "timestamp": dates, "symbol": "SPY", "side": "buy",
-            "quantity": 100, "price": 400.0, "pnl": 50.0,
-        })
+        trades = pd.DataFrame(
+            {
+                "timestamp": dates,
+                "symbol": "SPY",
+                "side": "buy",
+                "quantity": 100,
+                "price": 400.0,
+                "pnl": 50.0,
+            }
+        )
         with pytest.raises(ValueError, match="market_data must not be empty"):
             shadow_account_simulator(
                 trades,
@@ -117,13 +151,11 @@ class TestShadowAccountSimulator:
 # Sprint 0: monthly_trade_review
 # ──────────────────────────────────────────────
 
+
 def _make_trades(n=10, rng=None):
     if rng is None:
         rng = np.random.default_rng(42)
-    return [
-        {"symbol": "AAPL", "side": "buy", "pnl": float(rng.normal(50, 100))}
-        for _ in range(n)
-    ]
+    return [{"symbol": "AAPL", "side": "buy", "pnl": float(rng.normal(50, 100))} for _ in range(n)]
 
 
 class TestMonthlyTradeReview:
@@ -221,15 +253,25 @@ class TestMonthlyTradeReview:
 # Sprint 0: training_task_recommend
 # ──────────────────────────────────────────────
 
+
 class TestTrainingTaskRecommend:
     def _taxonomy(self):
         return [
-            {"task_type": "entry_drill", "description": "Improve entry timing",
-             "targets": ["low_win_rate", "disposition_effect"]},
-            {"task_type": "loss_mgmt", "description": "Loss management practice",
-             "targets": ["negative_avg_pnl"]},
-            {"task_type": "journal_review", "description": "Review journal",
-             "targets": ["overtrading"]},
+            {
+                "task_type": "entry_drill",
+                "description": "Improve entry timing",
+                "targets": ["low_win_rate", "disposition_effect"],
+            },
+            {
+                "task_type": "loss_mgmt",
+                "description": "Loss management practice",
+                "targets": ["negative_avg_pnl"],
+            },
+            {
+                "task_type": "journal_review",
+                "description": "Review journal",
+                "targets": ["overtrading"],
+            },
         ]
 
     def test_basic_returns_required_keys(self):

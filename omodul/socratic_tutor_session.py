@@ -5,6 +5,7 @@ Red line: LLM must never reveal the correct answer (enforced in oskill layer).
 
 Pillars: fingerprint + decision_trail + cost
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -55,7 +56,7 @@ async def socratic_tutor_session(
         state = create_socratic_state(input_data.question, input_data.correct_answer)
         turns: list[dict] = []
 
-        for i, msg in enumerate(input_data.student_messages[:config.max_turns]):
+        for i, msg in enumerate(input_data.student_messages[: config.max_turns]):
             out = await process_socratic_turn(
                 state,
                 msg,
@@ -64,17 +65,19 @@ async def socratic_tutor_session(
                 model=config.model,
                 hint_level=config.hint_level,
             )
-            turns.append({
-                "turn": out.turn_number,
-                "student": msg,
-                "assistant": out.assistant_text,
-                "step_check": out.step_check_triggered,
-                "answer_leaked": out.answer_leaked,
-            })
-            trail.record(event=f"turn_{i+1}", leaked=out.answer_leaked)
+            turns.append(
+                {
+                    "turn": out.turn_number,
+                    "student": msg,
+                    "assistant": out.assistant_text,
+                    "step_check": out.step_check_triggered,
+                    "answer_leaked": out.answer_leaked,
+                }
+            )
+            trail.record(event=f"turn_{i + 1}", leaked=out.answer_leaked)
 
             if on_step:
-                on_step("socratic_tutor_session", f"turn_{i+1}")
+                on_step("socratic_tutor_session", f"turn_{i + 1}")
 
         q_hash = str(hash(input_data.question))[:12]
         fp = compute_fingerprint({"question_hash": q_hash, "user_id": input_data.user_id})

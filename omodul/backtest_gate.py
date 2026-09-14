@@ -5,6 +5,7 @@ Composites: oskill.walk_forward + oprim.pbo_compute + oprim.deflated_sharpe
 
 ⚠️  OOS deflated_sharpe ≤ 0 OR PBO > 0.5 → status = "failed"
 """
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -58,14 +59,15 @@ def backtest_gate(
     trail = Trail()
 
     wf = walk_forward(
-        strategy_fn, data,
+        strategy_fn,
+        data,
         n_splits=config.n_splits,
         embargo=config.embargo,
         periods=config.periods,
     )
-    trail.record(event="walk_forward_done",
-                 n_splits=config.n_splits,
-                 mean_oos_sharpe=wf["mean_oos_sharpe"])
+    trail.record(
+        event="walk_forward_done", n_splits=config.n_splits, mean_oos_sharpe=wf["mean_oos_sharpe"]
+    )
 
     oos_sharpes = wf["oos_sharpes"]
     dsr_value = wf["deflated_sharpe"].get("deflated_sharpe", 0.0)
@@ -84,14 +86,16 @@ def backtest_gate(
     status = "failed" if fail_reasons else "passed"
     trail.record(event="gate_decision", status=status)
 
-    report = "\n".join([
-        f"Strategy: {config.strategy_name}",
-        f"Status: {status}",
-        f"Mean OOS Sharpe: {wf['mean_oos_sharpe']:.4f}",
-        f"Deflated Sharpe: {dsr_value:.4f}",
-        f"PBO: {pbo_value:.4f}",
-        *([f"Fail reasons: " + "; ".join(fail_reasons)] if fail_reasons else []),
-    ])
+    report = "\n".join(
+        [
+            f"Strategy: {config.strategy_name}",
+            f"Status: {status}",
+            f"Mean OOS Sharpe: {wf['mean_oos_sharpe']:.4f}",
+            f"Deflated Sharpe: {dsr_value:.4f}",
+            f"PBO: {pbo_value:.4f}",
+            *(["Fail reasons: " + "; ".join(fail_reasons)] if fail_reasons else []),
+        ]
+    )
 
     return build_result(
         status="ok",

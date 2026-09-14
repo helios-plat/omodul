@@ -1,14 +1,11 @@
-"""Tests for omodul-024/025/026: send_welcome_email, reset_password_workflow, verify_email_workflow."""
+"""Tests for the welcome-email, password-reset, and email-verification workflows."""
 
 from __future__ import annotations
 
 import json
 import sys
 from datetime import UTC, datetime
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
-
-import pytest
 
 # Stub missing deps (jinja2, alembic, sqlalchemy, frontmatter) not installed in omodul venv.
 # These are pulled in transitively when omodul/__init__.py imports oprim.*
@@ -28,23 +25,22 @@ for _mod in _STUB_MODULES:
         sys.modules[_mod] = MagicMock()
 
 # Import directly from submodule to avoid omodul.__init__ chain import issues
+from omodul.reset_password_workflow import (  # noqa: E402
+    ResetPasswordConfig,
+    ResetPasswordInput,
+    reset_password_workflow,
+)
 from omodul.send_welcome_email import (  # noqa: E402
     WelcomeEmailConfig,
     WelcomeEmailInput,
     compute_fingerprint_for,
     send_welcome_email,
 )
-from omodul.reset_password_workflow import (  # noqa: E402
-    ResetPasswordConfig,
-    ResetPasswordInput,
-    reset_password_workflow,
-)
 from omodul.verify_email_workflow import (  # noqa: E402
     VerifyEmailConfig,
     VerifyEmailInput,
     verify_email_workflow,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -206,8 +202,14 @@ class TestResetPasswordWorkflow:
         with (
             patch("oprim.template_render.template_render", return_value="body"),
             patch("oprim.push_email.push_email", return_value=_email_result()),
-            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
-            patch("omodul.reset_password_workflow.write_one", new_callable=AsyncMock, return_value=1),
+            patch(
+                "obase.persistence.pool.PgPool.get_or_create",
+                new_callable=AsyncMock,
+                return_value=MagicMock(),
+            ),
+            patch(
+                "omodul.reset_password_workflow.write_one", new_callable=AsyncMock, return_value=1
+            ),
         ):
             result = await reset_password_workflow(
                 _reset_config(), ResetPasswordInput(request_ip="1.2.3.4"), tmp_path
@@ -219,8 +221,14 @@ class TestResetPasswordWorkflow:
         with (
             patch("oprim.template_render.template_render", return_value="body"),
             patch("oprim.push_email.push_email", return_value=_email_result()),
-            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
-            patch("omodul.reset_password_workflow.write_one", new_callable=AsyncMock, return_value=1),
+            patch(
+                "obase.persistence.pool.PgPool.get_or_create",
+                new_callable=AsyncMock,
+                return_value=MagicMock(),
+            ),
+            patch(
+                "omodul.reset_password_workflow.write_one", new_callable=AsyncMock, return_value=1
+            ),
         ):
             result = await reset_password_workflow(_reset_config(), ResetPasswordInput(), tmp_path)
         findings = result["findings"]
@@ -232,8 +240,14 @@ class TestResetPasswordWorkflow:
         with (
             patch("oprim.template_render.template_render", return_value="body"),
             patch("oprim.push_email.push_email", return_value=_email_result()),
-            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
-            patch("omodul.reset_password_workflow.write_one", new_callable=AsyncMock, return_value=1),
+            patch(
+                "obase.persistence.pool.PgPool.get_or_create",
+                new_callable=AsyncMock,
+                return_value=MagicMock(),
+            ),
+            patch(
+                "omodul.reset_password_workflow.write_one", new_callable=AsyncMock, return_value=1
+            ),
         ):
             await reset_password_workflow(_reset_config(), ResetPasswordInput(), tmp_path)
         trail_file = tmp_path / "decision_trail.json"
@@ -244,8 +258,16 @@ class TestResetPasswordWorkflow:
 
     async def test_db_write_failure_status_failed(self, tmp_path):
         with (
-            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
-            patch("omodul.reset_password_workflow.write_one", new_callable=AsyncMock, side_effect=Exception("DB down")),
+            patch(
+                "obase.persistence.pool.PgPool.get_or_create",
+                new_callable=AsyncMock,
+                return_value=MagicMock(),
+            ),
+            patch(
+                "omodul.reset_password_workflow.write_one",
+                new_callable=AsyncMock,
+                side_effect=Exception("DB down"),
+            ),
         ):
             result = await reset_password_workflow(_reset_config(), ResetPasswordInput(), tmp_path)
         assert result["status"] == "failed"
@@ -253,8 +275,16 @@ class TestResetPasswordWorkflow:
 
     async def test_decision_trail_still_written_on_failure(self, tmp_path):
         with (
-            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
-            patch("omodul.reset_password_workflow.write_one", new_callable=AsyncMock, side_effect=Exception("DB down")),
+            patch(
+                "obase.persistence.pool.PgPool.get_or_create",
+                new_callable=AsyncMock,
+                return_value=MagicMock(),
+            ),
+            patch(
+                "omodul.reset_password_workflow.write_one",
+                new_callable=AsyncMock,
+                side_effect=Exception("DB down"),
+            ),
         ):
             await reset_password_workflow(_reset_config(), ResetPasswordInput(), tmp_path)
         trail_file = tmp_path / "decision_trail.json"
@@ -266,8 +296,14 @@ class TestResetPasswordWorkflow:
         with (
             patch("oprim.template_render.template_render", return_value="body"),
             patch("oprim.push_email.push_email", return_value=_email_result()),
-            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
-            patch("omodul.reset_password_workflow.write_one", new_callable=AsyncMock, return_value=1),
+            patch(
+                "obase.persistence.pool.PgPool.get_or_create",
+                new_callable=AsyncMock,
+                return_value=MagicMock(),
+            ),
+            patch(
+                "omodul.reset_password_workflow.write_one", new_callable=AsyncMock, return_value=1
+            ),
         ):
             result = await reset_password_workflow(_reset_config(), ResetPasswordInput(), tmp_path)
         assert result["fingerprint"] is None
@@ -276,8 +312,14 @@ class TestResetPasswordWorkflow:
         with (
             patch("oprim.template_render.template_render", return_value="body"),
             patch("oprim.push_email.push_email", return_value=_email_result()),
-            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
-            patch("omodul.reset_password_workflow.write_one", new_callable=AsyncMock, return_value=1),
+            patch(
+                "obase.persistence.pool.PgPool.get_or_create",
+                new_callable=AsyncMock,
+                return_value=MagicMock(),
+            ),
+            patch(
+                "omodul.reset_password_workflow.write_one", new_callable=AsyncMock, return_value=1
+            ),
         ):
             result = await reset_password_workflow(_reset_config(), ResetPasswordInput(), tmp_path)
         assert len(result["decision_trail"]["steps"]) >= 2
@@ -286,8 +328,14 @@ class TestResetPasswordWorkflow:
         with (
             patch("oprim.template_render.template_render", return_value="body"),
             patch("oprim.push_email.push_email", return_value=_email_result()),
-            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
-            patch("omodul.reset_password_workflow.write_one", new_callable=AsyncMock, return_value=1),
+            patch(
+                "obase.persistence.pool.PgPool.get_or_create",
+                new_callable=AsyncMock,
+                return_value=MagicMock(),
+            ),
+            patch(
+                "omodul.reset_password_workflow.write_one", new_callable=AsyncMock, return_value=1
+            ),
         ):
             result = await reset_password_workflow(_reset_config(), ResetPasswordInput(), tmp_path)
         assert result["cost_usd"] == 0.0
@@ -318,8 +366,14 @@ class TestVerifyEmailWorkflow:
     async def test_verify_valid_otp_verified_true(self, tmp_path):
         with (
             patch("oprim.otp_generate.otp_verify", return_value=True),
-            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
-            patch("omodul.verify_email_workflow.update_one", new_callable=AsyncMock, return_value=True),
+            patch(
+                "obase.persistence.pool.PgPool.get_or_create",
+                new_callable=AsyncMock,
+                return_value=MagicMock(),
+            ),
+            patch(
+                "omodul.verify_email_workflow.update_one", new_callable=AsyncMock, return_value=True
+            ),
         ):
             result = await verify_email_workflow(
                 _verify_config(action="verify"),

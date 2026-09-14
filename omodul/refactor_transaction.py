@@ -1,39 +1,53 @@
 """Auto-split from hicode whl."""
 
 from __future__ import annotations
-from oskill import apply_edit_block
-from oprim import file_read, file_write
+
 import json
 import re
-import sys
-import os
 from pathlib import Path
 from typing import Any, ClassVar
+
+from oprim import file_read, file_write
+from oskill import EditBlock, apply_edit_block
 from pydantic import BaseModel
-from ._base import BaseConfig, CostTracker, Trail, build_result, compute_fingerprint, extract_text, llm_call, write_report
+
+from ._base import (
+    BaseConfig,
+    CostTracker,
+    Trail,
+    build_result,
+    compute_fingerprint,
+    extract_text,
+    llm_call,
+    write_report,
+)
+
 
 class RefactorTransactionConfig(BaseConfig):
     max_files: int = 20
     max_file_tokens: int = 5000
     dry_run: bool = False
-    _omodul_name: ClassVar[str] = 'refactor_transaction'
-    _omodul_version: ClassVar[str] = '1.0.0'
-    _fingerprint_fields: ClassVar[set[str]] = {'instruction', 'paths'}
-    _enabled_pillars: ClassVar[set[str]] = {'decision_trail', 'fingerprint', 'cost', 'report'}
+    _omodul_name: ClassVar[str] = "refactor_transaction"
+    _omodul_version: ClassVar[str] = "1.0.0"
+    _fingerprint_fields: ClassVar[set[str]] = {"instruction", "paths"}
+    _enabled_pillars: ClassVar[set[str]] = {"decision_trail", "fingerprint", "cost", "report"}
+
 
 class RefactorTransactionInput(BaseModel):
     instruction: str
     paths: list[str]
     caller: Any
-    context: str = ''
+    context: str = ""
+
 
 class RunAndFixConfig(BaseConfig):
     max_iterations: int = 5
     timeout: int = 60
-    _omodul_name: ClassVar[str] = 'run_and_fix'
-    _omodul_version: ClassVar[str] = '1.0.0'
-    _fingerprint_fields: ClassVar[set[str]] = {'command'}
-    _enabled_pillars: ClassVar[set[str]] = {'decision_trail', 'cost', 'report'}
+    _omodul_name: ClassVar[str] = "run_and_fix"
+    _omodul_version: ClassVar[str] = "1.0.0"
+    _fingerprint_fields: ClassVar[set[str]] = {"command"}
+    _enabled_pillars: ClassVar[set[str]] = {"decision_trail", "cost", "report"}
+
 
 class RunAndFixInput(BaseModel):
     command: str
@@ -41,13 +55,15 @@ class RunAndFixInput(BaseModel):
     caller: Any
     target_files: list[str] = []
 
+
 class MigrateDependencyConfig(BaseConfig):
     max_files: int = 50
     max_file_tokens: int = 3000
-    _omodul_name: ClassVar[str] = 'migrate_dependency'
-    _omodul_version: ClassVar[str] = '1.0.0'
-    _fingerprint_fields: ClassVar[set[str]] = {'dependency', 'target_version'}
-    _enabled_pillars: ClassVar[set[str]] = {'decision_trail', 'fingerprint', 'cost', 'report'}
+    _omodul_name: ClassVar[str] = "migrate_dependency"
+    _omodul_version: ClassVar[str] = "1.0.0"
+    _fingerprint_fields: ClassVar[set[str]] = {"dependency", "target_version"}
+    _enabled_pillars: ClassVar[set[str]] = {"decision_trail", "fingerprint", "cost", "report"}
+
 
 class MigrateDependencyInput(BaseModel):
     dependency: str
@@ -55,50 +71,59 @@ class MigrateDependencyInput(BaseModel):
     root_path: str
     caller: Any
 
+
 class CreateCheckpointConfig(BaseConfig):
-    _omodul_name: ClassVar[str] = 'create_checkpoint'
-    _omodul_version: ClassVar[str] = '1.0.0'
-    _fingerprint_fields: ClassVar[set[str]] = {'session_id', 'message_count'}
-    _enabled_pillars: ClassVar[set[str]] = {'fingerprint', 'decision_trail'}
+    _omodul_name: ClassVar[str] = "create_checkpoint"
+    _omodul_version: ClassVar[str] = "1.0.0"
+    _fingerprint_fields: ClassVar[set[str]] = {"session_id", "message_count"}
+    _enabled_pillars: ClassVar[set[str]] = {"fingerprint", "decision_trail"}
+
 
 class CreateCheckpointInput(BaseModel):
     messages: list[dict]
-    session_id: str = ''
+    session_id: str = ""
     metadata: dict = {}
     store: Any = None
 
+
 class RewindConfig(BaseConfig):
-    _omodul_name: ClassVar[str] = 'rewind_to_checkpoint'
-    _omodul_version: ClassVar[str] = '1.0.0'
+    _omodul_name: ClassVar[str] = "rewind_to_checkpoint"
+    _omodul_version: ClassVar[str] = "1.0.0"
     _fingerprint_fields: ClassVar[set[str]] = set()
-    _enabled_pillars: ClassVar[set[str]] = {'decision_trail'}
+    _enabled_pillars: ClassVar[set[str]] = {"decision_trail"}
+
 
 class RewindInput(BaseModel):
     checkpoint_id: str
     store: Any = None
-    checkpoint_path: str = ''
+    checkpoint_path: str = ""
+
 
 class CompactConversationConfig(BaseConfig):
     target_budget: int = 4000
-    _omodul_name: ClassVar[str] = 'compact_conversation'
-    _omodul_version: ClassVar[str] = '1.0.0'
-    _fingerprint_fields: ClassVar[set[str]] = {'message_count', 'last_msg_hash'}
-    _enabled_pillars: ClassVar[set[str]] = {'cost', 'decision_trail', 'fingerprint'}
+    _omodul_name: ClassVar[str] = "compact_conversation"
+    _omodul_version: ClassVar[str] = "1.0.0"
+    _fingerprint_fields: ClassVar[set[str]] = {"message_count", "last_msg_hash"}
+    _enabled_pillars: ClassVar[set[str]] = {"cost", "decision_trail", "fingerprint"}
+
 
 class CompactConversationInput(BaseModel):
     messages: list[dict]
     caller: Any
-    session_id: str = ''
+    session_id: str = ""
+
 
 class InstallPluginConfig(BaseConfig):
-    _omodul_name: ClassVar[str] = 'install_plugin'
-    _omodul_version: ClassVar[str] = '1.0.0'
-    _fingerprint_fields: ClassVar[set[str]] = {'plugin_name', 'version'}
-    _enabled_pillars: ClassVar[set[str]] = {'decision_trail', 'fingerprint'}
+    _omodul_name: ClassVar[str] = "install_plugin"
+    _omodul_version: ClassVar[str] = "1.0.0"
+    _fingerprint_fields: ClassVar[set[str]] = {"plugin_name", "version"}
+    _enabled_pillars: ClassVar[set[str]] = {"decision_trail", "fingerprint"}
+
 
 class InstallPluginInput(BaseModel):
     plugin_bundle: dict
     install_dir: str
+
 
 async def refactor_transaction(
     config: RefactorTransactionConfig,
@@ -119,12 +144,14 @@ async def refactor_transaction(
     error = None
     report_path = None
     applied: list[str] = []
-    snapshots: dict[str, str] = {}   # path → original content（简化 versionstore）
+    snapshots: dict[str, str] = {}  # path → original content（简化 versionstore）
 
-    fingerprint = compute_fingerprint({
-        "instruction": input_data.instruction,
-        "paths": sorted(input_data.paths),
-    })
+    fingerprint = compute_fingerprint(
+        {
+            "instruction": input_data.instruction,
+            "paths": sorted(input_data.paths),
+        }
+    )
 
     try:
         trail.record(event="refactor_start", instruction=input_data.instruction)
@@ -133,7 +160,7 @@ async def refactor_transaction(
 
         # 读取所有文件并打快照
         file_contents: dict[str, str] = {}
-        for path in input_data.paths[:config.max_files]:
+        for path in input_data.paths[: config.max_files]:
             try:
                 content = file_read(path)
                 file_contents[path] = content
@@ -146,7 +173,7 @@ async def refactor_transaction(
 
         # 构建上下文
         code_ctx = "\n\n".join(
-            f"## {p}\n```\n{c[:config.max_file_tokens * 4]}\n```"
+            f"## {p}\n```\n{c[: config.max_file_tokens * 4]}\n```"
             for p, c in list(file_contents.items())[:8]
         )
 
@@ -160,17 +187,20 @@ async def refactor_transaction(
 
         response = await llm_call(
             [{"role": "user", "content": prompt}],
-            caller=input_data.caller, cost=cost, trail=trail,
-            model=config.llm_model, event="generate_edits",
+            caller=input_data.caller,
+            cost=cost,
+            trail=trail,
+            model=config.llm_model,
+            event="generate_edits",
         )
         raw = extract_text(response)
-        raw = re.sub(r'^```(?:json)?\s*', '', raw, flags=re.MULTILINE)
-        raw = re.sub(r'```\s*$', '', raw, flags=re.MULTILINE).strip()
+        raw = re.sub(r"^```(?:json)?\s*", "", raw, flags=re.MULTILINE)
+        raw = re.sub(r"```\s*$", "", raw, flags=re.MULTILINE).strip()
 
         try:
             edits = json.loads(raw)
         except json.JSONDecodeError:
-            m = re.search(r'\[.*?\]', raw, re.DOTALL)
+            m = re.search(r"\[.*?\]", raw, re.DOTALL)
             edits = json.loads(m.group(0)) if m else []
 
         trail.record(event="edits_parsed", count=len(edits))
@@ -198,7 +228,9 @@ async def refactor_transaction(
                 trail.record(event="edit_applied", path=path)
             else:
                 failed_paths.append(path)  # pragma: no cover
-                trail.record(event="edit_failed", path=path, conflicts=result.conflicts)  # pragma: no cover
+                trail.record(
+                    event="edit_failed", path=path, conflicts=result.conflicts
+                )  # pragma: no cover
 
         if failed_paths:
             # 回滚已写的文件
@@ -233,7 +265,12 @@ async def refactor_transaction(
         trail_path = trail.write(output_dir)
 
     return build_result(
-        status=status, error=error, fingerprint=fingerprint,
-        trail=trail, trail_path=trail_path, report_path=report_path,
-        cost_usd=cost.total_usd, applied=applied,
+        status=status,
+        error=error,
+        fingerprint=fingerprint,
+        trail=trail,
+        trail_path=trail_path,
+        report_path=report_path,
+        cost_usd=cost.total_usd,
+        applied=applied,
     )

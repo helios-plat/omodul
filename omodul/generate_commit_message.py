@@ -1,52 +1,66 @@
 """Auto-split from hicode whl."""
 
 from __future__ import annotations
-from oprim import count_tokens, git_diff
-import sys
-import os
+
 from pathlib import Path
 from typing import Any, ClassVar
-from pydantic import BaseModel
-from ._base import BaseConfig, CostTracker, Trail, build_result, compute_fingerprint, extract_text, llm_call, write_report
 
-class GenerateCommitConfig(BaseConfig):
+from oprim import count_tokens, git_diff
+from pydantic import BaseModel
+
+from ._base import (
+    BaseConfig,
+    CostTracker,
+    build_result,
+    compute_fingerprint,
+    extract_text,
+)
+
+
+class InitializeProjectConfig(BaseConfig):
     max_files_to_scan: int = 100
     head_lines_per_file: int = 10
-    agents_md_path: str = 'AGENTS.md'
-    _omodul_name: ClassVar[str] = 'initialize_project'
-    _omodul_version: ClassVar[str] = '1.0.0'
-    _fingerprint_fields: ClassVar[set[str]] = {'root_path'}
-    _enabled_pillars: ClassVar[set[str]] = {'report', 'cost', 'decision_trail'}
+    agents_md_path: str = "AGENTS.md"
+    _omodul_name: ClassVar[str] = "initialize_project"
+    _omodul_version: ClassVar[str] = "1.0.0"
+    _fingerprint_fields: ClassVar[set[str]] = {"root_path"}
+    _enabled_pillars: ClassVar[set[str]] = {"report", "cost", "decision_trail"}
 
-class GenerateCommitInput(BaseModel):
+
+class InitializeProjectInput(BaseModel):
     root_path: str
     caller: Any
 
+
 class GenerateCommitConfig(BaseConfig):
     max_diff_tokens: int = 3000
-    commit_style: str = 'conventional'
-    _omodul_name: ClassVar[str] = 'generate_commit_message'
-    _omodul_version: ClassVar[str] = '1.0.0'
-    _fingerprint_fields: ClassVar[set[str]] = {'diff_hash'}
-    _enabled_pillars: ClassVar[set[str]] = {'cost'}
+    commit_style: str = "conventional"
+    _omodul_name: ClassVar[str] = "generate_commit_message"
+    _omodul_version: ClassVar[str] = "1.0.0"
+    _fingerprint_fields: ClassVar[set[str]] = {"diff_hash"}
+    _enabled_pillars: ClassVar[set[str]] = {"cost"}
+
 
 class GenerateCommitInput(BaseModel):
     repo_path: str
     caller: Any
-    diff_text: str = ''
+    diff_text: str = ""
+
 
 class SummarizeSessionConfig(BaseConfig):
     max_messages: int = 200
-    summary_length: str = 'brief'
-    _omodul_name: ClassVar[str] = 'summarize_session'
-    _omodul_version: ClassVar[str] = '1.0.0'
+    summary_length: str = "brief"
+    _omodul_name: ClassVar[str] = "summarize_session"
+    _omodul_version: ClassVar[str] = "1.0.0"
     _fingerprint_fields: ClassVar[set[str]] = set()
-    _enabled_pillars: ClassVar[set[str]] = {'cost'}
+    _enabled_pillars: ClassVar[set[str]] = {"cost"}
+
 
 class SummarizeSessionInput(BaseModel):
     messages: list[dict]
     caller: Any
-    session_id: str = ''
+    session_id: str = ""
+
 
 async def generate_commit_message(
     config: GenerateCommitConfig,
@@ -67,6 +81,7 @@ async def generate_commit_message(
     message = ""
 
     import hashlib
+
     diff_hash = hashlib.md5((input_data.diff_text or "").encode()).hexdigest()[:8]
     fingerprint = compute_fingerprint({"diff_hash": diff_hash})
 
@@ -80,19 +95,21 @@ async def generate_commit_message(
 
         if not diff.strip():
             return build_result(
-                status="completed", error=None,
-                cost_usd=0.0, message="chore: no changes",
+                status="completed",
+                error=None,
+                cost_usd=0.0,
+                message="chore: no changes",
                 fingerprint=fingerprint,
             )
 
         # token 截断
         if count_tokens(diff) > config.max_diff_tokens:
-            diff = diff[:config.max_diff_tokens * 4]
+            diff = diff[: config.max_diff_tokens * 4]
 
         style_hint = {
             "conventional": "Use Conventional Commits format: type(scope): description",
-            "imperative":   "Use imperative mood: 'Add feature' not 'Added feature'",
-            "descriptive":  "Be descriptive and explain what and why",
+            "imperative": "Use imperative mood: 'Add feature' not 'Added feature'",
+            "descriptive": "Be descriptive and explain what and why",
         }.get(config.commit_style, "")
 
         prompt = (
@@ -104,10 +121,11 @@ async def generate_commit_message(
 
         response = await input_data.caller(
             messages=[{"role": "user", "content": prompt}],
-            tools=None, max_tokens=128,
+            tools=None,
+            max_tokens=128,
         )
         cost.add_from_response(response, model=config.llm_model)
-        message = extract_text(response).strip().split("\n")[0]   # 取第一行
+        message = extract_text(response).strip().split("\n")[0]  # 取第一行
 
         if on_step:
             on_step({"event": "completed", "message": message})  # pragma: no cover
@@ -117,6 +135,9 @@ async def generate_commit_message(
         error = {"type": type(exc).__name__, "message": str(exc)}
 
     return build_result(
-        status=status, error=error, cost_usd=cost.total_usd,
-        message=message, fingerprint=fingerprint,
+        status=status,
+        error=error,
+        cost_usd=cost.total_usd,
+        message=message,
+        fingerprint=fingerprint,
     )

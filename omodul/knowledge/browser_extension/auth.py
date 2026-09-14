@@ -1,4 +1,5 @@
 """Token auth for browser extension API."""
+
 from __future__ import annotations
 
 import os
@@ -38,6 +39,8 @@ async def verify_token(token: str) -> None:
     """Raise AuthError if the token is wrong or not configured."""
     expected = get_token()
     if expected is None:
-        raise AuthError("Token not configured. Run: python -m omodul.knowledge.browser_extension init")
+        raise AuthError(
+            "Token not configured. Run: python -m omodul.knowledge.browser_extension init"
+        )
     if not secrets.compare_digest(token, expected):
         raise AuthError("Invalid browser extension token")

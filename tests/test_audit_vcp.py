@@ -1,4 +1,5 @@
 """Tests for omodul.audit.vcp_silver_record."""
+
 from __future__ import annotations
 
 import json
@@ -6,13 +7,10 @@ from pathlib import Path
 
 import pytest
 
-from omodul.audit import vcp_silver_record, VALID_EVENT_TYPES
-from oprim.crypto import sha256_hash
-from oprim.serialization import canonical_json
+from omodul.audit import VALID_EVENT_TYPES, vcp_silver_record
 
 SCHEMA_PATH = (
-    Path(__file__).parent.parent
-    / "omodul" / "schemas" / "audit" / "vcp_silver_record.schema.json"
+    Path(__file__).parent.parent / "omodul" / "schemas" / "audit" / "vcp_silver_record.schema.json"
 )
 
 _DET_EVIDENCE = {
@@ -57,10 +55,21 @@ class TestVcpBasic:
     def test_vcp_output_keys(self):
         event = vcp_silver_record(**_minimal_event())
         required = {
-            "event_id", "event_timestamp", "policy_id", "policy_version",
-            "conformance_tier", "event_type", "strategy_instance_id", "strategy_id",
-            "determinism_evidence", "faithfulness_evidence", "decision_payload",
-            "hash_prev", "hash_current", "signature", "signing_key_id",
+            "event_id",
+            "event_timestamp",
+            "policy_id",
+            "policy_version",
+            "conformance_tier",
+            "event_type",
+            "strategy_instance_id",
+            "strategy_id",
+            "determinism_evidence",
+            "faithfulness_evidence",
+            "decision_payload",
+            "hash_prev",
+            "hash_current",
+            "signature",
+            "signing_key_id",
         }
         assert required.issubset(set(event.keys()))
 

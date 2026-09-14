@@ -6,10 +6,7 @@ import json
 import os
 import tempfile
 
-import pytest
-
 from omodul.register_ku import RegisterKuConfig, compute_fingerprint_for, register_ku
-
 
 # ---------------------------------------------------------------------------
 # Mock backend

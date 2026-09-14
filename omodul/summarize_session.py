@@ -1,51 +1,65 @@
 """Auto-split from hicode whl."""
 
 from __future__ import annotations
-import sys
-import os
+
 from pathlib import Path
 from typing import Any, ClassVar
-from pydantic import BaseModel
-from ._base import BaseConfig, CostTracker, Trail, build_result, compute_fingerprint, extract_text, llm_call, write_report
 
-class SummarizeSessionConfig(BaseConfig):
+from pydantic import BaseModel
+
+from ._base import (
+    BaseConfig,
+    CostTracker,
+    _msg_text,
+    build_result,
+    extract_text,
+)
+
+
+class InitializeProjectConfig(BaseConfig):
     max_files_to_scan: int = 100
     head_lines_per_file: int = 10
-    agents_md_path: str = 'AGENTS.md'
-    _omodul_name: ClassVar[str] = 'initialize_project'
-    _omodul_version: ClassVar[str] = '1.0.0'
-    _fingerprint_fields: ClassVar[set[str]] = {'root_path'}
-    _enabled_pillars: ClassVar[set[str]] = {'report', 'cost', 'decision_trail'}
+    agents_md_path: str = "AGENTS.md"
+    _omodul_name: ClassVar[str] = "initialize_project"
+    _omodul_version: ClassVar[str] = "1.0.0"
+    _fingerprint_fields: ClassVar[set[str]] = {"root_path"}
+    _enabled_pillars: ClassVar[set[str]] = {"report", "cost", "decision_trail"}
 
-class SummarizeSessionInput(BaseModel):
+
+class InitializeProjectInput(BaseModel):
     root_path: str
     caller: Any
 
+
 class GenerateCommitConfig(BaseConfig):
     max_diff_tokens: int = 3000
-    commit_style: str = 'conventional'
-    _omodul_name: ClassVar[str] = 'generate_commit_message'
-    _omodul_version: ClassVar[str] = '1.0.0'
-    _fingerprint_fields: ClassVar[set[str]] = {'diff_hash'}
-    _enabled_pillars: ClassVar[set[str]] = {'cost'}
+    commit_style: str = "conventional"
+    _omodul_name: ClassVar[str] = "generate_commit_message"
+    _omodul_version: ClassVar[str] = "1.0.0"
+    _fingerprint_fields: ClassVar[set[str]] = {"diff_hash"}
+    _enabled_pillars: ClassVar[set[str]] = {"cost"}
+
 
 class GenerateCommitInput(BaseModel):
     repo_path: str
     caller: Any
-    diff_text: str = ''
+    diff_text: str = ""
+
 
 class SummarizeSessionConfig(BaseConfig):
     max_messages: int = 200
-    summary_length: str = 'brief'
-    _omodul_name: ClassVar[str] = 'summarize_session'
-    _omodul_version: ClassVar[str] = '1.0.0'
+    summary_length: str = "brief"
+    _omodul_name: ClassVar[str] = "summarize_session"
+    _omodul_version: ClassVar[str] = "1.0.0"
     _fingerprint_fields: ClassVar[set[str]] = set()
-    _enabled_pillars: ClassVar[set[str]] = {'cost'}
+    _enabled_pillars: ClassVar[set[str]] = {"cost"}
+
 
 class SummarizeSessionInput(BaseModel):
     messages: list[dict]
     caller: Any
-    session_id: str = ''
+    session_id: str = ""
+
 
 async def summarize_session(
     config: SummarizeSessionConfig,
@@ -66,21 +80,31 @@ async def summarize_session(
     summary = ""
 
     try:
-        msgs = input_data.messages[:config.max_messages]
+        msgs = input_data.messages[: config.max_messages]
         if not msgs:
-            return build_result(status="completed", error=None, cost_usd=0.0,
-                                summary="(empty session)")
+            return build_result(
+                status="completed", error=None, cost_usd=0.0, summary="(empty session)"
+            )
 
-        history = "\n".join(
-            f"[{m.get('role','?')}]: {_msg_text(m)[:300]}" for m in msgs
+        history = "\n".join(f"[{m.get('role', '?')}]: {_msg_text(m)[:300]}" for m in msgs)
+        detail = (
+            "in detail, preserving key decisions and code changes"
+            if config.summary_length == "detailed"
+            else "briefly in 3-5 sentences"
         )
-        detail = "in detail, preserving key decisions and code changes" \
-            if config.summary_length == "detailed" else "briefly in 3-5 sentences"
 
         response = await input_data.caller(
-            messages=[{"role": "user", "content":
-                f"Summarize this AI coding session {detail}, focusing on what was accomplished:\n\n{history[:8000]}"}],
-            tools=None, max_tokens=512,
+            messages=[
+                {
+                    "role": "user",
+                    "content": (
+                        f"Summarize this AI coding session {detail}, "
+                        f"focusing on what was accomplished:\n\n{history[:8000]}"
+                    ),
+                }
+            ],
+            tools=None,
+            max_tokens=512,
         )
         cost.add_from_response(response, model=config.llm_model)
         summary = extract_text(response).strip()

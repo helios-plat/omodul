@@ -1,22 +1,20 @@
 """Tests for M-G1: conflict_detection_workflow."""
+
 from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
 from unittest.mock import MagicMock, patch
-
-import pytest
 
 from omodul.conflict_detection_workflow import (
     ConflictDetectionConfig,
     conflict_detection_workflow,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_config(**overrides) -> ConflictDetectionConfig:
     base = dict(
@@ -40,6 +38,7 @@ def _make_input(
     exist_ids=None,
 ):
     from oprim._aii_graph_types import ConflictDetectionInput
+
     return ConflictDetectionInput(
         new_ku_texts=new_texts or [f"new_text_{i}" for i in range(n_new)],
         new_ku_embeddings=new_embs or [[float(i), 0.0] for i in range(n_new)],
@@ -51,8 +50,10 @@ def _make_input(
 
 def _llm_response(payload):
     text = json.dumps(payload, ensure_ascii=False)
+
     async def llm(*, messages, system=None, max_tokens=256, **kw):
         return {"content": [{"type": "text", "text": text}], "usage": {}}
+
     return llm
 
 
@@ -71,6 +72,7 @@ def _patch_registry(llm_fn):
 # Tests
 # ---------------------------------------------------------------------------
 
+
 class TestConflictDetectionWorkflow:
     async def test_completed_status_on_success(self, tmp_path):
         llm = _llm_response(None)
@@ -84,13 +86,16 @@ class TestConflictDetectionWorkflow:
 
     async def test_conflict_pairs_in_result(self, tmp_path):
         # High-similarity opposing texts → conflict detected
-        llm = _llm_response({
-            "conflict_type": "factual_contradiction",
-            "description": "contradiction",
-            "severity": "high",
-        })
+        llm = _llm_response(
+            {
+                "conflict_type": "factual_contradiction",
+                "description": "contradiction",
+                "severity": "high",
+            }
+        )
         inp = _make_input(
-            n_new=1, n_existing=1,
+            n_new=1,
+            n_existing=1,
             new_texts=["该药物增加血压"],
             new_embs=[[1.0, 0.0]],
             exist_texts=["该药物减少血压"],
@@ -161,11 +166,13 @@ class TestConflictDetectionWorkflow:
         assert result["batch_id"] == "b99"
 
     async def test_conflict_grade_always_unverified(self, tmp_path):
-        llm = _llm_response({
-            "conflict_type": "factual_contradiction",
-            "description": "x",
-            "severity": "high",
-        })
+        llm = _llm_response(
+            {
+                "conflict_type": "factual_contradiction",
+                "description": "x",
+                "severity": "high",
+            }
+        )
         inp = _make_input(
             new_texts=["支持该政策"],
             new_embs=[[1.0, 0.0]],

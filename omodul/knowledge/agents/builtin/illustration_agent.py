@@ -286,9 +286,8 @@ class IllustrationAgent(Agent):
 def _fetch_substrate_summary(substrate_id: str) -> str:
     """Fetch cached summary from meta_db derivative or substrate row."""
     try:
-        from oskill.knowledge._context import meta_db_path
-
         from oprim.meta_db import open_meta_db
+        from oskill.knowledge._context import meta_db_path
 
         db_path = meta_db_path()
         if not db_path.exists():
@@ -313,9 +312,8 @@ def _save_illustration_derivative(
     provider: str,
 ) -> str:
     """Insert illustration derivative record into meta_db; return derivative ULID."""
-    from oskill.knowledge._context import meta_db_path
-
     from oprim.meta_db import open_meta_db
+    from oskill.knowledge._context import meta_db_path
 
     derivative_id = uuid.uuid4().hex
     db = open_meta_db(meta_db_path())

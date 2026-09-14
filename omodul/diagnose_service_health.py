@@ -6,12 +6,11 @@ from pathlib import Path
 from typing import Any, ClassVar, Literal
 
 from obase.cost_tracker import CostTracker
-from pydantic import BaseModel
-
 from obase.docker import docker_inspect
 from oprim import system_cpu_usage, system_ram_usage
 from oprim._network import network_http_health  # v3 not top-level
 from oskill import classify_signal, compute_severity_score, diagnose_pattern_match
+from pydantic import BaseModel
 
 from omodul._base_config import BaseConfig
 from omodul._decision_trail import build_decision_trail, record_step

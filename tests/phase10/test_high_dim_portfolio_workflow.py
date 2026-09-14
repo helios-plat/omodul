@@ -1,4 +1,5 @@
 """Tests for high_dim_portfolio_workflow."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -26,8 +27,11 @@ class TestHighDimPortfolioWorkflow:
     def test_basic_output_keys(self, returns_60x5):
         result = high_dim_portfolio_workflow(returns_60x5)
         assert set(result.keys()) == {
-            "hrp_weights", "ssd_weights", "clusters",
-            "noise_threshold", "n_clusters"
+            "hrp_weights",
+            "ssd_weights",
+            "clusters",
+            "noise_threshold",
+            "n_clusters",
         }
 
     def test_hrp_weights_shape(self, returns_60x5):

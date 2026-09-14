@@ -14,7 +14,12 @@ class MacroDailyReportConfig(BaseConfig):
 
     _omodul_name: ClassVar[str] = "macro_daily_report"
     _omodul_version: ClassVar[str] = "1.0.0"
-    _fingerprint_fields: ClassVar[set[str]] = {"report_date", "quadrants", "data_snapshot_hash", "llm_model"}
+    _fingerprint_fields: ClassVar[set[str]] = {
+        "report_date",
+        "quadrants",
+        "data_snapshot_hash",
+        "llm_model",
+    }
 
     report_date: str = ""
     quadrants: list[str] = ["liquidity", "growth", "policy", "risk"]
@@ -38,7 +43,8 @@ def macro_daily_report_workflow(
 ) -> dict[str, Any]:
     """Generate macro daily report with 4 quadrants.
 
-    Decision trail: load_cycle / classify / load_calendar / policy_link / risk_assess / llm_summary / write_report
+    Decision trail: load_cycle / classify / load_calendar / policy_link /
+    risk_assess / llm_summary / write_report
     """
     fingerprint = compute_fingerprint_for(config)
     trail: list[dict[str, str]] = []
@@ -67,14 +73,23 @@ def macro_daily_report_workflow(
         # Step 6: LLM summary (4 quadrants)
         if llm is not None:
             for quadrant in config.quadrants:
-                prompt = f"Summarize {quadrant} outlook for {config.report_date} in 2-3 sentences (Chinese)."
+                prompt = (
+                    f"Summarize {quadrant} outlook for {config.report_date} "
+                    "in 2-3 sentences (Chinese)."
+                )
                 try:
                     summary = llm.call(prompt)
                     findings["quadrants"][quadrant] = summary
                     cost_usd += 0.005
                 except Exception as e:
                     findings["quadrants"][quadrant] = f"[LLM Error: {e}]"
-            trail.append({"step": "llm_summary", "status": "ok", "detail": f"{len(config.quadrants)} quadrants"})
+            trail.append(
+                {
+                    "step": "llm_summary",
+                    "status": "ok",
+                    "detail": f"{len(config.quadrants)} quadrants",
+                }
+            )
         else:
             trail.append({"step": "llm_summary", "status": "skipped"})
 

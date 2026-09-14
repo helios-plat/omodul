@@ -21,9 +21,7 @@ from omodul._runtime import _current_cost_tracker
 class DiagnoseRootCauseConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "diagnose_root_cause"
     _omodul_version: ClassVar[str] = "1.0.0"
-    _fingerprint_fields: ClassVar[set[str]] = {
-        "signal_hash", "available_tools_hash", "max_steps"
-    }
+    _fingerprint_fields: ClassVar[set[str]] = {"signal_hash", "available_tools_hash", "max_steps"}
     llm_model: str = "claude-3-5-sonnet-20241022"
     max_steps: int = 20
     max_tokens_per_step: int = 4096
@@ -34,15 +32,15 @@ class DiagnoseRootCauseConfig(BaseConfig):
 
 class DiagnoseRootCauseInput(BaseModel):
     signal: Signal
-    available_tool_names: list[str]    # e.g. ["docker_container_logs", "postgres_slow_queries", ...]
+    available_tool_names: list[str]  # e.g. ["docker_container_logs", "postgres_slow_queries", ...]
     initial_context: dict[str, Any] = Field(default_factory=dict)
 
 
 class DiagnoseRootCauseFindings(BaseModel):
     root_cause_hypothesis: str
-    evidence_chain: list[dict[str, Any]]         # 每步证据 (step_no / tool_used / observation / inference)
+    evidence_chain: list[dict[str, Any]]  # 每步证据 (step_no / tool_used / observation / inference)
     confidence: float
-    suggested_actions: list[str]       # 自然语言建议
+    suggested_actions: list[str]  # 自然语言建议
     requires_human: bool
     requires_human_reason: str | None = None
 
@@ -74,8 +72,11 @@ def diagnose_root_cause(
             evidence_chain=[s.model_dump() for s in outcome.steps],
             confidence=outcome.final_conclusion.get("confidence", 0.0),
             suggested_actions=outcome.final_conclusion.get("suggested_actions", []),
-            requires_human=outcome.stopped_reason == "max_steps" or outcome.final_conclusion.get("confidence", 0.0) < config.confidence_threshold,
-            requires_human_reason=f"Stopped due to {outcome.stopped_reason}" if outcome.stopped_reason != "confidence_threshold" else None
+            requires_human=outcome.stopped_reason == "max_steps"
+            or outcome.final_conclusion.get("confidence", 0.0) < config.confidence_threshold,
+            requires_human_reason=f"Stopped due to {outcome.stopped_reason}"
+            if outcome.stopped_reason != "confidence_threshold"
+            else None,
         )
     except Exception as e:
         error_info = {
@@ -88,10 +89,14 @@ def diagnose_root_cause(
         _current_cost_tracker.reset(token)
 
     decision_trail = build_decision_trail(
-        fingerprint=fingerprint, config=config,
-        input_data=input_data, trail_steps=trail_steps,
-        cost_tracker=cost_tracker, started_at=started_at,
-        status=status, error=error_info,
+        fingerprint=fingerprint,
+        config=config,
+        input_data=input_data,
+        trail_steps=trail_steps,
+        cost_tracker=cost_tracker,
+        started_at=started_at,
+        status=status,
+        error=error_info,
     )
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -107,7 +112,7 @@ def diagnose_root_cause(
         findings=findings,
         decision_trail=decision_trail,
         cost_tracker=cost_tracker,
-        status=status
+        status=status,
     )
 
     return {
@@ -125,7 +130,7 @@ def _stage_investigation(
     config: DiagnoseRootCauseConfig,
     input_data: DiagnoseRootCauseInput,
     trail_steps: list[dict[str, Any]],
-    on_step: Callable[[dict[str, Any]], None] | None
+    on_step: Callable[[dict[str, Any]], None] | None,
 ) -> InvestigationOutcome:
     started_at = datetime.now(UTC)
 
@@ -138,7 +143,7 @@ def _stage_investigation(
         llm=llm,
         on_step=on_step,
         max_steps=config.max_steps,
-        confidence_threshold=config.confidence_threshold
+        confidence_threshold=config.confidence_threshold,
     )
 
     record_step(
@@ -146,13 +151,21 @@ def _stage_investigation(
         on_step=on_step,
         layer="oskill",
         callable_name="agentic_investigate_loop",
-        inputs_summary={"signal_hash": config.signal_hash, "tools_count": len(input_data.available_tool_names)},
-        outputs_summary={"steps_taken": outcome.steps_taken, "stopped_reason": outcome.stopped_reason},
-        started_at=started_at
+        inputs_summary={
+            "signal_hash": config.signal_hash,
+            "tools_count": len(input_data.available_tool_names),
+        },
+        outputs_summary={
+            "steps_taken": outcome.steps_taken,
+            "stopped_reason": outcome.stopped_reason,
+        },
+        started_at=started_at,
     )
 
     return outcome
 
 
-def compute_fingerprint_for_diagnose_root_cause(config: DiagnoseRootCauseConfig, input_data: DiagnoseRootCauseInput) -> str:
+def compute_fingerprint_for_diagnose_root_cause(
+    config: DiagnoseRootCauseConfig, input_data: DiagnoseRootCauseInput
+) -> str:
     return compute_fingerprint(config, input_data)

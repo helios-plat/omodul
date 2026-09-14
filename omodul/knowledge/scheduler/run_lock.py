@@ -1,4 +1,5 @@
 """Redis-backed distributed lock to prevent duplicate scheduled job execution."""
+
 from __future__ import annotations
 
 import os
@@ -20,6 +21,7 @@ class RunLock:
     def _get_client(self):
         if self._client is None:
             import redis.asyncio as redis
+
             self._client = redis.from_url(self._redis_url)
         return self._client
 

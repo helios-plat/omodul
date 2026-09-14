@@ -1,11 +1,12 @@
 """Tests for agents base, registry, and errors."""
+
 from __future__ import annotations
 
 import pytest
 
-from omodul.knowledge.agents.base import Agent, AgentContext, AgentResult, AgentStep, Citation
+from omodul.knowledge.agents.base import Agent, AgentResult
 from omodul.knowledge.agents.errors import AgentNotFoundError, AgentToolNotAllowedError
-from omodul.knowledge.agents.registry import AgentRegistry, register_agent
+from omodul.knowledge.agents.registry import AgentRegistry
 
 
 class _DummyAgent(Agent):
@@ -71,6 +72,7 @@ class TestBuiltinRegistration:
 
     def test_all_builtins_registered(self):
         from omodul.knowledge.agents import get_registry
+
         reg = get_registry()
         for name in [
             "knowledge_curator",
@@ -83,6 +85,7 @@ class TestBuiltinRegistration:
 
     def test_builtin_listing_has_required_fields(self):
         from omodul.knowledge.agents import get_registry
+
         agents = get_registry().list_agents()
         for a in agents:
             assert "name" in a

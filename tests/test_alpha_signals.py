@@ -1,4 +1,5 @@
 """Tests for omodul.alpha_signals."""
+
 from __future__ import annotations
 
 import json
@@ -7,7 +8,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from omodul.alpha_signals import bocpd_trend, ofi_meanrev, funding_rate_directional
+from omodul.alpha_signals import bocpd_trend, funding_rate_directional, ofi_meanrev
 
 REAL_DATA_DIR = Path(__file__).parent / "real_data"
 
@@ -16,6 +17,7 @@ def _load_btc_returns() -> np.ndarray:
     path = REAL_DATA_DIR / "btc_1m_sample.csv"
     if path.exists():
         import pandas as pd
+
         df = pd.read_csv(path)
         return df["log_return"].values
     # Fallback: synthesize
@@ -33,15 +35,18 @@ def _load_orderbook() -> dict:
             return json.load(f)
     return {
         "arg": {"channel": "books", "instId": "BTC-USDT"},
-        "data": [{
-            "bids": [["44999.5", "3.0", "", "3"], ["44998.0", "1.5", "", "1"]],
-            "asks": [["45001.0", "2.5", "", "2"], ["45002.0", "1.0", "", "1"]],
-            "ts": "1700000000000",
-        }],
+        "data": [
+            {
+                "bids": [["44999.5", "3.0", "", "3"], ["44998.0", "1.5", "", "1"]],
+                "asks": [["45001.0", "2.5", "", "2"], ["45002.0", "1.0", "", "1"]],
+                "ts": "1700000000000",
+            }
+        ],
     }
 
 
 # ─── BOCPD Trend Tests ───────────────────────────────────────────────────────
+
 
 class TestBocpdTrend:
     @pytest.mark.academic_reference
@@ -118,11 +123,14 @@ class TestBocpdTrend:
     def test_bocpd_trend_strength_bounded(self):
         rng = np.random.default_rng(42)
         returns = rng.normal(0.01, 0.005, 100)
-        result = bocpd_trend(returns=returns, bocpd_hazard=0.01, trend_window=20, confidence_threshold=0.0)
+        result = bocpd_trend(
+            returns=returns, bocpd_hazard=0.01, trend_window=20, confidence_threshold=0.0
+        )
         assert 0.0 <= result["strength"] <= 1.0
 
 
 # ─── OFI Mean Reversion Tests ─────────────────────────────────────────────────
+
 
 def _make_orderbook_arrays(n=200, buy_pressure=True):
     """Build bid/ask arrays where recent n//3 bars have strong buy or sell pressure.
@@ -289,6 +297,7 @@ class TestOfiMeanrev:
 
 
 # ─── Funding Rate Directional Tests ──────────────────────────────────────────
+
 
 def _make_funding_data(n=24, funding_level=0.0):
     """Generate synthetic spot/perp/funding arrays."""

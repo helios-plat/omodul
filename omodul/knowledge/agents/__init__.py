@@ -1,4 +1,7 @@
 """omodul.knowledge.agents — Agent infrastructure + 5 builtin agents."""
+
+# Import builtin agents so they self-register via @register_agent
+import omodul.knowledge.agents.builtin  # noqa: F401
 from omodul.knowledge.agents.base import (
     Agent,
     AgentContext,
@@ -15,9 +18,6 @@ from omodul.knowledge.agents.errors import (
 from omodul.knowledge.agents.registry import AgentRegistry, get_registry, register_agent
 from omodul.knowledge.agents.runner import AgentRunner
 from omodul.knowledge.agents.tracer import AgentTracer
-
-# Import builtin agents so they self-register via @register_agent
-import omodul.knowledge.agents.builtin  # noqa: F401
 
 __all__ = [
     # Base

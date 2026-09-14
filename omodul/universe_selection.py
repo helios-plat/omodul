@@ -1,4 +1,5 @@
 """Universe selection specifications."""
+
 from __future__ import annotations
 
 VALID_INSTRUMENT_TYPES = {"spot", "perpetual", "futures", "option", "index_future"}

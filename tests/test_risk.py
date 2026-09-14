@@ -1,6 +1,5 @@
 """Tests for Group 5: Risk modules."""
 
-import numpy as np
 import pandas as pd
 import pytest
 
@@ -9,8 +8,9 @@ from omodul.risk import scenario_stress_test, tail_risk_analyzer
 
 class TestScenarioStressTest:
     def test_historical_scenario(self, spy_returns, btc_panel):
-        scenarios = [{"name": "test", "type": "historical",
-                      "start": "2023-03-01", "end": "2023-06-01"}]
+        scenarios = [
+            {"name": "test", "type": "historical", "start": "2023-03-01", "end": "2023-06-01"}
+        ]
         result = scenario_stress_test(spy_returns, btc_panel, scenarios=scenarios, n_bootstrap=100)
         assert "per_scenario" in result
         assert result["summary"]["n_scenarios"] == 1
@@ -33,11 +33,15 @@ class TestScenarioStressTest:
 
     def test_empty_scenarios_raises(self):
         with pytest.raises(ValueError, match="empty"):
-            scenario_stress_test(pd.Series([0.01] * 20), pd.DataFrame({"x": range(20)}), scenarios=[])
+            scenario_stress_test(
+                pd.Series([0.01] * 20), pd.DataFrame({"x": range(20)}), scenarios=[]
+            )
 
     def test_short_returns_raises(self):
         with pytest.raises(ValueError, match="at least 10"):
-            scenario_stress_test(pd.Series([0.01] * 5), pd.DataFrame(), scenarios=[{"type": "custom"}])
+            scenario_stress_test(
+                pd.Series([0.01] * 5), pd.DataFrame(), scenarios=[{"type": "custom"}]
+            )
 
 
 class TestTailRiskAnalyzer:
@@ -72,15 +76,28 @@ class TestTailRiskAnalyzer:
 
     def test_custom_scenario_first_day_shock(self, spy_returns, btc_panel):
         """Test shock_distribution='first_day'."""
-        scenarios = [{"name": "crash", "type": "custom", "shock_pct": -0.15,
-                      "duration_days": 5, "shock_distribution": "first_day"}]
+        scenarios = [
+            {
+                "name": "crash",
+                "type": "custom",
+                "shock_pct": -0.15,
+                "duration_days": 5,
+                "shock_distribution": "first_day",
+            }
+        ]
         result = scenario_stress_test(spy_returns, btc_panel, scenarios=scenarios)
         assert result["per_scenario"][0]["performance"] is not None
 
     def test_custom_scenario_linear_shock(self, spy_returns, btc_panel):
         """Test shock_distribution='linear'."""
-        scenarios = [{"name": "slow", "type": "custom", "shock_pct": -0.10,
-                      "duration_days": 10, "shock_distribution": "linear"}]
+        scenarios = [
+            {
+                "name": "slow",
+                "type": "custom",
+                "shock_pct": -0.10,
+                "duration_days": 10,
+                "shock_distribution": "linear",
+            }
+        ]
         result = scenario_stress_test(spy_returns, btc_panel, scenarios=scenarios)
         assert result["per_scenario"][0]["performance"]["n_days"] == 10
-

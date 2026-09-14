@@ -1,4 +1,5 @@
 """Preset view loader — installs builtin views (idempotent)."""
+
 from __future__ import annotations
 
 from pathlib import Path

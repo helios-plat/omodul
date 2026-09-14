@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import numpy as np
-import pandas as pd
-
 import oprim
 import oskill
+import pandas as pd
 
 
 def scenario_stress_test(
@@ -48,7 +47,9 @@ def scenario_stress_test(
             if len(period_data) == 0:
                 per_scenario.append({"name": s_name, "type": s_type, "error": "no data in range"})
                 continue
-            scenario_returns = period_data.select_dtypes(include=[np.number]).iloc[:, 0].pct_change().dropna()
+            scenario_returns = (
+                period_data.select_dtypes(include=[np.number]).iloc[:, 0].pct_change().dropna()
+            )
 
         elif s_type == "custom":
             shock_pct = scenario.get("shock_pct", -0.10)
@@ -74,20 +75,34 @@ def scenario_stress_test(
             window = len(query)
             db = []
             for i in range(0, len(historical_data) - window, window // 2):
-                chunk = historical_data.iloc[i:i + window].select_dtypes(include=[np.number]).iloc[:, 0].values
+                chunk = (
+                    historical_data.iloc[i : i + window]
+                    .select_dtypes(include=[np.number])
+                    .iloc[:, 0]
+                    .values
+                )
                 if len(chunk) == window:
                     db.append(chunk)
             if db:
-                matches = oskill.historical_analogy_search(query, db, top_k=scenario.get("top_k", 5))
+                matches = oskill.historical_analogy_search(
+                    query, db, top_k=scenario.get("top_k", 5)
+                )
                 # Use worst match as stress scenario
                 worst_idx = matches[-1]["historical_idx"] if matches else 0
                 start_pos = worst_idx * (window // 2)
-                scenario_returns = historical_data.iloc[start_pos:start_pos + window].select_dtypes(
-                    include=[np.number]).iloc[:, 0].pct_change().dropna()
+                scenario_returns = (
+                    historical_data.iloc[start_pos : start_pos + window]
+                    .select_dtypes(include=[np.number])
+                    .iloc[:, 0]
+                    .pct_change()
+                    .dropna()
+                )
             else:
                 scenario_returns = pd.Series([0.0])
         else:
-            per_scenario.append({"name": s_name, "type": s_type, "error": f"unknown type: {s_type}"})
+            per_scenario.append(
+                {"name": s_name, "type": s_type, "error": f"unknown type: {s_type}"}
+            )
             continue
 
         # Compute performance metrics
@@ -126,8 +141,12 @@ def scenario_stress_test(
             rows.append({"scenario": s["name"], **s["performance"]})
     comparison = pd.DataFrame(rows) if rows else pd.DataFrame()
 
-    worst = min(per_scenario, key=lambda x: x.get("performance", {}).get("cumulative_return", 0)
-                if x.get("performance") else 0)
+    worst = min(
+        per_scenario,
+        key=lambda x: (
+            x.get("performance", {}).get("cumulative_return", 0) if x.get("performance") else 0
+        ),
+    )
 
     return {
         "per_scenario": per_scenario,
@@ -169,10 +188,14 @@ def tail_risk_analyzer(
     for method in methods:
         for cl in confidence_levels:
             var_result = oprim.value_at_risk(ret, confidence_level=cl, method=method)
-            rows.append({
-                "method": method, "confidence_level": cl,
-                "var": float(var_result["var"]), "es": float(var_result["es"]),
-            })
+            rows.append(
+                {
+                    "method": method,
+                    "confidence_level": cl,
+                    "var": float(var_result["var"]),
+                    "es": float(var_result["es"]),
+                }
+            )
     var_es_table = pd.DataFrame(rows)
 
     # Tail metrics
@@ -195,8 +218,11 @@ def tail_risk_analyzer(
         }
 
     # Method comparison (filter NaN before max/min)
-    vars_95 = {r["method"]: r["var"] for r in rows
-               if r["confidence_level"] == confidence_levels[0] and not np.isnan(r["var"])}
+    vars_95 = {
+        r["method"]: r["var"]
+        for r in rows
+        if r["confidence_level"] == confidence_levels[0] and not np.isnan(r["var"])
+    }
     most_conservative = max(vars_95, key=vars_95.get) if vars_95 else None
     most_liberal = min(vars_95, key=vars_95.get) if vars_95 else None
 
@@ -206,10 +232,14 @@ def tail_risk_analyzer(
         ci_per_var = {}
         for cl in confidence_levels:
             boot = oskill.bootstrap_distribution(
-                ret.values, statistic=lambda x, q=cl: float(np.percentile(x, (1 - q) * 100)),
+                ret.values,
+                statistic=lambda x, q=cl: float(np.percentile(x, (1 - q) * 100)),
                 n_bootstrap=n_bootstrap,
             )
-            ci_per_var[f"var_{int(cl*100)}"] = {"ci_low": boot["ci_low"], "ci_high": boot["ci_high"]}
+            ci_per_var[f"var_{int(cl * 100)}"] = {
+                "ci_low": boot["ci_low"],
+                "ci_high": boot["ci_high"],
+            }
 
     return {
         "var_es_table": var_es_table,
@@ -220,5 +250,9 @@ def tail_risk_analyzer(
             "most_liberal": most_liberal,
         },
         "ci_per_var_estimate": ci_per_var,
-        "summary": {"n_observations": len(ret), "methods": methods, "confidence_levels": confidence_levels},
+        "summary": {
+            "n_observations": len(ret),
+            "methods": methods,
+            "confidence_levels": confidence_levels,
+        },
     }

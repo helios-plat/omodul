@@ -3,6 +3,7 @@
 Pillars: cost, decision_trail
 Composites: oprim.funding_rate_fetch + oskill.market_impact_sigmoid
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -65,14 +66,11 @@ def funding_arb(
     trail.record(event="rates_fetched", count=len(funding_rates))
 
     mean_rate = (
-        sum(r["funding_rate"] for r in funding_rates) / len(funding_rates)
-        if funding_rates else 0.0
+        sum(r["funding_rate"] for r in funding_rates) / len(funding_rates) if funding_rates else 0.0
     )
     annual_funding_bps = mean_rate * 3 * 365 * 10_000
 
-    impact = market_impact_sigmoid(
-        config.notional, adv=config.adv, params=config.impact_params
-    )
+    impact = market_impact_sigmoid(config.notional, adv=config.adv, params=config.impact_params)
     impact_bps = impact["impact_bps"]
     round_trip_bps = impact_bps * 2
     net_bps = annual_funding_bps - round_trip_bps

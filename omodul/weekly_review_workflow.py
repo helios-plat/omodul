@@ -6,10 +6,10 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, ClassVar, Literal
 
-from pydantic import BaseModel, Field
-
 from obase.cost_tracker import CostTracker
 from obase.provider_registry import ProviderRegistry
+from pydantic import BaseModel, Field
+
 from omodul._base_config import BaseConfig
 from omodul._decision_trail import build_decision_trail, record_step
 from omodul._fingerprint import compute_fingerprint
@@ -74,7 +74,11 @@ def weekly_review_workflow(
         ```python
         config = WeeklyReviewConfig(time_window_days=7)
         input_data = WeeklyReviewInput(
-            activities=[ActivityItem(activity_id="1", activity_type="s", title="t", timestamp_utc="...")],
+            activities=[
+                ActivityItem(
+                    activity_id="1", activity_type="s", title="t", timestamp_utc="..."
+                )
+            ],
             window_start_utc=datetime.now(),
             window_end_utc=datetime.now()
         )
@@ -98,8 +102,17 @@ def weekly_review_workflow(
             with open(report_path, "w") as f:
                 f.write(f"# {config.title_prefix}\n\nNo activities found.")
             return _build_response(
-                findings, fingerprint, config, input_data, trail_steps,
-                cost_tracker, started_at, status, error, output_dir, report_path
+                findings,
+                fingerprint,
+                config,
+                input_data,
+                trail_steps,
+                cost_tracker,
+                started_at,
+                status,
+                error,
+                output_dir,
+                report_path,
             )
 
         t0 = datetime.now(UTC)
@@ -113,11 +126,9 @@ Provide a general summary and group them by category.
 """
         response = llm(messages=[{"role": "user", "content": prompt}], max_tokens=2000)
         llm_content = response.get("content", "No summary generated.")
-        
+
         findings.summary = llm_content
-        findings.groups = [
-            ActivityGroup(category="General", count=len(input_data.activities))
-        ]
+        findings.groups = [ActivityGroup(category="General", count=len(input_data.activities))]
 
         record_step(
             trail_steps=trail_steps,
@@ -138,8 +149,17 @@ Provide a general summary and group them by category.
         _write_failed_marker(output_dir)
 
     return _build_response(
-        findings, fingerprint, config, input_data, trail_steps,
-        cost_tracker, started_at, status, error, output_dir, report_path
+        findings,
+        fingerprint,
+        config,
+        input_data,
+        trail_steps,
+        cost_tracker,
+        started_at,
+        status,
+        error,
+        output_dir,
+        report_path,
     )
 
 
@@ -198,7 +218,7 @@ def _write_markdown_report(
         f.write("## Findings\n")
         f.write(f"Groups: {len(findings.groups)}\n\n")
         f.write("## Trail\n")
-        f.write(f"Steps recorded.\n\n")
+        f.write("Steps recorded.\n\n")
         f.write("## Cost\n")
         f.write(f"USD: {cost_tracker.total_usd}\n\n")
         f.write("## Reproducibility\n")

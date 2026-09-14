@@ -88,7 +88,8 @@ def risk_parity(
     References
     ----------
     .. [1] Qian, E. (2005). Risk Parity Portfolios.
-    .. [2] Extraction source: Selene project, services/portfolio/capital/kelly.py:risk_parity_weights
+    .. [2] Extraction source: Selene project,
+       services/portfolio/capital/kelly.py:risk_parity_weights
     """
     if not volatilities:
         return {}
@@ -133,8 +134,10 @@ def execution_cost_model(
     References
     ----------
     .. [1] Kyle, A.S. (1985). Continuous Auctions and Insider Trading.
-    .. [2] Almgren, R. & Chriss, N. (2001). Optimal execution of portfolio transactions.
-    .. [3] Extraction source: Selene project, services/execution/slippage/model.py:SlippageModel.estimate
+    .. [2] Almgren, R. & Chriss, N. (2001). Optimal execution of portfolio
+       transactions.
+    .. [3] Extraction source: Selene project,
+       services/execution/slippage/model.py:SlippageModel.estimate
     """
     # 1. Half-spread
     spread_cost = spread_bps / 2.0

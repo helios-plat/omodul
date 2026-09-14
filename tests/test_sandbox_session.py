@@ -69,8 +69,9 @@ def test_session_forwards_pty_and_memory_refuses(sess_mod) -> None:
 
 
 def test_hosted_chat_verify_fails_without_driver(sess_mod, monkeypatch) -> None:
-    from omodul.sandbox_broker import reset_broker
     from oprim._opensandbox import set_opensandbox_driver
+
+    from omodul.sandbox_broker import reset_broker
 
     monkeypatch.setenv("VEYA_SANDBOX_PROFILE", "hosted")
     reset_broker()
@@ -81,8 +82,9 @@ def test_hosted_chat_verify_fails_without_driver(sess_mod, monkeypatch) -> None:
 
 
 def test_hosted_chat_verify_runs_on_opensandbox(sess_mod, monkeypatch) -> None:
-    from omodul.sandbox_broker import reset_broker
     from oprim._opensandbox import LoopbackOpenSandboxDriver, set_opensandbox_driver
+
+    from omodul.sandbox_broker import reset_broker
 
     monkeypatch.setenv("VEYA_SANDBOX_PROFILE", "hosted")
     reset_broker()

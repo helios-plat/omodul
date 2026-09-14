@@ -6,11 +6,12 @@ from pathlib import Path
 from typing import Any, ClassVar
 
 from obase.loop_breaker import get_breaker
-from omodul._base import BaseConfig, Trail, build_result
 from oprim._hash_tool_call import hash_tool_call
 from oskill.constitutional_violation import detect_constitution_violation
 from oskill.loop_detection import detect_trajectory_loop
 from pydantic import BaseModel, ConfigDict
+
+from omodul._base import BaseConfig, Trail, build_result
 
 
 class MonitorConfig(BaseConfig):

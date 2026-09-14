@@ -174,9 +174,7 @@ async def _stage_persist(
     on_step: Callable[[dict[str, Any]], None] | None,
 ) -> str:
     step_start = datetime.now(UTC)
-    node_id = hashlib.sha256(
-        f"{config.host}:{config.node_label}".encode()
-    ).hexdigest()[:12]
+    node_id = hashlib.sha256(f"{config.host}:{config.node_label}".encode()).hexdigest()[:12]
     await insert_one(
         pool,
         table="aegis_nodes",

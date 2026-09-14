@@ -1,10 +1,10 @@
 """Tests for AgentRunner and AgentTracer."""
+
 from __future__ import annotations
 
 import asyncio
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -22,9 +22,7 @@ class _OkAgent(Agent):
         return AgentResult(
             success=True,
             output={"done": True},
-            trace=[
-                AgentStep(step_num=1, tool_name="noop", tool_output={"x": 1}, duration_ms=5)
-            ],
+            trace=[AgentStep(step_num=1, tool_name="noop", tool_output={"x": 1}, duration_ms=5)],
             citations=[Citation(substrate_id="SUB001")],
             total_input_tokens=10,
             total_output_tokens=20,
@@ -126,12 +124,16 @@ class TestAgentRunner:
 class TestAgentTracer:
     def _make_tracer(self, tmp_path: Path) -> AgentTracer:
         from oprim.meta_db import MetaDB
+
         db_path = tmp_path / "test.duckdb"
         db = MetaDB(db_path)
         # Apply migration
         migrations_dir = (
             Path(__file__).parent.parent.parent.parent.parent.parent
-            / "oprim" / "oprim" / "meta_db" / "migrations"
+            / "oprim"
+            / "oprim"
+            / "meta_db"
+            / "migrations"
         )
         if migrations_dir.exists():
             db.migrate(migrations_dir)

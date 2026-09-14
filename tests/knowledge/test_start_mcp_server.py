@@ -1,12 +1,11 @@
 """Tests for omodul.knowledge.start_mcp_server."""
+
 from __future__ import annotations
 
-import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from unittest.mock import MagicMock, patch, AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
 from mcp.server.fastmcp import FastMCP
 
 from omodul.knowledge.start_mcp_server import (
@@ -21,7 +20,6 @@ from omodul.knowledge.start_mcp_server import (
     create_stratum_mcp_server,
     start_mcp_server,
 )
-
 
 _MIGRATIONS = Path("/home/soffy/projects/platform/oprim/oprim/meta_db/migrations")
 
@@ -63,8 +61,10 @@ class TestSearchHandler:
         mock_result.highlight = None
         mock_result.metadata = {"medium": "paper"}
 
-        with patch("omodul.knowledge.start_mcp_server.hybrid_search",
-                   new=AsyncMock(return_value=[mock_result])):
+        with patch(
+            "omodul.knowledge.start_mcp_server.hybrid_search",
+            new=AsyncMock(return_value=[mock_result]),
+        ):
             results = await _search_handler("test query")
 
         assert isinstance(results, list)
@@ -73,14 +73,16 @@ class TestSearchHandler:
         assert results[0]["score"] == 0.9
 
     async def test_empty_query_returns_empty(self, stratum_home):
-        with patch("omodul.knowledge.start_mcp_server.hybrid_search",
-                   new=AsyncMock(return_value=[])):
+        with patch(
+            "omodul.knowledge.start_mcp_server.hybrid_search", new=AsyncMock(return_value=[])
+        ):
             results = await _search_handler("no match")
         assert results == []
 
     async def test_medium_filter_passed_through(self, stratum_home):
-        with patch("omodul.knowledge.start_mcp_server.hybrid_search",
-                   new=AsyncMock(return_value=[])) as mock_hs:
+        with patch(
+            "omodul.knowledge.start_mcp_server.hybrid_search", new=AsyncMock(return_value=[])
+        ) as mock_hs:
             await _search_handler("query", medium_filter=["paper"])
         mock_hs.assert_called_once_with("query", top_k=20, medium_filter=["paper"])
 
@@ -93,12 +95,25 @@ class TestFetchSubstrateHandler:
     def test_invalid_meta_json_falls_back(self, stratum_home):
         from oprim.meta_db import open_meta_db
         from oskill.knowledge._context import meta_db_path
-        now = datetime.now(timezone.utc).isoformat()
+
+        now = datetime.now(UTC).isoformat()
         db = open_meta_db(meta_db_path())
         db.migrate(_MIGRATIONS)
         db.execute(
-            "INSERT INTO substrate (id, ulid, title, mime, source_path, file_hash, byte_size, meta_json, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
-            ["01ARZ3NDEKTSV4RRFFQ69G5FAW", "01ARZ3NDEKTSV4RRFFQ69G5FAW", "Bad JSON", "", "", "h002", 0, "NOT_JSON", now, now],
+            "INSERT INTO substrate (id, ulid, title, mime, source_path, file_hash, "
+            "byte_size, meta_json, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+            [
+                "01ARZ3NDEKTSV4RRFFQ69G5FAW",
+                "01ARZ3NDEKTSV4RRFFQ69G5FAW",
+                "Bad JSON",
+                "",
+                "",
+                "h002",
+                0,
+                "NOT_JSON",
+                now,
+                now,
+            ],
         )
         db.close()
         result = _fetch_substrate_handler("01ARZ3NDEKTSV4RRFFQ69G5FAW")
@@ -108,6 +123,7 @@ class TestFetchSubstrateHandler:
     def test_unknown_id_returns_error(self, stratum_home):
         from oprim.meta_db import open_meta_db
         from oskill.knowledge._context import meta_db_path
+
         db = open_meta_db(meta_db_path())
         db.migrate(_MIGRATIONS)
         db.close()
@@ -119,12 +135,25 @@ class TestFetchSubstrateHandler:
     def test_known_id_returns_substrate(self, stratum_home):
         from oprim.meta_db import open_meta_db
         from oskill.knowledge._context import meta_db_path
-        now = datetime.now(timezone.utc).isoformat()
+
+        now = datetime.now(UTC).isoformat()
         db = open_meta_db(meta_db_path())
         db.migrate(_MIGRATIONS)
         db.execute(
-            "INSERT INTO substrate (id, ulid, title, mime, source_path, file_hash, byte_size, meta_json, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
-            ["01ARZ3NDEKTSV4RRFFQ69G5FAV", "01ARZ3NDEKTSV4RRFFQ69G5FAV", "Kelly Paper", "", "", "h001", 1024, '{"medium":"paper"}', now, now],
+            "INSERT INTO substrate (id, ulid, title, mime, source_path, file_hash, "
+            "byte_size, meta_json, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+            [
+                "01ARZ3NDEKTSV4RRFFQ69G5FAV",
+                "01ARZ3NDEKTSV4RRFFQ69G5FAV",
+                "Kelly Paper",
+                "",
+                "",
+                "h001",
+                1024,
+                '{"medium":"paper"}',
+                now,
+                now,
+            ],
         )
         db.close()
 
@@ -143,11 +172,13 @@ class TestListNotesHandler:
     def test_returns_notes_list(self, stratum_home):
         from oprim.meta_db import open_meta_db
         from oskill.knowledge._context import meta_db_path
-        now = datetime.now(timezone.utc).isoformat()
+
+        now = datetime.now(UTC).isoformat()
         db = open_meta_db(meta_db_path())
         db.migrate(_MIGRATIONS)
         db.execute(
-            "INSERT INTO note (id, title, content, wikilinks, substrate_id, created_at) VALUES (?,?,?,?,?,?)",
+            "INSERT INTO note (id, title, content, wikilinks, substrate_id, "
+            "created_at) VALUES (?,?,?,?,?,?)",
             ["NOTE01", "My Note", "Content of the note", "[]", None, now],
         )
         db.close()
@@ -161,7 +192,8 @@ class TestListNotesHandler:
     def test_respects_limit(self, stratum_home):
         from oprim.meta_db import open_meta_db
         from oskill.knowledge._context import meta_db_path
-        now = datetime.now(timezone.utc).isoformat()
+
+        now = datetime.now(UTC).isoformat()
         db = open_meta_db(meta_db_path())
         db.migrate(_MIGRATIONS)
         for i in range(5):
@@ -183,10 +215,12 @@ class TestRecentChangesHandler:
     def test_returns_changefeed_events(self, stratum_home):
         from oprim.meta_db import open_meta_db
         from oskill.knowledge._context import meta_db_path
+
         db = open_meta_db(meta_db_path())
         db.migrate(_MIGRATIONS)
         db.execute(
-            "INSERT INTO changefeed_local (seq, table_name, row_id, op, payload) VALUES (?,?,?,?,?)",
+            "INSERT INTO changefeed_local (seq, table_name, row_id, op, payload) "
+            "VALUES (?,?,?,?,?)",
             [1, "substrate", "SUB001", "insert", '{"substrate_id":"SUB001"}'],
         )
         db.close()
@@ -200,6 +234,7 @@ class TestRecentChangesHandler:
     def test_respects_limit(self, stratum_home):
         from oprim.meta_db import open_meta_db
         from oskill.knowledge._context import meta_db_path
+
         db = open_meta_db(meta_db_path())
         db.migrate(_MIGRATIONS)
         for i in range(1, 6):
@@ -222,11 +257,13 @@ class TestPinSubstrate:
     def test_pin_existing_substrate(self, stratum_home):
         from oprim.meta_db import open_meta_db
         from oskill.knowledge._context import meta_db_path
-        now = datetime.now(timezone.utc).isoformat()
+
+        now = datetime.now(UTC).isoformat()
         db = open_meta_db(meta_db_path())
         db.migrate(_MIGRATIONS)
         db.execute(
-            "INSERT INTO substrate (id, ulid, title, mime, source_path, file_hash, byte_size, meta_json, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO substrate (id, ulid, title, mime, source_path, file_hash, "
+            "byte_size, meta_json, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
             ["PIN001", "PIN001", "Pinnable", "", "", "h001", 0, "{}", now, now],
         )
         db.close()
@@ -244,6 +281,7 @@ class TestPinSubstrate:
     def test_pin_nonexistent_substrate_returns_error(self, stratum_home):
         from oprim.meta_db import open_meta_db
         from oskill.knowledge._context import meta_db_path
+
         db = open_meta_db(meta_db_path())
         db.migrate(_MIGRATIONS)
         db.close()
@@ -254,11 +292,14 @@ class TestPinSubstrate:
     def test_unpin_substrate(self, stratum_home):
         from oprim.meta_db import open_meta_db
         from oskill.knowledge._context import meta_db_path
-        now = datetime.now(timezone.utc).isoformat()
+
+        now = datetime.now(UTC).isoformat()
         db = open_meta_db(meta_db_path())
         db.migrate(_MIGRATIONS)
         db.execute(
-            "INSERT INTO substrate (id, ulid, title, mime, source_path, file_hash, byte_size, meta_json, is_pinned, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO substrate (id, ulid, title, mime, source_path, file_hash, "
+            "byte_size, meta_json, is_pinned, created_at, updated_at) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?)",
             ["UNPIN001", "UNPIN001", "Pinned", "", "", "h001", 0, "{}", True, now, now],
         )
         db.close()
@@ -285,7 +326,8 @@ class TestListViewsHandler:
     def test_returns_views_list(self, stratum_home):
         from oprim.meta_db import open_meta_db
         from oskill.knowledge._context import meta_db_path
-        now = datetime.now(timezone.utc).isoformat()
+
+        now = datetime.now(UTC).isoformat()
         db = open_meta_db(meta_db_path())
         db.migrate(_MIGRATIONS)
         db.execute(
@@ -305,6 +347,7 @@ class TestListViewsHandler:
     def test_no_views_returns_empty_list(self, stratum_home):
         from oprim.meta_db import open_meta_db
         from oskill.knowledge._context import meta_db_path
+
         db = open_meta_db(meta_db_path())
         db.migrate(_MIGRATIONS)
         db.close()
@@ -320,7 +363,8 @@ class TestListViewsHandler:
     def test_lists_only_own_user_views(self, stratum_home):
         from oprim.meta_db import open_meta_db
         from oskill.knowledge._context import meta_db_path
-        now = datetime.now(timezone.utc).isoformat()
+
+        now = datetime.now(UTC).isoformat()
         db = open_meta_db(meta_db_path())
         db.migrate(_MIGRATIONS)
         db.execute(
@@ -346,7 +390,8 @@ class TestSetDefaultViewHandler:
     def test_set_default_success(self, stratum_home):
         from oprim.meta_db import open_meta_db
         from oskill.knowledge._context import meta_db_path
-        now = datetime.now(timezone.utc).isoformat()
+
+        now = datetime.now(UTC).isoformat()
         db = open_meta_db(meta_db_path())
         db.migrate(_MIGRATIONS)
         db.execute(
@@ -365,6 +410,7 @@ class TestSetDefaultViewHandler:
     def test_set_default_unknown_view_returns_error(self, stratum_home):
         from oprim.meta_db import open_meta_db
         from oskill.knowledge._context import meta_db_path
+
         db = open_meta_db(meta_db_path())
         db.migrate(_MIGRATIONS)
         db.close()
@@ -375,7 +421,8 @@ class TestSetDefaultViewHandler:
     def test_set_default_switches_previous_default(self, stratum_home):
         from oprim.meta_db import open_meta_db
         from oskill.knowledge._context import meta_db_path
-        now = datetime.now(timezone.utc).isoformat()
+
+        now = datetime.now(UTC).isoformat()
         db = open_meta_db(meta_db_path())
         db.migrate(_MIGRATIONS)
         db.execute(

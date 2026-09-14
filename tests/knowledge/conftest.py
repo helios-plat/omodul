@@ -1,4 +1,5 @@
 """Shared fixtures for omodul.knowledge tests."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -12,6 +13,7 @@ def stratum_home(tmp_path, monkeypatch):
     home.mkdir()
     monkeypatch.setenv("STRATUM_HOME", str(home))
     import oprim._config as _cfg_mod
+
     _cfg_mod._store["STRATUM_HOME"] = str(home)
     yield home
     _cfg_mod._store.pop("STRATUM_HOME", None)

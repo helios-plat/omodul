@@ -17,22 +17,23 @@ from __future__ import annotations
 
 import json
 import time
-from dataclasses import dataclass, field
+from dataclasses import field
 from pathlib import Path
-from typing import Any, ClassVar, Dict, List, Optional
+from typing import Any, ClassVar
 
-from omodul._base import BaseConfig, Trail, build_result, compute_fingerprint, write_report
 from oskill._bayesian_belief_update import BayesianBeliefUpdater
 
+from omodul._base import BaseConfig, Trail, build_result, compute_fingerprint, write_report
+
 # 蜜罐事件类型 → [P(信号|benign), P(信号|suspicious), P(信号|hostile)]
-SIGNAL_LIKELIHOODS: Dict[str, List[float]] = {
-    "probe":                [0.02, 0.30, 0.80],
-    "credential_stuffing":  [0.001, 0.20, 0.90],
-    "payload_injection":    [0.01, 0.25, 0.85],
-    "exfiltration":         [0.001, 0.10, 0.95],
-    "anomalous_io":         [0.05, 0.40, 0.70],
-    "honeypot_trigger":     [0.005, 0.35, 0.92],
-    "benign_activity":      [0.95, 0.30, 0.05],
+SIGNAL_LIKELIHOODS: dict[str, list[float]] = {
+    "probe": [0.02, 0.30, 0.80],
+    "credential_stuffing": [0.001, 0.20, 0.90],
+    "payload_injection": [0.01, 0.25, 0.85],
+    "exfiltration": [0.001, 0.10, 0.95],
+    "anomalous_io": [0.05, 0.40, 0.70],
+    "honeypot_trigger": [0.005, 0.35, 0.92],
+    "benign_activity": [0.95, 0.30, 0.05],
 }
 _DEFAULT_LIKELIHOOD = [0.10, 0.30, 0.60]
 
@@ -45,8 +46,8 @@ class ThreatModelConfig(BaseConfig):
     _fingerprint_fields: ClassVar[set[str]] = {"signals"}
     _enabled_pillars: ClassVar[set[str]] = {"report", "decision_trail", "fingerprint"}
 
-    states: List[str] = field(default_factory=lambda: ["benign", "suspicious", "hostile"])
-    quarantine_threshold: float = 0.7           # P(hostile) ≥ 此值 → 自动隔离
+    states: list[str] = field(default_factory=lambda: ["benign", "suspicious", "hostile"])
+    quarantine_threshold: float = 0.7  # P(hostile) ≥ 此值 → 自动隔离
     hostile_state: str = "hostile"
     persistence_name: str = "threat_profile.json"
 
@@ -54,19 +55,21 @@ class ThreatModelConfig(BaseConfig):
 class ThreatModelInput:
     """威胁模型输入。prior 缺省 None → 均匀先验(或读上次持久化画像)。"""
 
-    def __init__(self,
-                 signals: List[dict],
-                 *,
-                 prior: Optional[List[float]] = None,
-                 profile_path: Optional[str] = None,
-                 entity: str = "default"):
-        self.signals = signals                  # [{"kind": "probe", "severity": 0.8, ...}]
+    def __init__(
+        self,
+        signals: list[dict],
+        *,
+        prior: list[float] | None = None,
+        profile_path: str | None = None,
+        entity: str = "default",
+    ):
+        self.signals = signals  # [{"kind": "probe", "severity": 0.8, ...}]
         self.prior = prior
-        self.profile_path = profile_path        # 持久化画像路径(读旧先验/写新后验)
+        self.profile_path = profile_path  # 持久化画像路径(读旧先验/写新后验)
         self.entity = entity
 
 
-def _modulated_likelihood(kind: str, severity: float) -> List[float]:
+def _modulated_likelihood(kind: str, severity: float) -> list[float]:
     """severity ∈ [0,1]: 0 → 无信息(似然全 1), 1 → 表内原值。线性插值。"""
     base = SIGNAL_LIKELIHOODS.get(kind, _DEFAULT_LIKELIHOOD)
     s = max(0.0, min(1.0, severity))
@@ -86,8 +89,8 @@ async def threat_model_evolve(
     trail = Trail()
 
     # 先验: 显式 > 持久化画像 > 均匀
-    prior: Optional[List[float]] = input_data.prior
-    profile_path: Optional[Path] = None
+    prior: list[float] | None = input_data.prior
+    profile_path: Path | None = None
     if prior is None and input_data.profile_path:
         profile_path = Path(input_data.profile_path).expanduser()
         if profile_path.exists():
@@ -100,14 +103,16 @@ async def threat_model_evolve(
     updater = BayesianBeliefUpdater(config.states, prior)
     trail.record(event="init", prior=[round(x, 6) for x in updater.posterior])
 
-    signal_trail: List[dict[str, Any]] = []
+    signal_trail: list[dict[str, Any]] = []
     for i, sig in enumerate(input_data.signals):
         kind = str(sig.get("kind", "probe"))
         severity = float(sig.get("severity", 1.0))
         lik = _modulated_likelihood(kind, severity)
         updater.update(lik)
         entry = {
-            "index": i, "kind": kind, "severity": severity,
+            "index": i,
+            "kind": kind,
+            "severity": severity,
             "likelihood": [round(x, 4) for x in lik],
             "posterior": [round(x, 6) for x in updater.posterior],
         }
@@ -118,14 +123,17 @@ async def threat_model_evolve(
     quarantined = hostile_prob >= config.quarantine_threshold
     trail.record(event="verdict", hostile=round(hostile_prob, 6), quarantined=quarantined)
 
-    fingerprint = compute_fingerprint({
-        "entity": input_data.entity,
-        "signals": [{"kind": s.get("kind"), "severity": s.get("severity")}
-                    for s in input_data.signals],
-    })
+    fingerprint = compute_fingerprint(
+        {
+            "entity": input_data.entity,
+            "signals": [
+                {"kind": s.get("kind"), "severity": s.get("severity")} for s in input_data.signals
+            ],
+        }
+    )
 
     # 威胁画像持久化: 后验 → 下一次的先验 (闭环)
-    profile: Dict[str, Any] = {
+    profile: dict[str, Any] = {
         "entity": input_data.entity,
         "states": config.states,
         "posterior": [round(x, 6) for x in updater.posterior],
@@ -134,20 +142,17 @@ async def threat_model_evolve(
         "signal_counts": _count_signals(input_data.signals),
         "updated_at": time.time(),
     }
-    persist_path: Optional[Path] = None
+    persist_path: Path | None = None
     if profile_path is not None:
         profile_path.parent.mkdir(parents=True, exist_ok=True)
-        profile_path.write_text(json.dumps(profile, ensure_ascii=False, indent=2),
-                                encoding="utf-8")
+        profile_path.write_text(json.dumps(profile, ensure_ascii=False, indent=2), encoding="utf-8")
         persist_path = profile_path
     else:
         persist_path = output_dir / config.persistence_name
-        persist_path.write_text(json.dumps(profile, ensure_ascii=False, indent=2),
-                                encoding="utf-8")
+        persist_path.write_text(json.dumps(profile, ensure_ascii=False, indent=2), encoding="utf-8")
 
     report = _render_report(config, input_data, profile, signal_trail)
-    report_path = write_report(report, output_dir=output_dir,
-                               name=f"threat_{fingerprint[:8]}")
+    report_path = write_report(report, output_dir=output_dir, name=f"threat_{fingerprint[:8]}")
     trail.write(output_dir, suffix=f"_{fingerprint[:8]}")
 
     return build_result(
@@ -167,16 +172,17 @@ async def threat_model_evolve(
     )
 
 
-def _count_signals(signals: List[dict]) -> Dict[str, int]:
-    out: Dict[str, int] = {}
+def _count_signals(signals: list[dict]) -> dict[str, int]:
+    out: dict[str, int] = {}
     for s in signals:
         kind = str(s.get("kind", "unknown"))
         out[kind] = out.get(kind, 0) + 1
     return out
 
 
-def _render_report(config: ThreatModelConfig, input_data: ThreatModelInput,
-                   profile: dict, signal_trail: List[dict]) -> str:
+def _render_report(
+    config: ThreatModelConfig, input_data: ThreatModelInput, profile: dict, signal_trail: list[dict]
+) -> str:
     lines = [
         f"# 威胁模型演化报告 — {input_data.entity}",
         "",
@@ -190,12 +196,15 @@ def _render_report(config: ThreatModelConfig, input_data: ThreatModelInput,
         "",
     ]
     for e in signal_trail:
-        lines.append(f"- [{e['index']}] {e['kind']} (severity={e['severity']}) → "
-                     f"后验 {e['posterior']}")
-    lines += ["", "> 本报告由 omodul.threat_model_evolve 生成。后验已持久化, "
-                  "将作为下一次信号评估的先验(威胁记忆闭环)。"]
+        lines.append(
+            f"- [{e['index']}] {e['kind']} (severity={e['severity']}) → 后验 {e['posterior']}"
+        )
+    lines += [
+        "",
+        "> 本报告由 omodul.threat_model_evolve 生成。后验已持久化, "
+        "将作为下一次信号评估的先验(威胁记忆闭环)。",
+    ]
     return "\n".join(lines)
 
 
-__all__ = ["SIGNAL_LIKELIHOODS", "ThreatModelConfig", "ThreatModelInput",
-           "threat_model_evolve"]
+__all__ = ["SIGNAL_LIKELIHOODS", "ThreatModelConfig", "ThreatModelInput", "threat_model_evolve"]

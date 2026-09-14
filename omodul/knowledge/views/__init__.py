@@ -1,4 +1,5 @@
 """omodul.knowledge.views — View CRUD, applier, and preset loader."""
+
 from omodul.knowledge.views.applier import apply_view
 from omodul.knowledge.views.crud import (
     create_view,

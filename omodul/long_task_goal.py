@@ -160,9 +160,9 @@ class Goal:
         """
         status = {t.id: t.status for t in self.todos.values()}
         return [
-            t for t in self.todos.values()
-            if t.status != TODO_DONE
-            and all(status.get(dep) == TODO_DONE for dep in t.blocked_by)
+            t
+            for t in self.todos.values()
+            if t.status != TODO_DONE and all(status.get(dep) == TODO_DONE for dep in t.blocked_by)
         ]
 
     def next_action(self) -> Todo | None:

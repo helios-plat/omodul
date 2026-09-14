@@ -13,7 +13,7 @@ from omodul._base import BaseConfig, CostTracker, Trail, build_result
 _QA_SYSTEM = (
     "你是无情的 QA 检查官。对照 acceptance，严格审查 worker 提交的"
     "实际 git diff 与执行结果。只输出 JSON："
-    "{\"passed\": true|false, \"reasoning\": \"...\"}。"
+    '{"passed": true|false, "reasoning": "..."}。'
     "证据不足或与 acceptance 不符必须 failed。"
 )
 

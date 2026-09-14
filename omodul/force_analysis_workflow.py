@@ -5,6 +5,7 @@
 
 Added: omodul v1.30.7
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -67,8 +68,9 @@ async def force_analysis_workflow(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     try:
-        trail.record(event="start", user_id=input_data.user_id,
-                     n_messages=len(input_data.student_messages))
+        trail.record(
+            event="start", user_id=input_data.user_id, n_messages=len(input_data.student_messages)
+        )
 
         messages = input_data.student_messages[: config.max_turns]
 
@@ -90,10 +92,12 @@ async def force_analysis_workflow(
         if result.answer_leaked:
             trail.record(event="redline_triggered")
 
-        fp = compute_fingerprint({
-            "question_hash": str(hash(input_data.question_text))[:12],
-            "user_id": input_data.user_id,
-        })
+        fp = compute_fingerprint(
+            {
+                "question_hash": str(hash(input_data.question_text))[:12],
+                "user_id": input_data.user_id,
+            }
+        )
 
         return build_result(
             status="ok",
@@ -121,6 +125,9 @@ async def force_analysis_workflow(
 class _MockCaller:
     async def __call__(self, **kwargs: Any) -> dict:
         return {
-            "content": '{"assistant_text":"你觉得这个物体受几个力的作用？","equation_ready":false,"answer_leaked":false}',
+            "content": (
+                '{"assistant_text":"你觉得这个物体受几个力的作用？",'
+                '"equation_ready":false,"answer_leaked":false}'
+            ),
             "usage": {"input_tokens": 0, "output_tokens": 0},
         }

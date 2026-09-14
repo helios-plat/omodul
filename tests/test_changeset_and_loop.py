@@ -42,6 +42,12 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "oservice"))
 sys.path.insert(0, str(Path(__file__).parent))
 
+from oservi.agentic_loop import (
+    AgenticLoop,
+    ManifestValidationError,
+    ToolSpec,
+)
+
 from omodul import (
     ChangesetConfig,
     ChangesetInput,
@@ -50,11 +56,6 @@ from omodul import (
     VersionStore,
     apply_changeset,
     compute_fingerprint_for,
-)
-from oservi.agentic_loop import (
-    AgenticLoop,
-    ManifestValidationError,
-    ToolSpec,
 )
 
 PASSED: list[str] = []
@@ -74,6 +75,7 @@ def tmp_dir():
 # ============================================================
 # apply_changeset 测试
 # ============================================================
+
 
 def cs_config(**kw) -> ChangesetConfig:
     return ChangesetConfig(**kw)
@@ -102,11 +104,13 @@ def test_cs_02_edit_blocks_fuzzy():
     with tmp_dir() as d:
         p = Path(d) / "b.txt"
         p.write_text("  hello\n  world\n")
-        edits = [Edit(
-            path=str(p),
-            blocks=[EditBlock(search="hello", replace="goodbye")],
-            validate_syntax=False,
-        )]
+        edits = [
+            Edit(
+                path=str(p),
+                blocks=[EditBlock(search="hello", replace="goodbye")],
+                validate_syntax=False,
+            )
+        ]
         result = apply_changeset(cs_config(), cs_input(edits), Path(d) / "out")
         ok = result["status"] == "completed" and "goodbye" in p.read_text()
         report("cs_02_edit_blocks_fuzzy", ok, f"status={result['status']}")
@@ -117,13 +121,7 @@ def test_cs_03_unified_diff():
     with tmp_dir() as d:
         p = Path(d) / "c.txt"
         p.write_text("line1\nline2\nline3\n")
-        diff = (
-            "@@ -1,3 +1,3 @@\n"
-            " line1\n"
-            "-line2\n"
-            "+LINE2\n"
-            " line3\n"
-        )
+        diff = "@@ -1,3 +1,3 @@\n line1\n-line2\n+LINE2\n line3\n"
         edits = [Edit(path=str(p), unified_diff=diff, validate_syntax=False)]
         result = apply_changeset(cs_config(), cs_input(edits), Path(d) / "out")
         ok = result["status"] == "completed" and "LINE2" in p.read_text()
@@ -137,11 +135,13 @@ def test_cs_04_syntax_error_rollback():
         original = "x = 1\n"
         p.write_text(original)
         vstore = VersionStore()
-        edits = [Edit(
-            path=str(p),
-            full_content="def broken(\n",   # 语法错误
-            validate_syntax=True,
-        )]
+        edits = [
+            Edit(
+                path=str(p),
+                full_content="def broken(\n",  # 语法错误
+                validate_syntax=True,
+            )
+        ]
         result = apply_changeset(
             cs_config(syntax_check_enabled=True),
             cs_input(edits, vstore),
@@ -152,8 +152,9 @@ def test_cs_04_syntax_error_rollback():
             and p.read_text() == original
             and result["applied"] == []
         )
-        report("cs_04_syntax_error_rollback", ok,
-               f"status={result['status']} file={p.read_text()!r}")
+        report(
+            "cs_04_syntax_error_rollback", ok, f"status={result['status']} file={p.read_text()!r}"
+        )
 
 
 def test_cs_05_block_not_found_rollback():
@@ -162,11 +163,13 @@ def test_cs_05_block_not_found_rollback():
         p = Path(d) / "e.txt"
         p.write_text("alpha beta\n")
         vstore = VersionStore()
-        edits = [Edit(
-            path=str(p),
-            blocks=[EditBlock(search="NONEXISTENT", replace="x")],
-            validate_syntax=False,
-        )]
+        edits = [
+            Edit(
+                path=str(p),
+                blocks=[EditBlock(search="NONEXISTENT", replace="x")],
+                validate_syntax=False,
+            )
+        ]
         result = apply_changeset(cs_config(), cs_input(edits, vstore), Path(d) / "out")
         ok = result["status"] == "rolled_back" and p.read_text() == "alpha beta\n"
         report("cs_05_block_not_found_rollback", ok, f"status={result['status']}")
@@ -187,8 +190,7 @@ def test_cs_06_versionstore_undo():
         rev = result["snapshot_rev"]
         vstore.restore(rev)
         ok = p.read_text() == "original\n"
-        report("cs_06_versionstore_undo", ok,
-               f"after_undo={p.read_text()!r}")
+        report("cs_06_versionstore_undo", ok, f"after_undo={p.read_text()!r}")
 
 
 def test_cs_07_fingerprint_stable():
@@ -233,11 +235,14 @@ def test_cs_09_multi_file_second_fails_rollback():
         # 第 1 个写盘后第 2 个失败 → 全部回滚
         ok = (
             result["status"] == "rolled_back"
-            and p1.read_text() == "a = 1\n"   # 已回滚
-            and p2.read_text() == "b = 2\n"   # 未被改动
+            and p1.read_text() == "a = 1\n"  # 已回滚
+            and p2.read_text() == "b = 2\n"  # 未被改动
         )
-        report("cs_09_multi_file_second_fails_rollback", ok,
-               f"p1={p1.read_text()!r} p2={p2.read_text()!r}")
+        report(
+            "cs_09_multi_file_second_fails_rollback",
+            ok,
+            f"p1={p1.read_text()!r} p2={p2.read_text()!r}",
+        )
 
 
 def test_cs_10_sandbox_violation():
@@ -283,13 +288,13 @@ def test_cs_12_decision_trail_written():
         if ok:
             trail = json.loads(trail_path.read_text())
             ok = len(trail) > 0
-        report("cs_12_decision_trail_written", ok,
-               f"steps={result['decision_trail']['steps']}")
+        report("cs_12_decision_trail_written", ok, f"steps={result['decision_trail']['steps']}")
 
 
 # ============================================================
 # agentic_loop 测试
 # ============================================================
+
 
 def _text_response(text="done", in_tok=100, out_tok=50):
     return {
@@ -301,9 +306,7 @@ def _text_response(text="done", in_tok=100, out_tok=50):
 
 def _tool_response(tool_name, tool_input, in_tok=100, out_tok=30):
     return {
-        "content": [
-            {"type": "tool_use", "id": "t1", "name": tool_name, "input": tool_input}
-        ],
+        "content": [{"type": "tool_use", "id": "t1", "name": tool_name, "input": tool_input}],
         "stop_reason": "tool_use",
         "usage": {"input_tokens": in_tok, "output_tokens": out_tok},
     }
@@ -312,8 +315,7 @@ def _tool_response(tool_name, tool_input, in_tok=100, out_tok=30):
 def make_caller(responses):
     idx = 0
 
-    async def caller(*, messages, tools=None, max_tokens=8192,
-                     thinking_budget=None, system=None):
+    async def caller(*, messages, tools=None, max_tokens=8192, thinking_budget=None, system=None):
         nonlocal idx
         r = responses[min(idx, len(responses) - 1)]
         idx += 1
@@ -364,8 +366,7 @@ async def test_al_02_normal_completion():
     loop.run()
     result = await loop.session("do something")
     ok = result["status"] == "completed" and "all done" in result["result"]
-    report("al_02_normal_completion", ok,
-           f"status={result['status']} result={result['result']!r}")
+    report("al_02_normal_completion", ok, f"status={result['status']} result={result['result']!r}")
 
 
 async def test_al_03_tool_call_execution():
@@ -373,18 +374,19 @@ async def test_al_03_tool_call_execution():
     events = []
     loop = make_loop()
     loop.assemble(
-        llm_caller=make_caller([
-            _tool_response("echo_tool", {"msg": "hello"}),
-            _text_response("tool done"),
-        ]),
+        llm_caller=make_caller(
+            [
+                _tool_response("echo_tool", {"msg": "hello"}),
+                _text_response("tool done"),
+            ]
+        ),
         tools=[make_echo_tool()],
     )
     loop.run()
     result = await loop.session("use tool", on_step=lambda e: events.append(e["event"]))
     tool_called = any(e == "tool_call" for e in events)
     ok = result["status"] == "completed" and tool_called
-    report("al_03_tool_call_execution", ok,
-           f"status={result['status']} tool_called={tool_called}")
+    report("al_03_tool_call_execution", ok, f"status={result['status']} tool_called={tool_called}")
 
 
 async def test_al_04_hook_block():
@@ -399,10 +401,12 @@ async def test_al_04_hook_block():
 
     loop = make_loop()
     loop.assemble(
-        llm_caller=make_caller([
-            _tool_response("echo_tool", {"msg": "x"}),
-            _text_response("done after block"),
-        ]),
+        llm_caller=make_caller(
+            [
+                _tool_response("echo_tool", {"msg": "x"}),
+                _text_response("done after block"),
+            ]
+        ),
         tools=[make_echo_tool()],
         hook_dispatch=hook_dispatch,
     )
@@ -448,8 +452,7 @@ async def test_al_06_budget_exceeded():
     loop.run()
     result = await loop.session("expensive task")
     ok = result["status"] == "budget_exceeded"
-    report("al_06_budget_exceeded", ok,
-           f"status={result['status']} cost={result['cost_usd']}")
+    report("al_06_budget_exceeded", ok, f"status={result['status']} cost={result['cost_usd']}")
 
 
 async def test_al_07_max_iterations():
@@ -469,8 +472,7 @@ async def test_al_07_max_iterations():
     loop.run()
     result = await loop.session("infinite loop test")
     ok = len(calls) <= 2
-    report("al_07_max_iterations", ok,
-           f"llm_calls={len(calls)} status={result['status']}")
+    report("al_07_max_iterations", ok, f"llm_calls={len(calls)} status={result['status']}")
 
 
 async def test_al_08_on_step_events():
@@ -483,10 +485,7 @@ async def test_al_08_on_step_events():
     )
     loop.run()
     await loop.session("event test", on_step=lambda e: events.append(e["event"]))
-    ok = (
-        "session_start" in events
-        and "session_done" in events
-    )
+    ok = "session_start" in events and "session_done" in events
     report("al_08_on_step_events", ok, f"events={events}")
 
 
@@ -494,10 +493,12 @@ async def test_al_09_unknown_tool_continues():
     """LLM 请求不存在工具 → tool_not_found，引擎继续不崩溃。"""
     loop = make_loop()
     loop.assemble(
-        llm_caller=make_caller([
-            _tool_response("nonexistent_tool", {}),
-            _text_response("recovered"),
-        ]),
+        llm_caller=make_caller(
+            [
+                _tool_response("nonexistent_tool", {}),
+                _text_response("recovered"),
+            ]
+        ),
         tools=[make_echo_tool()],
     )
     loop.run()
@@ -524,10 +525,12 @@ async def test_al_10_context_compaction():
 
     loop._maybe_compact = tracking_compact
     loop.assemble(
-        llm_caller=make_caller([
-            _tool_response("echo_tool", {"msg": "a"}),
-            _text_response("done"),
-        ]),
+        llm_caller=make_caller(
+            [
+                _tool_response("echo_tool", {"msg": "a"}),
+                _text_response("done"),
+            ]
+        ),
         tools=[make_echo_tool()],
     )
     loop.run()
@@ -575,13 +578,13 @@ async def test_al_12_health_status():
     loop.run()
     h_after = loop.health()
     ok = h_before["status"] == "stopped" and h_after["status"] == "healthy"
-    report("al_12_health_status", ok,
-           f"before={h_before['status']} after={h_after['status']}")
+    report("al_12_health_status", ok, f"before={h_before['status']} after={h_after['status']}")
 
 
 # ============================================================
 # 主运行器
 # ============================================================
+
 
 async def main():
     print("\n" + "=" * 65)

@@ -21,7 +21,10 @@ class InstallSelfHostedAppConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "install_self_hosted_app"
     _omodul_version: ClassVar[str] = "1.0.0"
     _fingerprint_fields: ClassVar[set[str]] = {
-        "app_slug", "app_version", "instance_name", "config_hash"
+        "app_slug",
+        "app_version",
+        "instance_name",
+        "config_hash",
     }
 
     app_slug: str = Field(..., description="App 标识 (e.g. 'gitea', 'nextcloud')")
@@ -36,7 +39,7 @@ class InstallSelfHostedAppConfig(BaseConfig):
 
 
 class InstallSelfHostedAppInput(BaseModel):
-    app_config: dict[str, Any]                # 容器 env / volumes / ports / etc.
+    app_config: dict[str, Any]  # 容器 env / volumes / ports / etc.
     target_host: str = "localhost"  # 目标安装机器 (MVP 仅本机)
     docker_host: str = "unix:///var/run/docker.sock"
     caddy_admin_url: str = "http://localhost:2019"
@@ -50,7 +53,7 @@ class InstallSelfHostedAppFindings(BaseModel):
     health_status: Literal["healthy", "unhealthy", "no_health_check"]
     domain: str | None
     https_active: bool
-    monitors_bound: list[str]       # 已绑定的告警监控类型
+    monitors_bound: list[str]  # 已绑定的告警监控类型
     autoheal_plugins_attached: list[str]  # 自动绑定的 plugin 名
 
 
@@ -93,7 +96,7 @@ def install_self_hosted_app(
             domain=config.domain,
             https_active=proxy_info.get("https", False),
             monitors_bound=["health_check"],
-            autoheal_plugins_attached=[]
+            autoheal_plugins_attached=[],
         )
 
     except Exception as e:
@@ -107,10 +110,14 @@ def install_self_hosted_app(
         _current_cost_tracker.reset(token)
 
     decision_trail = build_decision_trail(
-        fingerprint=fingerprint, config=config,
-        input_data=input_data, trail_steps=trail_steps,
-        cost_tracker=cost_tracker, started_at=started_at,
-        status=status, error=error_info,
+        fingerprint=fingerprint,
+        config=config,
+        input_data=input_data,
+        trail_steps=trail_steps,
+        cost_tracker=cost_tracker,
+        started_at=started_at,
+        status=status,
+        error=error_info,
     )
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -126,7 +133,7 @@ def install_self_hosted_app(
         findings=findings,
         decision_trail=decision_trail,
         cost_tracker=cost_tracker,
-        status=status
+        status=status,
     )
 
     return {
@@ -144,16 +151,20 @@ def _stage_pull_image(
     config: InstallSelfHostedAppConfig,
     input_data: InstallSelfHostedAppInput,
     trail_steps: list[dict[str, Any]],
-    on_step: Callable[[dict[str, Any]], None] | None
+    on_step: Callable[[dict[str, Any]], None] | None,
 ) -> dict[str, Any]:
     step_start = datetime.now(UTC)
     # Simplified: app_slug:app_version as image
     image = f"{config.app_slug}:{config.app_version}"
     result = docker_image_pull(image=image, docker_host=input_data.docker_host)
     record_step(
-        trail_steps=trail_steps, on_step=on_step, layer="oprim",
-        callable_name="docker_image_pull", inputs_summary={"image": image},
-        outputs_summary={"id": result.digest}, started_at=step_start
+        trail_steps=trail_steps,
+        on_step=on_step,
+        layer="oprim",
+        callable_name="docker_image_pull",
+        inputs_summary={"image": image},
+        outputs_summary={"id": result.digest},
+        started_at=step_start,
     )
     return result
 
@@ -162,14 +173,18 @@ def _stage_start_container(
     config: InstallSelfHostedAppConfig,
     input_data: InstallSelfHostedAppInput,
     trail_steps: list[dict[str, Any]],
-    on_step: Callable[[dict[str, Any]], None] | None
+    on_step: Callable[[dict[str, Any]], None] | None,
 ) -> dict[str, Any]:
     step_start = datetime.now(UTC)
     docker_container_start(container_id=config.instance_name, docker_host=input_data.docker_host)
     record_step(
-        trail_steps=trail_steps, on_step=on_step, layer="oprim",
-        callable_name="docker_container_start", inputs_summary={"name": config.instance_name},
-        outputs_summary={"result": "started"}, started_at=step_start
+        trail_steps=trail_steps,
+        on_step=on_step,
+        layer="oprim",
+        callable_name="docker_container_start",
+        inputs_summary={"name": config.instance_name},
+        outputs_summary={"result": "started"},
+        started_at=step_start,
     )
     # Get ID
     inspect = docker_container_inspect(
@@ -183,7 +198,7 @@ def _stage_health_check(
     input_data: InstallSelfHostedAppInput,
     container_info: dict[str, Any],
     trail_steps: list[dict[str, Any]],
-    on_step: Callable[[dict[str, Any]], None] | None
+    on_step: Callable[[dict[str, Any]], None] | None,
 ) -> dict[str, Any]:
     step_start = datetime.now(UTC)
     status: Literal["healthy", "unhealthy", "no_health_check"] = "healthy"
@@ -197,9 +212,13 @@ def _stage_health_check(
         status = "no_health_check"
 
     record_step(
-        trail_steps=trail_steps, on_step=on_step, layer="oprim",
-        callable_name="http_health_probe", inputs_summary={"url": "...", "timeout": 5},
-        outputs_summary={"status": status}, started_at=step_start
+        trail_steps=trail_steps,
+        on_step=on_step,
+        layer="oprim",
+        callable_name="http_health_probe",
+        inputs_summary={"url": "...", "timeout": 5},
+        outputs_summary={"status": status},
+        started_at=step_start,
     )
     return {"status": status}
 
@@ -208,7 +227,7 @@ def _stage_configure_reverse_proxy(
     config: InstallSelfHostedAppConfig,
     input_data: InstallSelfHostedAppInput,
     trail_steps: list[dict[str, Any]],
-    on_step: Callable[[dict[str, Any]], None] | None
+    on_step: Callable[[dict[str, Any]], None] | None,
 ) -> dict[str, Any]:
     if not config.domain:
         return {}
@@ -216,9 +235,13 @@ def _stage_configure_reverse_proxy(
     try:
         caddy_admin_reload(config={}, admin_url=input_data.caddy_admin_url)
         record_step(
-            trail_steps=trail_steps, on_step=on_step, layer="oprim",
-            callable_name="caddy_admin_reload", inputs_summary={"domain": config.domain},
-            outputs_summary={"status": "reloaded"}, started_at=step_start
+            trail_steps=trail_steps,
+            on_step=on_step,
+            layer="oprim",
+            callable_name="caddy_admin_reload",
+            inputs_summary={"domain": config.domain},
+            outputs_summary={"status": "reloaded"},
+            started_at=step_start,
         )
         return {"https": True}
     except Exception:

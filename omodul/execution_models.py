@@ -1,7 +1,9 @@
 """Execution models for order scheduling and cost estimation."""
+
 from __future__ import annotations
 
 import logging
+
 import numpy as np
 
 log = logging.getLogger(__name__)
@@ -14,7 +16,8 @@ except ImportError:
 _SUPPORTED_COST_MODEL = "crypto_market_impact_sigmoid"
 
 _impact_fn_name = (
-    "crypto_market_impact_sigmoid" if crypto_market_impact_sigmoid is not None
+    "crypto_market_impact_sigmoid"
+    if crypto_market_impact_sigmoid is not None
     else "_crypto_impact_fallback"
 )
 log.info("impact_model_active: %s", _impact_fn_name)
@@ -75,8 +78,7 @@ def twap_with_impact(
     """
     if cost_model_name != _SUPPORTED_COST_MODEL:
         raise ValueError(
-            f"cost_model_name must be {_SUPPORTED_COST_MODEL!r}, "
-            f"got {cost_model_name!r}"
+            f"cost_model_name must be {_SUPPORTED_COST_MODEL!r}, got {cost_model_name!r}"
         )
     if n_slices < 1:
         raise ValueError(f"n_slices must be >= 1, got {n_slices}")
@@ -100,12 +102,14 @@ def twap_with_impact(
         slippage_usd = slice_notional * impact_bps / 10000.0
         total_impact_bps += impact_bps
         total_slippage_usd += slippage_usd
-        schedule.append({
-            "slice_index": i,
-            "offset_sec": i * slice_duration_sec,
-            "notional_usd": slice_notional,
-            "expected_impact_bps": impact_bps,
-        })
+        schedule.append(
+            {
+                "slice_index": i,
+                "offset_sec": i * slice_duration_sec,
+                "notional_usd": slice_notional,
+                "expected_impact_bps": impact_bps,
+            }
+        )
 
     return {
         "schedule": schedule,
@@ -156,13 +160,10 @@ def aggressive_limit(
     """
     if cost_model_name != _SUPPORTED_COST_MODEL:
         raise ValueError(
-            f"cost_model_name must be {_SUPPORTED_COST_MODEL!r}, "
-            f"got {cost_model_name!r}"
+            f"cost_model_name must be {_SUPPORTED_COST_MODEL!r}, got {cost_model_name!r}"
         )
     if on_timeout not in {"market", "cancel"}:
-        raise ValueError(
-            f"on_timeout must be 'market' or 'cancel', got {on_timeout!r}"
-        )
+        raise ValueError(f"on_timeout must be 'market' or 'cancel', got {on_timeout!r}")
     if max_slippage_bps <= 0:
         raise ValueError(f"max_slippage_bps must be > 0, got {max_slippage_bps}")
 

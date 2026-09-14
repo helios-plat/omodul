@@ -5,6 +5,7 @@ Selects practice items using spaced-repetition priority + mastery gap weighting.
 
 Pillars: fingerprint + decision_trail
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -70,9 +71,7 @@ def daily_mission_workflow(
                 question_id=q.get("question_id", f"q{i}"),
                 kc_id=q.get("kc_id", "unknown"),
                 difficulty=float(q.get("difficulty", 0.5)),
-                mastery=input_data.kc_mastery.get(
-                    q.get("kc_id", ""), float(q.get("mastery", 0.5))
-                ),
+                mastery=input_data.kc_mastery.get(q.get("kc_id", ""), float(q.get("mastery", 0.5))),
                 days_since_last=input_data.last_seen_dates.get(q.get("question_id", ""), 99),
             )
             for i, q in enumerate(input_data.available_questions)
@@ -85,19 +84,21 @@ def daily_mission_workflow(
         review_pool.sort(key=_mission_priority, reverse=True)
         new_pool.sort(key=_mission_priority, reverse=True)
 
-        selected = review_pool[:review_target] + new_pool[:config.mission_count - review_target]
+        selected = review_pool[:review_target] + new_pool[: config.mission_count - review_target]
         if len(selected) < config.mission_count:
             remaining = [it for it in items if it not in selected]
             remaining.sort(key=_mission_priority, reverse=True)
-            selected += remaining[:config.mission_count - len(selected)]
+            selected += remaining[: config.mission_count - len(selected)]
 
-        selected = selected[:config.mission_count]
+        selected = selected[: config.mission_count]
         trail.record(event="missions_selected", count=len(selected))
 
-        fp = compute_fingerprint({
-            "user_id": input_data.user_id,
-            "mission_date": input_data.mission_date,
-        })
+        fp = compute_fingerprint(
+            {
+                "user_id": input_data.user_id,
+                "mission_date": input_data.mission_date,
+            }
+        )
 
         missions = [
             {
@@ -127,18 +128,14 @@ def daily_mission_workflow(
                     kc_id=q.get("kc_id", "unknown"),
                     difficulty=float(q.get("difficulty", 0.5)),
                     mastery=input_data.kc_mastery.get(q.get("kc_id", ""), 0.5),
-                    days_since_last=input_data.last_seen_dates.get(q.get("question_id", ""), 99)
+                    days_since_last=input_data.last_seen_dates.get(q.get("question_id", ""), 99),
                 )
                 for q in q_list
             ]
             subj_items.sort(key=_mission_priority, reverse=True)
             subjects_missions[subj] = [
-                {
-                    "question_id": it.question_id,
-                    "kc_id": it.kc_id,
-                    "difficulty": it.difficulty
-                }
-                for it in subj_items[:2] # 每科取2个作为演示
+                {"question_id": it.question_id, "kc_id": it.kc_id, "difficulty": it.difficulty}
+                for it in subj_items[:2]  # 每科取2个作为演示
             ]
 
         trail_path = trail.write(output_dir)
@@ -153,8 +150,8 @@ def daily_mission_workflow(
             "decision_trail": trail.steps,
             "trail_path": str(trail_path),
             "cost_usd": cost.total_usd,
-            "missions": missions, # 旧契约保留
-            "subjects": subjects_missions # 新增多科目分组契约
+            "missions": missions,  # 旧契约保留
+            "subjects": subjects_missions,  # 新增多科目分组契约
         }
 
     except Exception as exc:

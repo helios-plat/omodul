@@ -3,18 +3,14 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
-from pathlib import Path
+from datetime import UTC, datetime
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP
-
 from oprim._logging import log
 from oprim.mcp import create_mcp_server, register_tool
-
-from oskill.knowledge._context import meta_db_path
 from oskill.hybrid_search import hybrid_search
-
+from oskill.knowledge._context import meta_db_path
 
 # ── Tool handlers ────────────────────────────────────────────────────────────
 
@@ -49,7 +45,8 @@ def _fetch_substrate_handler(substrate_id: str) -> dict[str, Any]:
 
         db = open_meta_db(db_p)
         rows = db.fetchall(
-            "SELECT id, ulid, title, mime, source_path, file_hash, byte_size, meta_json, created_at FROM substrate WHERE id = ?",
+            "SELECT id, ulid, title, mime, source_path, file_hash, byte_size, "
+            "meta_json, created_at FROM substrate WHERE id = ?",
             [substrate_id],
         )
         db.close()
@@ -85,7 +82,8 @@ def _list_notes_handler(limit: int = 20) -> list[dict[str, Any]]:
 
         db = open_meta_db(db_p)
         rows = db.fetchall(
-            "SELECT id, title, content, wikilinks, substrate_id, created_at FROM note ORDER BY created_at DESC LIMIT ?",
+            "SELECT id, title, content, wikilinks, substrate_id, created_at "
+            "FROM note ORDER BY created_at DESC LIMIT ?",
             [limit],
         )
         db.close()
@@ -115,7 +113,8 @@ def _recent_changes_handler(limit: int = 20) -> list[dict[str, Any]]:
 
         db = open_meta_db(db_p)
         rows = db.fetchall(
-            "SELECT seq, table_name, row_id, op, payload, ts FROM changefeed_local ORDER BY seq DESC LIMIT ?",
+            "SELECT seq, table_name, row_id, op, payload, ts FROM changefeed_local "
+            "ORDER BY seq DESC LIMIT ?",
             [limit],
         )
         db.close()
@@ -155,7 +154,7 @@ def _set_pinned(substrate_id: str, pinned: bool) -> dict[str, Any]:
     try:
         from oprim.meta_db import open_meta_db
 
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         db = open_meta_db(db_p)
         exists = db.fetchall("SELECT id FROM substrate WHERE id = ?", [substrate_id])
         if not exists:
@@ -190,7 +189,7 @@ def _list_views_handler(user_id: str) -> dict[str, Any]:
 def _set_default_view_handler(user_id: str, view_id: str) -> dict[str, Any]:
     """Set a view as the default for a user."""
     try:
-        from omodul.knowledge.views import set_default, get_view
+        from omodul.knowledge.views import get_view, set_default
 
         view = get_view(view_id)
         if view is None:

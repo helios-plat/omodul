@@ -1,7 +1,6 @@
 """Agent registry — maps agent names to classes."""
-from __future__ import annotations
 
-from typing import Type
+from __future__ import annotations
 
 from .base import Agent
 from .errors import AgentNotFoundError
@@ -11,14 +10,14 @@ class AgentRegistry:
     """Registry of all available builtin agents."""
 
     def __init__(self) -> None:
-        self._agents: dict[str, Type[Agent]] = {}
+        self._agents: dict[str, type[Agent]] = {}
 
-    def register(self, agent_cls: Type[Agent]) -> None:
+    def register(self, agent_cls: type[Agent]) -> None:
         if not agent_cls.name:
             raise ValueError(f"{agent_cls.__name__} must define a non-empty 'name'")
         self._agents[agent_cls.name] = agent_cls
 
-    def get(self, name: str) -> Type[Agent]:
+    def get(self, name: str) -> type[Agent]:
         if name not in self._agents:
             raise AgentNotFoundError(f"Agent not registered: {name!r}")
         return self._agents[name]
@@ -45,7 +44,7 @@ def get_registry() -> AgentRegistry:
     return _global_registry
 
 
-def register_agent(cls: Type[Agent]) -> Type[Agent]:
+def register_agent(cls: type[Agent]) -> type[Agent]:
     """Class decorator: @register_agent"""
     _global_registry.register(cls)
     return cls

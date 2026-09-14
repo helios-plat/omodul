@@ -16,6 +16,7 @@ from omodul.knowledge.scheduler.notifier import Notifier
 
 def _make_store(tmp_path: Path):
     from oprim.meta_db import MetaDB
+
     from omodul.knowledge.scheduler.job_store import JobStore
 
     db_path = tmp_path / "test.duckdb"

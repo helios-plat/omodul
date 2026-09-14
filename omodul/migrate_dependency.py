@@ -1,38 +1,50 @@
 """Auto-split from hicode whl."""
 
 from __future__ import annotations
-from oprim import file_read, glob_match
-import json
-import re
-import sys
-import os
+
 from pathlib import Path
 from typing import Any, ClassVar
-from pydantic import BaseModel
-from ._base import BaseConfig, CostTracker, Trail, build_result, compute_fingerprint, extract_text, llm_call, write_report
 
-class MigrateDependencyConfig(BaseConfig):
+from oprim import file_read
+from pydantic import BaseModel
+
+from ._base import (
+    BaseConfig,
+    CostTracker,
+    Trail,
+    build_result,
+    compute_fingerprint,
+    extract_text,
+    llm_call,
+    write_report,
+)
+
+
+class RefactorTransactionConfig(BaseConfig):
     max_files: int = 20
     max_file_tokens: int = 5000
     dry_run: bool = False
-    _omodul_name: ClassVar[str] = 'refactor_transaction'
-    _omodul_version: ClassVar[str] = '1.0.0'
-    _fingerprint_fields: ClassVar[set[str]] = {'instruction', 'paths'}
-    _enabled_pillars: ClassVar[set[str]] = {'decision_trail', 'fingerprint', 'cost', 'report'}
+    _omodul_name: ClassVar[str] = "refactor_transaction"
+    _omodul_version: ClassVar[str] = "1.0.0"
+    _fingerprint_fields: ClassVar[set[str]] = {"instruction", "paths"}
+    _enabled_pillars: ClassVar[set[str]] = {"decision_trail", "fingerprint", "cost", "report"}
 
-class MigrateDependencyInput(BaseModel):
+
+class RefactorTransactionInput(BaseModel):
     instruction: str
     paths: list[str]
     caller: Any
-    context: str = ''
+    context: str = ""
+
 
 class RunAndFixConfig(BaseConfig):
     max_iterations: int = 5
     timeout: int = 60
-    _omodul_name: ClassVar[str] = 'run_and_fix'
-    _omodul_version: ClassVar[str] = '1.0.0'
-    _fingerprint_fields: ClassVar[set[str]] = {'command'}
-    _enabled_pillars: ClassVar[set[str]] = {'decision_trail', 'cost', 'report'}
+    _omodul_name: ClassVar[str] = "run_and_fix"
+    _omodul_version: ClassVar[str] = "1.0.0"
+    _fingerprint_fields: ClassVar[set[str]] = {"command"}
+    _enabled_pillars: ClassVar[set[str]] = {"decision_trail", "cost", "report"}
+
 
 class RunAndFixInput(BaseModel):
     command: str
@@ -40,13 +52,15 @@ class RunAndFixInput(BaseModel):
     caller: Any
     target_files: list[str] = []
 
+
 class MigrateDependencyConfig(BaseConfig):
     max_files: int = 50
     max_file_tokens: int = 3000
-    _omodul_name: ClassVar[str] = 'migrate_dependency'
-    _omodul_version: ClassVar[str] = '1.0.0'
-    _fingerprint_fields: ClassVar[set[str]] = {'dependency', 'target_version'}
-    _enabled_pillars: ClassVar[set[str]] = {'decision_trail', 'fingerprint', 'cost', 'report'}
+    _omodul_name: ClassVar[str] = "migrate_dependency"
+    _omodul_version: ClassVar[str] = "1.0.0"
+    _fingerprint_fields: ClassVar[set[str]] = {"dependency", "target_version"}
+    _enabled_pillars: ClassVar[set[str]] = {"decision_trail", "fingerprint", "cost", "report"}
+
 
 class MigrateDependencyInput(BaseModel):
     dependency: str
@@ -54,50 +68,59 @@ class MigrateDependencyInput(BaseModel):
     root_path: str
     caller: Any
 
+
 class CreateCheckpointConfig(BaseConfig):
-    _omodul_name: ClassVar[str] = 'create_checkpoint'
-    _omodul_version: ClassVar[str] = '1.0.0'
-    _fingerprint_fields: ClassVar[set[str]] = {'session_id', 'message_count'}
-    _enabled_pillars: ClassVar[set[str]] = {'fingerprint', 'decision_trail'}
+    _omodul_name: ClassVar[str] = "create_checkpoint"
+    _omodul_version: ClassVar[str] = "1.0.0"
+    _fingerprint_fields: ClassVar[set[str]] = {"session_id", "message_count"}
+    _enabled_pillars: ClassVar[set[str]] = {"fingerprint", "decision_trail"}
+
 
 class CreateCheckpointInput(BaseModel):
     messages: list[dict]
-    session_id: str = ''
+    session_id: str = ""
     metadata: dict = {}
     store: Any = None
 
+
 class RewindConfig(BaseConfig):
-    _omodul_name: ClassVar[str] = 'rewind_to_checkpoint'
-    _omodul_version: ClassVar[str] = '1.0.0'
+    _omodul_name: ClassVar[str] = "rewind_to_checkpoint"
+    _omodul_version: ClassVar[str] = "1.0.0"
     _fingerprint_fields: ClassVar[set[str]] = set()
-    _enabled_pillars: ClassVar[set[str]] = {'decision_trail'}
+    _enabled_pillars: ClassVar[set[str]] = {"decision_trail"}
+
 
 class RewindInput(BaseModel):
     checkpoint_id: str
     store: Any = None
-    checkpoint_path: str = ''
+    checkpoint_path: str = ""
+
 
 class CompactConversationConfig(BaseConfig):
     target_budget: int = 4000
-    _omodul_name: ClassVar[str] = 'compact_conversation'
-    _omodul_version: ClassVar[str] = '1.0.0'
-    _fingerprint_fields: ClassVar[set[str]] = {'message_count', 'last_msg_hash'}
-    _enabled_pillars: ClassVar[set[str]] = {'cost', 'decision_trail', 'fingerprint'}
+    _omodul_name: ClassVar[str] = "compact_conversation"
+    _omodul_version: ClassVar[str] = "1.0.0"
+    _fingerprint_fields: ClassVar[set[str]] = {"message_count", "last_msg_hash"}
+    _enabled_pillars: ClassVar[set[str]] = {"cost", "decision_trail", "fingerprint"}
+
 
 class CompactConversationInput(BaseModel):
     messages: list[dict]
     caller: Any
-    session_id: str = ''
+    session_id: str = ""
+
 
 class InstallPluginConfig(BaseConfig):
-    _omodul_name: ClassVar[str] = 'install_plugin'
-    _omodul_version: ClassVar[str] = '1.0.0'
-    _fingerprint_fields: ClassVar[set[str]] = {'plugin_name', 'version'}
-    _enabled_pillars: ClassVar[set[str]] = {'decision_trail', 'fingerprint'}
+    _omodul_name: ClassVar[str] = "install_plugin"
+    _omodul_version: ClassVar[str] = "1.0.0"
+    _fingerprint_fields: ClassVar[set[str]] = {"plugin_name", "version"}
+    _enabled_pillars: ClassVar[set[str]] = {"decision_trail", "fingerprint"}
+
 
 class InstallPluginInput(BaseModel):
     plugin_bundle: dict
     install_dir: str
+
 
 async def migrate_dependency(
     config: MigrateDependencyConfig,
@@ -118,21 +141,25 @@ async def migrate_dependency(
     error = None
     report_path = None
 
-    fingerprint = compute_fingerprint({
-        "dependency": input_data.dependency,
-        "target_version": input_data.target_version,
-    })
+    fingerprint = compute_fingerprint(
+        {
+            "dependency": input_data.dependency,
+            "target_version": input_data.target_version,
+        }
+    )
 
     try:
-        trail.record(event="migrate_start",
-                     dep=input_data.dependency, version=input_data.target_version)
+        trail.record(
+            event="migrate_start", dep=input_data.dependency, version=input_data.target_version
+        )
         if on_step:
             on_step({"event": "migrate_start"})
 
         from oprim.fs import glob_match
+
         # 查找使用此依赖的文件
         try:
-            all_files = glob_match("**/*.py", root=input_data.root_path)[:config.max_files]
+            all_files = glob_match("**/*.py", root=input_data.root_path)[: config.max_files]
         except Exception:  # pragma: no cover
             all_files = []  # pragma: no cover
 
@@ -148,8 +175,7 @@ async def migrate_dependency(
         trail.record(event="files_found", count=len(dep_files))
 
         file_ctx = "\n\n".join(
-            f"## {p}\n```python\n{c[:config.max_file_tokens * 4]}\n```"
-            for p, c in dep_files[:8]
+            f"## {p}\n```python\n{c[: config.max_file_tokens * 4]}\n```" for p, c in dep_files[:8]
         )
 
         prompt = (
@@ -165,8 +191,11 @@ async def migrate_dependency(
 
         response = await llm_call(
             [{"role": "user", "content": prompt}],
-            caller=input_data.caller, cost=cost, trail=trail,
-            model=config.llm_model, event="generate_migration_plan",
+            caller=input_data.caller,
+            cost=cost,
+            trail=trail,
+            model=config.llm_model,
+            event="generate_migration_plan",
         )
         migration_text = extract_text(response)
         trail.record(event="plan_generated")
@@ -189,7 +218,11 @@ async def migrate_dependency(
         trail_path = trail.write(output_dir)
 
     return build_result(
-        status=status, error=error, fingerprint=fingerprint,
-        trail=trail, trail_path=trail_path, report_path=report_path,
+        status=status,
+        error=error,
+        fingerprint=fingerprint,
+        trail=trail,
+        trail_path=trail_path,
+        report_path=report_path,
         cost_usd=cost.total_usd,
     )

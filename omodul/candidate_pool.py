@@ -11,15 +11,16 @@ from __future__ import annotations
 import hashlib
 import traceback
 from collections.abc import Callable
-from datetime import UTC, datetime, date
+from datetime import UTC, date, datetime
 from pathlib import Path
-from typing import Any, ClassVar, Set
+from typing import Any, ClassVar
 
 from obase.cost_tracker import CostTracker
-from omodul._base_config import BaseConfig
-from omodul._decision_trail import build_decision_trail, record_step
 from oprim.apply_screen_filter import ScreenRule, apply_screen_filter
 from pydantic import BaseModel, Field, field_validator
+
+from omodul._base_config import BaseConfig
+from omodul._decision_trail import build_decision_trail, record_step
 
 _VERSION = "1.0.0"
 
@@ -41,7 +42,7 @@ _REGIME_OVERRIDES: dict[str, dict[str, float]] = {
 }
 
 
-def compute_fingerprint_for(config: "CandidatePoolConfig", input_data: Any) -> str:
+def compute_fingerprint_for(config: CandidatePoolConfig, input_data: Any) -> str:
     """公开 fingerprint API. 依赖 {regime, scope, trade_date}."""
     raw = f"{config.regime}|{config.scope}|{config.trade_date.isoformat()}|{_VERSION}"
     return hashlib.sha256(raw.encode()).hexdigest()
@@ -50,8 +51,8 @@ def compute_fingerprint_for(config: "CandidatePoolConfig", input_data: Any) -> s
 class CandidatePoolConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "candidate_pool"
     _omodul_version: ClassVar[str] = _VERSION
-    _enabled_pillars: ClassVar[Set[str]] = {"fingerprint", "decision_trail"}
-    _fingerprint_fields: ClassVar[Set[str]] = {"regime", "scope", "trade_date"}
+    _enabled_pillars: ClassVar[set[str]] = {"fingerprint", "decision_trail"}
+    _fingerprint_fields: ClassVar[set[str]] = {"regime", "scope", "trade_date"}
 
     regime: str
     scope: str = "A_share"

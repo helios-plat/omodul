@@ -1,4 +1,5 @@
 """Agent-domain errors."""
+
 from __future__ import annotations
 
 from oprim.errors import StratumError

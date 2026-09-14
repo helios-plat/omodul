@@ -24,20 +24,18 @@ import json
 import os
 import sys
 import tempfile
-import time
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
 
 sys.path.insert(0, str(Path(__file__).parent))
 
 from omodul import (
     RECURSION_DEPTH_LIMIT,
+    CostTracker,
+    HookSpec,
     SubagentConfig,
     SubagentDefinition,
     SubagentInput,
     SubagentPermissions,
-    CostTracker,
-    HookSpec,
     _current_cost,
     _current_depth,
     _current_trail,
@@ -45,10 +43,10 @@ from omodul import (
     run_subagent,
 )
 
-
 # ---------------------------------------------------------------------------
 # 测试工具
 # ---------------------------------------------------------------------------
+
 
 def make_defn(
     name: str = "test-agent",
@@ -124,8 +122,10 @@ async def with_tmp(coro):
 # 测试用例
 # ---------------------------------------------------------------------------
 
+
 async def test_01_normal_completion():
     """正常完成：LLM 单轮返回文本，无工具调用。"""
+
     async def run(tmp):
         result = await run_subagent(make_config(), make_input(), tmp)
         ok = (
@@ -136,6 +136,7 @@ async def test_01_normal_completion():
             and result["decision_trail"]["steps"] > 0
         )
         report("01_normal_completion", ok, f"status={result['status']}")
+
     await with_tmp(run)
 
 
@@ -143,8 +144,12 @@ async def test_02_tool_call_execution():
     """工具调用：LLM 请求 bash_exec，执行后 LLM 返回 end_turn。"""
     tool_call_response = {
         "content": [
-            {"type": "tool_use", "id": "t1", "name": "bash_exec",
-             "input": {"command": "echo hello"}}
+            {
+                "type": "tool_use",
+                "id": "t1",
+                "name": "bash_exec",
+                "input": {"command": "echo hello"},
+            }
         ],
         "stop_reason": "tool_use",
         "usage": {"input_tokens": 200, "output_tokens": 30},
@@ -167,8 +172,10 @@ async def test_02_tool_call_execution():
     async def run(tmp):
         result = await run_subagent(make_config(), make_input(defn=defn, caller=caller), tmp)
         ok = result["status"] == "completed" and result["iterations"] >= 1
-        report("02_tool_call_execution", ok,
-               f"status={result['status']} iters={result['iterations']}")
+        report(
+            "02_tool_call_execution", ok, f"status={result['status']} iters={result['iterations']}"
+        )
+
     await with_tmp(run)
 
 
@@ -176,8 +183,12 @@ async def test_03_permission_denied_plan_mode():
     """plan 模式下 file_write 被拒，循环继续（不 crash）。"""
     tool_call_response = {
         "content": [
-            {"type": "tool_use", "id": "t2", "name": "file_write",
-             "input": {"path": "/tmp/x.py", "content": "x=1"}}
+            {
+                "type": "tool_use",
+                "id": "t2",
+                "name": "file_write",
+                "input": {"path": "/tmp/x.py", "content": "x=1"},
+            }
         ],
         "stop_reason": "tool_use",
         "usage": {"input_tokens": 150, "output_tokens": 20},
@@ -199,14 +210,18 @@ async def test_03_permission_denied_plan_mode():
         trail_path = Path(result["decision_trail"]["path"])
         trail = json.loads(trail_path.read_text())
         has_denied = any(s.get("event") == "permission_denied" for s in trail)
-        report("03_permission_denied_plan_mode", ok and has_denied,
-               f"status={result['status']} has_denied={has_denied}")
+        report(
+            "03_permission_denied_plan_mode",
+            ok and has_denied,
+            f"status={result['status']} has_denied={has_denied}",
+        )
+
     await with_tmp(run)
 
 
 async def test_04_hook_blocks_tool():
     """PreToolUse hook 返回 block → 工具跳过，循环继续。"""
-    import sys, tempfile as tf, os
+    import tempfile as tf
 
     # 写一个 block hook 脚本
     hook_script = '#!/bin/sh\necho \'{"decision":"block","output":"blocked by test"}\''
@@ -217,8 +232,12 @@ async def test_04_hook_blocks_tool():
 
     tool_call_response = {
         "content": [
-            {"type": "tool_use", "id": "t3", "name": "bash_exec",
-             "input": {"command": "rm -rf /"}}   # 危险命令
+            {
+                "type": "tool_use",
+                "id": "t3",
+                "name": "bash_exec",
+                "input": {"command": "rm -rf /"},
+            }  # 危险命令
         ],
         "stop_reason": "tool_use",
         "usage": {"input_tokens": 100, "output_tokens": 20},
@@ -230,8 +249,7 @@ async def test_04_hook_blocks_tool():
     }
     caller = _make_mock_caller([tool_call_response, final_response])
     hooks = [HookSpec(event="PreToolUse", command=hook_path, matcher="bash_exec")]
-    defn = make_defn(hook_specs=hooks,
-                     permissions=SubagentPermissions(allowed_tools=["bash_exec"]))
+    defn = make_defn(hook_specs=hooks, permissions=SubagentPermissions(allowed_tools=["bash_exec"]))
 
     async def run(tmp):
         result = await run_subagent(make_config(), make_input(defn=defn, caller=caller), tmp)
@@ -240,6 +258,7 @@ async def test_04_hook_blocks_tool():
         hook_blocked = any(s.get("event") == "hook_blocked" for s in trail)
         ok = result["status"] == "completed" and hook_blocked
         report("04_hook_blocks_tool", ok, f"hook_blocked={hook_blocked}")
+
     try:
         await with_tmp(run)
     finally:
@@ -259,10 +278,14 @@ async def test_05_budget_exceeded():
 
     async def run(tmp):
         result = await run_subagent(config, make_input(caller=caller), tmp)
-        ok = result["status"] in ("budget_exceeded", "completed")  # 取决于检查时机
+        result["status"] in ("budget_exceeded", "completed")  # 取决于检查时机
         # 关键：cost_usd 应大于 budget
-        report("05_budget_exceeded", result["cost_usd"] > 0,
-               f"status={result['status']} cost={result['cost_usd']:.6f}")
+        report(
+            "05_budget_exceeded",
+            result["cost_usd"] > 0,
+            f"status={result['status']} cost={result['cost_usd']:.6f}",
+        )
+
     await with_tmp(run)
 
 
@@ -310,8 +333,9 @@ async def test_07_contextvar_no_cross_task_pollution():
         cost_b = results["B"]["cost_usd"]
         # B 的 token 是 A 的 9 倍，cost 应明显更高
         ok = cost_b > cost_a * 5
-        report("07_contextvar_no_cross_task_pollution", ok,
-               f"cost_A={cost_a:.6f} cost_B={cost_b:.6f}")
+        report(
+            "07_contextvar_no_cross_task_pollution", ok, f"cost_A={cost_a:.6f} cost_B={cost_b:.6f}"
+        )
 
     await with_tmp(run)
 
@@ -337,8 +361,11 @@ async def test_08_parent_child_cost_sharing():
         )
         # 父的 CostTracker 应被子累加（同一对象引用）
         ok = parent_tracker.total_usd > 0
-        report("08_parent_child_cost_sharing", ok,
-               f"parent_tracker.total_usd={parent_tracker.total_usd:.6f}")
+        report(
+            "08_parent_child_cost_sharing",
+            ok,
+            f"parent_tracker.total_usd={parent_tracker.total_usd:.6f}",
+        )
 
     try:
         await with_tmp(run)
@@ -359,9 +386,7 @@ async def test_09_cancelled_error_reraise_and_trail():
         return {"content": [], "stop_reason": "end_turn", "usage": {}}
 
     async def run(tmp):
-        task = asyncio.create_task(
-            run_subagent(make_config(), make_input(caller=slow_caller), tmp)
-        )
+        task = asyncio.create_task(run_subagent(make_config(), make_input(caller=slow_caller), tmp))
         await asyncio.sleep(0.05)  # 让 loop 启动
         task.cancel()
         try:
@@ -371,8 +396,7 @@ async def test_09_cancelled_error_reraise_and_trail():
             # 验证 trail 文件已落盘
             trail_files = list(tmp.glob("decision_trail_*.json"))
             ok = len(trail_files) > 0
-            report("09_cancelled_error_reraise_and_trail", ok,
-                   f"trail_files={len(trail_files)}")
+            report("09_cancelled_error_reraise_and_trail", ok, f"trail_files={len(trail_files)}")
 
     await with_tmp(run)
 
@@ -386,8 +410,7 @@ async def test_10_child_trail_independent():
         await run_subagent(make_config(), make_input(), tmp)
         # 父 trail 不应被子 agent 追加（子 agent 自建 trail）
         ok = len(parent_trail) == 0
-        report("10_child_trail_independent", ok,
-               f"parent_trail_len={len(parent_trail)}")
+        report("10_child_trail_independent", ok, f"parent_trail_len={len(parent_trail)}")
 
     try:
         await with_tmp(run)
@@ -397,20 +420,22 @@ async def test_10_child_trail_independent():
 
 async def test_11_llm_exception_returns_failed():
     """LLM 抛异常 → status=failed，不向上传播。"""
+
     async def bad_caller(*, messages, tools=None, max_tokens=4096, thinking_budget=None):
         raise RuntimeError("provider error: 503")
 
     async def run(tmp):
-        result = await run_subagent(
-            make_config(), make_input(caller=bad_caller), tmp
-        )
+        result = await run_subagent(make_config(), make_input(caller=bad_caller), tmp)
         ok = (
             result["status"] == "failed"
             and result["error"] is not None
             and "503" in result["error"].get("message", "")
         )
-        report("11_llm_exception_returns_failed", ok,
-               f"status={result['status']} error={result['error']}")
+        report(
+            "11_llm_exception_returns_failed",
+            ok,
+            f"status={result['status']} error={result['error']}",
+        )
 
     await with_tmp(run)
 
@@ -420,8 +445,12 @@ async def test_12_max_iterations_bounded():
     # 每次都请求工具，永不 end_turn
     tool_response = {
         "content": [
-            {"type": "tool_use", "id": "t99", "name": "bash_exec",
-             "input": {"command": "echo loop"}}
+            {
+                "type": "tool_use",
+                "id": "t99",
+                "name": "bash_exec",
+                "input": {"command": "echo loop"},
+            }
         ],
         "stop_reason": "tool_use",
         "usage": {"input_tokens": 50, "output_tokens": 10},
@@ -438,12 +467,13 @@ async def test_12_max_iterations_bounded():
     config = SubagentConfig(budget_usd=10.0, max_iterations=2)
 
     async def run(tmp):
-        result = await run_subagent(
-            config, make_input(defn=defn, caller=counting_caller), tmp
-        )
+        result = await run_subagent(config, make_input(defn=defn, caller=counting_caller), tmp)
         ok = call_count <= 2
-        report("12_max_iterations_bounded", ok,
-               f"llm_calls={call_count} (limit=2) status={result['status']}")
+        report(
+            "12_max_iterations_bounded",
+            ok,
+            f"llm_calls={call_count} (limit=2) status={result['status']}",
+        )
 
     await with_tmp(run)
 
@@ -460,6 +490,7 @@ async def test_bonus_fingerprint_stub():
 # ---------------------------------------------------------------------------
 # 运行器
 # ---------------------------------------------------------------------------
+
 
 async def main():
     print("\n" + "=" * 60)

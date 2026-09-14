@@ -9,8 +9,9 @@ No LLM guessing – only structural + interventional evidence.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any
 
 import networkx as nx
 
@@ -39,35 +40,37 @@ except ImportError:  # pragma: no cover - exercised only in minimal envs
 class NodeInterventionResult:
     node_id: str
     intervention_value: Any
-    effect_on_failure: str  # "eliminates_failure" | "strongly_reduces" | "reduces" | "no_effect" | "unknown"
-    structural_paths: List[Dict]
-    p_fault_after_do: Optional[float] = None
-    delta_p_fault: Optional[float] = None  # observational - interventional (positive = improvement)
-    raw: Dict[str, Any] = field(default_factory=dict)
+    effect_on_failure: (
+        str  # "eliminates_failure" | "strongly_reduces" | "reduces" | "no_effect" | "unknown"
+    )
+    structural_paths: list[dict]
+    p_fault_after_do: float | None = None
+    delta_p_fault: float | None = None  # observational - interventional (positive = improvement)
+    raw: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class CausalDiagnosisReport:
     failure_context: str
-    candidate_nodes: List[str]
-    interventions: List[NodeInterventionResult]
-    root_cause_candidates: List[str]
+    candidate_nodes: list[str]
+    interventions: list[NodeInterventionResult]
+    root_cause_candidates: list[str]
     confidence: float
-    structured_summary: Dict[str, Any]
-    recommended_actions: List[str]
+    structured_summary: dict[str, Any]
+    recommended_actions: list[str]
     quantitative: bool = False
 
 
 def causal_fault_diagnose(
     failure_log: str,
     *,
-    store: Optional[CausalGraphStore] = None,
+    store: CausalGraphStore | None = None,
     failure_node: str = "task_outcome",
-    candidate_nodes: Optional[Sequence[str]] = None,
+    candidate_nodes: Sequence[str] | None = None,
     intervention_value: Any = "ok",  # force the node into healthy state
-    cpd_map: Optional[Dict[str, Any]] = None,
+    cpd_map: dict[str, Any] | None = None,
     auto_build_cpds: bool = True,
-    observational_p_fault: Optional[float] = None,
+    observational_p_fault: float | None = None,
     use_cache: bool = True,
 ) -> CausalDiagnosisReport:
     """
@@ -125,8 +128,8 @@ def causal_fault_diagnose(
     if observational_p_fault is None and quantitative and failure_node in (cpd_map or {}):
         # Quick observational query with no intervention
         try:
-            from pgmpy.models import DiscreteBayesianNetwork
             from pgmpy.inference import VariableElimination
+            from pgmpy.models import DiscreteBayesianNetwork
 
             model = DiscreteBayesianNetwork(list(dag.edges()))
             for n in dag.nodes:
@@ -136,15 +139,19 @@ def causal_fault_diagnose(
                 model.add_cpds(cpd)
             infer = VariableElimination(model)
             q = infer.query(variables=[failure_node], show_progress=False)
-            states = list(q.state_names[failure_node]) if failure_node in q.state_names else list(range(q.cardinality[0]))
+            states = (
+                list(q.state_names[failure_node])
+                if failure_node in q.state_names
+                else list(range(q.cardinality[0]))
+            )
             probs = q.values.ravel()
             dist = {str(states[i]): float(probs[i]) for i in range(len(probs))}
             observational_p_fault = _extract_p_fault(dist)
         except Exception:
             observational_p_fault = None
 
-    interventions: List[NodeInterventionResult] = []
-    scored: List[tuple] = []  # (score, node_id) for ranking
+    interventions: list[NodeInterventionResult] = []
+    scored: list[tuple] = []  # (score, node_id) for ranking
 
     for node in candidate_nodes:
         if node == failure_node:
@@ -212,7 +219,7 @@ def causal_fault_diagnose(
     # O(V+E) 拓扑 DP 计路径频次 (替代 all_simple_paths 指数级枚举)
     from oprim._inference_cache import path_frequency_counts  # noqa: PLC0415
 
-    path_counts: Dict[str, int] = path_frequency_counts(dag, candidate_nodes, failure_node)
+    path_counts: dict[str, int] = path_frequency_counts(dag, candidate_nodes, failure_node)
 
     if quantitative:
         ranked = [n for _, n in sorted(scored, key=lambda t: t[0], reverse=True) if _ > 0.0]
@@ -252,9 +259,7 @@ def causal_fault_diagnose(
                 f"{top_res.p_fault_after_do:.3f}). Circuit-break / retry."
             )
         else:
-            actions.append(
-                f"Isolate / circuit-break component '{top}' and retry the task."
-            )
+            actions.append(f"Isolate / circuit-break component '{top}' and retry the task.")
         actions.append(
             f"Inspect runtime metrics / logs of '{top}' for the observed failure window."
         )

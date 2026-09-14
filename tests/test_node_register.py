@@ -102,9 +102,7 @@ async def test_node_register_findings_populated(
 @pytest.mark.asyncio
 @patch("omodul.node_register.PgPool.get_or_create", new_callable=AsyncMock)
 @patch("omodul.node_register.node_register_probe")
-async def test_node_register_probe_unreachable_fails(
-    mock_probe, mock_get_or_create, tmp_path
-):
+async def test_node_register_probe_unreachable_fails(mock_probe, mock_get_or_create, tmp_path):
     mock_get_or_create.return_value = MagicMock()
     probe = _make_probe_result("unreachable")
     probe.error = "connection refused"
@@ -135,9 +133,7 @@ async def test_node_register_insert_called_with_aegis_nodes(
 
     mock_insert.assert_called_once()
     call_kwargs = mock_insert.call_args
-    assert call_kwargs.kwargs.get("table") == "aegis_nodes" or (
-        len(call_kwargs.args) > 1 and False
-    )
+    assert call_kwargs.kwargs.get("table") == "aegis_nodes" or (len(call_kwargs.args) > 1 and False)
     assert "aegis_nodes" in str(call_kwargs)
 
 

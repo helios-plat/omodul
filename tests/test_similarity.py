@@ -43,10 +43,16 @@ class TestSmartPeerFinder:
 
     def test_with_timeseries(self):
         rng = np.random.default_rng(42)
-        query = {"signature": rng.normal(0, 1, 5), "timeseries": pd.DataFrame({"x": rng.normal(0, 1, 20)})}
+        query = {
+            "signature": rng.normal(0, 1, 5),
+            "timeseries": pd.DataFrame({"x": rng.normal(0, 1, 20)}),
+        }
         candidates = [
-            {"id": f"C{i}", "signature": rng.normal(0, 1, 5),
-             "timeseries": pd.DataFrame({"x": rng.normal(0, 1, 20)})}
+            {
+                "id": f"C{i}",
+                "signature": rng.normal(0, 1, 5),
+                "timeseries": pd.DataFrame({"x": rng.normal(0, 1, 20)}),
+            }
             for i in range(5)
         ]
         result = smart_peer_finder(query, candidates, methods=["cosine", "dtw"])
@@ -63,11 +69,13 @@ class TestEventCascadeClusterer:
         emb_noise = rng.normal(0, 1, (10, 3))
         embeddings = np.vstack([emb_cluster1, emb_cluster2, emb_noise])
 
-        events = pd.DataFrame({
-            "event_id": [f"E{i}" for i in range(n)],
-            "timestamp": pd.date_range("2023-01-01", periods=n, freq="h"),
-            "embedding": list(embeddings),
-        })
+        events = pd.DataFrame(
+            {
+                "event_id": [f"E{i}" for i in range(n)],
+                "timestamp": pd.date_range("2023-01-01", periods=n, freq="h"),
+                "embedding": list(embeddings),
+            }
+        )
         result = event_cascade_clusterer(events, eps=0.5, min_samples=3)
         assert "clusters" in result
         assert result["summary"]["n_events_total"] == n
@@ -76,11 +84,13 @@ class TestEventCascadeClusterer:
     def test_with_time_window(self):
         rng = np.random.default_rng(42)
         n = 20
-        events = pd.DataFrame({
-            "event_id": [f"E{i}" for i in range(n)],
-            "timestamp": pd.date_range("2023-01-01", periods=n, freq="D"),
-            "embedding": [rng.normal(0, 0.1, 5) for _ in range(n)],
-        })
+        events = pd.DataFrame(
+            {
+                "event_id": [f"E{i}" for i in range(n)],
+                "timestamp": pd.date_range("2023-01-01", periods=n, freq="D"),
+                "embedding": [rng.normal(0, 0.1, 5) for _ in range(n)],
+            }
+        )
         result = event_cascade_clusterer(events, eps=0.3, min_samples=2, time_window_hours=48)
         assert "clusters" in result
 
@@ -89,11 +99,13 @@ class TestEventCascadeClusterer:
         n = 15
         embeddings = rng.normal(0, 0.1, (n, 5))
         embeddings[-1] = rng.normal(0, 10, 5)  # outlier
-        events = pd.DataFrame({
-            "event_id": [f"E{i}" for i in range(n)],
-            "timestamp": pd.date_range("2023-01-01", periods=n, freq="h"),
-            "embedding": list(embeddings),
-        })
+        events = pd.DataFrame(
+            {
+                "event_id": [f"E{i}" for i in range(n)],
+                "timestamp": pd.date_range("2023-01-01", periods=n, freq="h"),
+                "embedding": list(embeddings),
+            }
+        )
         result = event_cascade_clusterer(events, include_outlier_detection=True)
         assert result["outlier_events"] is not None
 
@@ -111,8 +123,8 @@ class TestEventCascadeClusterer:
         query = {"signature": rng.normal(0, 1, 5)}
         candidates = [{"id": "C0", "signature": rng.normal(0, 1, 5)}]
         import warnings
+
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             smart_peer_finder(query, candidates, methods=["cosine", "dtw"])
             assert any("timeseries" in str(x.message) for x in w)
-

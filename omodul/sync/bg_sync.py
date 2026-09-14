@@ -1,9 +1,10 @@
 """omodul.sync.bg_sync — BackgroundSyncDaemon for Stratum multi-device sync."""
+
 from __future__ import annotations
 
 import asyncio
 import signal
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from oprim._logging import log
@@ -98,7 +99,7 @@ class BackgroundSyncDaemon:
                     self.db,
                     self.storage,
                 )
-                self._last_flush_at = datetime.now(tz=timezone.utc)
+                self._last_flush_at = datetime.now(tz=UTC)
                 self._last_flush_count = result.flushed_count
                 log.info(
                     "flush_loop_ok",
@@ -110,10 +111,8 @@ class BackgroundSyncDaemon:
             except Exception as exc:
                 log.error("flush_loop_error", error=str(exc))
                 try:
-                    await asyncio.wait_for(
-                        asyncio.shield(self._stop.wait()), timeout=60.0
-                    )
-                except asyncio.TimeoutError:
+                    await asyncio.wait_for(asyncio.shield(self._stop.wait()), timeout=60.0)
+                except TimeoutError:
                     pass
                 continue
 
@@ -122,7 +121,7 @@ class BackgroundSyncDaemon:
                     asyncio.shield(self._stop.wait()),
                     timeout=float(self.flush_interval),
                 )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass
 
     async def _pull_loop(self) -> None:
@@ -135,7 +134,7 @@ class BackgroundSyncDaemon:
                     self.db,
                     self.storage,
                 )
-                self._last_pull_at = datetime.now(tz=timezone.utc)
+                self._last_pull_at = datetime.now(tz=UTC)
                 self._last_applied_seq = result.last_applied_seq
                 log.info(
                     "pull_loop_ok",
@@ -147,10 +146,8 @@ class BackgroundSyncDaemon:
             except Exception as exc:
                 log.error("pull_loop_error", error=str(exc))
                 try:
-                    await asyncio.wait_for(
-                        asyncio.shield(self._stop.wait()), timeout=60.0
-                    )
-                except asyncio.TimeoutError:
+                    await asyncio.wait_for(asyncio.shield(self._stop.wait()), timeout=60.0)
+                except TimeoutError:
                     pass
                 continue
 
@@ -159,7 +156,7 @@ class BackgroundSyncDaemon:
                     asyncio.shield(self._stop.wait()),
                     timeout=float(self.pull_interval),
                 )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass
 
     async def _snapshot_loop(self) -> None:
@@ -171,7 +168,7 @@ class BackgroundSyncDaemon:
                     asyncio.shield(self._stop.wait()),
                     timeout=float(self.snapshot_interval),
                 )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass
 
             if self._stop.is_set():
@@ -184,7 +181,7 @@ class BackgroundSyncDaemon:
                     self.db,
                     self.storage,
                 )
-                self._last_snapshot_at = datetime.now(tz=timezone.utc)
+                self._last_snapshot_at = datetime.now(tz=UTC)
                 log.info(
                     "snapshot_loop_ok",
                     snapshot_id=result.get("snapshot_id"),
@@ -208,7 +205,9 @@ class BackgroundSyncDaemon:
             "running": not self._stop.is_set(),
             "last_flush_at": self._last_flush_at.isoformat() if self._last_flush_at else None,
             "last_pull_at": self._last_pull_at.isoformat() if self._last_pull_at else None,
-            "last_snapshot_at": self._last_snapshot_at.isoformat() if self._last_snapshot_at else None,
+            "last_snapshot_at": self._last_snapshot_at.isoformat()
+            if self._last_snapshot_at
+            else None,
             "last_flush_count": self._last_flush_count,
             "last_applied_seq": self._last_applied_seq,
         }

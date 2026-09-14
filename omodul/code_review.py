@@ -1,67 +1,87 @@
 """Auto-split from hicode whl."""
 
 from __future__ import annotations
-import sys
-import os
+
 from pathlib import Path
 from typing import Any, ClassVar
+
 from pydantic import BaseModel
-from ._base import BaseConfig, CostTracker, Trail, build_result, compute_fingerprint, extract_text, llm_call, write_report
+
+from ._base import (
+    BaseConfig,
+    CostTracker,
+    Trail,
+    _read_file_safe,
+    build_result,
+    compute_fingerprint,
+    extract_text,
+    llm_call,
+    write_report,
+)
+
 
 class CodeReviewConfig(BaseConfig):
-    focus_areas: list[str] = ['correctness', 'style', 'security', 'performance']
+    focus_areas: list[str] = ["correctness", "style", "security", "performance"]
     max_file_tokens: int = 6000
-    _omodul_name: ClassVar[str] = 'code_review'
-    _omodul_version: ClassVar[str] = '1.0.0'
-    _fingerprint_fields: ClassVar[set[str]] = {'paths'}
-    _enabled_pillars: ClassVar[set[str]] = {'report', 'cost', 'decision_trail'}
+    _omodul_name: ClassVar[str] = "code_review"
+    _omodul_version: ClassVar[str] = "1.0.0"
+    _fingerprint_fields: ClassVar[set[str]] = {"paths"}
+    _enabled_pillars: ClassVar[set[str]] = {"report", "cost", "decision_trail"}
+
 
 class CodeReviewInput(BaseModel):
     paths: list[str]
     caller: Any
-    diff_text: str = ''
-    context: str = ''
+    diff_text: str = ""
+    context: str = ""
+
 
 class GenerateTestsConfig(BaseConfig):
-    test_framework: str = 'pytest'
+    test_framework: str = "pytest"
     coverage_target: int = 80
     max_file_tokens: int = 6000
-    _omodul_name: ClassVar[str] = 'generate_tests'
-    _omodul_version: ClassVar[str] = '1.0.0'
-    _fingerprint_fields: ClassVar[set[str]] = {'target_path'}
-    _enabled_pillars: ClassVar[set[str]] = {'report', 'cost', 'decision_trail', 'fingerprint'}
+    _omodul_name: ClassVar[str] = "generate_tests"
+    _omodul_version: ClassVar[str] = "1.0.0"
+    _fingerprint_fields: ClassVar[set[str]] = {"target_path"}
+    _enabled_pillars: ClassVar[set[str]] = {"report", "cost", "decision_trail", "fingerprint"}
+
 
 class GenerateTestsInput(BaseModel):
     target_path: str
     caller: Any
-    output_test_path: str = ''
+    output_test_path: str = ""
+
 
 class ExplainCodebaseConfig(BaseConfig):
-    scope: str = 'full'
+    scope: str = "full"
     max_files: int = 20
     max_file_tokens: int = 2000
-    _omodul_name: ClassVar[str] = 'explain_codebase'
-    _omodul_version: ClassVar[str] = '1.0.0'
-    _fingerprint_fields: ClassVar[set[str]] = {'root_path'}
-    _enabled_pillars: ClassVar[set[str]] = {'report', 'cost'}
+    _omodul_name: ClassVar[str] = "explain_codebase"
+    _omodul_version: ClassVar[str] = "1.0.0"
+    _fingerprint_fields: ClassVar[set[str]] = {"root_path"}
+    _enabled_pillars: ClassVar[set[str]] = {"report", "cost"}
+
 
 class ExplainCodebaseInput(BaseModel):
     root_path: str
     caller: Any
-    focus: str = ''
+    focus: str = ""
+
 
 class SecurityAuditConfig(BaseConfig):
-    severity_threshold: str = 'medium'
+    severity_threshold: str = "medium"
     max_file_tokens: int = 5000
-    _omodul_name: ClassVar[str] = 'security_audit'
-    _omodul_version: ClassVar[str] = '1.0.0'
-    _fingerprint_fields: ClassVar[set[str]] = {'paths'}
-    _enabled_pillars: ClassVar[set[str]] = {'report', 'cost', 'decision_trail'}
+    _omodul_name: ClassVar[str] = "security_audit"
+    _omodul_version: ClassVar[str] = "1.0.0"
+    _fingerprint_fields: ClassVar[set[str]] = {"paths"}
+    _enabled_pillars: ClassVar[set[str]] = {"report", "cost", "decision_trail"}
+
 
 class SecurityAuditInput(BaseModel):
     paths: list[str]
     caller: Any
-    context: str = ''
+    context: str = ""
+
 
 async def code_review(
     config: CodeReviewConfig,
@@ -82,10 +102,12 @@ async def code_review(
     error = None
     report_path = None
 
-    fingerprint = compute_fingerprint({
-        "paths": sorted(input_data.paths),
-        "diff_hash": hash(input_data.diff_text) if input_data.diff_text else 0,
-    })
+    fingerprint = compute_fingerprint(
+        {
+            "paths": sorted(input_data.paths),
+            "diff_hash": hash(input_data.diff_text) if input_data.diff_text else 0,
+        }
+    )
 
     try:
         trail.record(event="review_start", paths=input_data.paths)
@@ -116,8 +138,11 @@ async def code_review(
 
         response = await llm_call(
             [{"role": "user", "content": prompt}],
-            caller=input_data.caller, cost=cost, trail=trail,
-            model=config.llm_model, event="llm_review",
+            caller=input_data.caller,
+            cost=cost,
+            trail=trail,
+            model=config.llm_model,
+            event="llm_review",
         )
         review_text = extract_text(response)
         trail.record(event="review_done", tokens=cost.out_tokens)
@@ -137,8 +162,12 @@ async def code_review(
         trail_path = trail.write(output_dir)
 
     return build_result(
-        status=status, error=error, fingerprint=fingerprint,
-        trail=trail, trail_path=trail_path, report_path=report_path,
+        status=status,
+        error=error,
+        fingerprint=fingerprint,
+        trail=trail,
+        trail_path=trail_path,
+        report_path=report_path,
         cost_usd=cost.total_usd,
         findings={"review_length": len(extract_text(response)) if status == "completed" else 0},
     )

@@ -14,7 +14,7 @@ import traceback
 from collections.abc import Callable
 from datetime import UTC, date, datetime
 from pathlib import Path
-from typing import Any, ClassVar, Set
+from typing import Any, ClassVar
 
 from obase.cost_tracker import CostTracker
 from pydantic import BaseModel, Field
@@ -27,8 +27,8 @@ from omodul._fingerprint import compute_fingerprint
 class DisciplineBannerConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "discipline_banner_toast_data"
     _omodul_version: ClassVar[str] = "1.0.0"
-    _enabled_pillars: ClassVar[Set[str]] = {"fingerprint", "decision_trail"}
-    _fingerprint_fields: ClassVar[Set[str]] = {"user_id_hash", "trade_date"}
+    _enabled_pillars: ClassVar[set[str]] = {"fingerprint", "decision_trail"}
+    _fingerprint_fields: ClassVar[set[str]] = {"user_id_hash", "trade_date"}
 
     user_id_hash: str
     trade_date: date
@@ -79,11 +79,11 @@ def discipline_banner_toast_data(
 
     Returns dict with: findings, fingerprint, decision_trail, status, error.
     """
+    import oprim
     from oskill.discipline_vs_violation_winrate_compute import (
         TradeRecord,
         discipline_vs_violation_winrate_compute,
     )
-    import oprim
 
     started_at = datetime.now(UTC)
     if output_dir:

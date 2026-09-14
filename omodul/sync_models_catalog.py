@@ -3,6 +3,7 @@ omodul.sync_models_catalog — Fetch and filter a models catalog by curated prov
 
 Pillars: fingerprint
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -22,12 +23,14 @@ async def _call(fn: Any, **kwargs: Any) -> Any:
     return result
 
 
-def compute_fingerprint_for(config: "Config", input_data: "InputData") -> str:
+def compute_fingerprint_for(config: Config, input_data: InputData) -> str:
     """Fingerprint over catalog_version + sorted curated_providers."""
-    return compute_fingerprint({
-        "catalog_version": config.catalog_version,
-        "curated_providers": sorted(config.curated_providers),
-    })
+    return compute_fingerprint(
+        {
+            "catalog_version": config.catalog_version,
+            "curated_providers": sorted(config.curated_providers),
+        }
+    )
 
 
 class Config(BaseConfig):

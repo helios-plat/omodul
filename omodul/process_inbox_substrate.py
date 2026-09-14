@@ -49,15 +49,15 @@ class InboxInput(BaseModel):
 
 class InboxFindings(BaseModel):
     substrate_id: str
-    substrate_ids: list[str] = []   # 套装时含多个，单本时含1个
+    substrate_ids: list[str] = []  # 套装时含多个，单本时含1个
     medium: str
     derivative_ids: list[str] = []
     classification_confidence: float = 0.0
     page_count: int = 0
     heading_count: int = 0
-    is_bundle: bool = False          # True 表示套装，已拆分为多个 substrate
-    parse_quality: str = "ok"        # "ok"|"empty"|"scanned"|"garbled"
-    is_duplicate: bool = False       # True 表示已有相同 file_hash 的 substrate
+    is_bundle: bool = False  # True 表示套装，已拆分为多个 substrate
+    parse_quality: str = "ok"  # "ok"|"empty"|"scanned"|"garbled"
+    is_duplicate: bool = False  # True 表示已有相同 file_hash 的 substrate
     duplicate_of: str | None = None  # 重复时指向已有 substrate_id
 
 
@@ -118,18 +118,20 @@ def process_inbox_substrate(
         )
 
         # Stage 2b: Parse quality check
-        _all_text = " ".join(
-            getattr(p, "text", "") for p in getattr(parsed_doc, "pages", [])
-        )
+        _all_text = " ".join(getattr(p, "text", "") for p in getattr(parsed_doc, "pages", []))
         _text_len = len(_all_text.strip())
         _ufffd_ratio = _all_text.count("\ufffd") / max(_text_len, 1) if _text_len else 0
         _pic_ratio = _all_text.count("[image]") / max(_text_len // 10, 1) if _text_len else 0
 
-        _is_pdf = str(config.file_path).lower().endswith(".pdf") if hasattr(config, "file_path") else False
+        _is_pdf = (
+            str(config.file_path).lower().endswith(".pdf")
+            if hasattr(config, "file_path")
+            else False
+        )
         if _text_len < 500 and _is_pdf:
-            _parse_quality = "scanned"   # PDF 无文字层 → 扫描版（非空文档）
+            _parse_quality = "scanned"  # PDF 无文字层 → 扫描版（非空文档）
         elif _text_len < 500:
-            _parse_quality = "empty"     # 非 PDF 的空内容
+            _parse_quality = "empty"  # 非 PDF 的空内容
         elif _ufffd_ratio > 0.30:
             _parse_quality = "garbled"
         elif _pic_ratio > 0.50:
@@ -189,8 +191,8 @@ def process_inbox_substrate(
 
         # Stage 5: Ingest substrate(s)
         # If parsed_doc is a list[EpubBook], it's a bundle — ingest each separately
-        from oskill.ingest_substrate import ingest_substrate
         from oprim._epub_toc_split import EpubBook
+        from oskill.ingest_substrate import ingest_substrate
 
         step_start = datetime.now(UTC)
         if isinstance(parsed_doc, list) and parsed_doc and isinstance(parsed_doc[0], EpubBook):
@@ -209,7 +211,10 @@ def process_inbox_substrate(
                         user_id_hash=config.user_id_hash,
                         user_hint={"medium": medium, "book_title": book.book_title},
                         content_override=book.content,
-                        metadata_override={**book.metadata, "bundle_file_hash": config.file_checksum},
+                        metadata_override={
+                            **book.metadata,
+                            "bundle_file_hash": config.file_checksum,
+                        },
                     )
                 )
                 substrate_ids.append(str(s_id))
@@ -220,7 +225,7 @@ def process_inbox_substrate(
                 layer="oskill",
                 callable_name="ingest_substrate (bundle)",
                 inputs_summary={"corpus_id": config.corpus_id, "book_count": len(parsed_doc)},
-                outputs_summary={"substrate_ids": [s[:12]+"..." for s in substrate_ids]},
+                outputs_summary={"substrate_ids": [s[:12] + "..." for s in substrate_ids]},
                 started_at=step_start,
             )
         else:

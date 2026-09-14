@@ -1,20 +1,18 @@
 """Tests for M-ONT-1: register_ku_ontology."""
+
 from __future__ import annotations
 
-from pathlib import Path
-
-import pytest
+from oprim._aii_graph_types import RegisterKuOntologyInput
 
 from omodul.register_ku_ontology import (
     RegisterKuOntologyConfig,
     register_ku_ontology,
 )
-from oprim._aii_graph_types import RegisterKuOntologyInput
-
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _config(**overrides) -> RegisterKuOntologyConfig:
     base = dict(
@@ -58,8 +56,8 @@ def _input(ku: dict, edges: list[dict] | None = None) -> RegisterKuOntologyInput
 # Tests
 # ---------------------------------------------------------------------------
 
-class TestRegisterKuOntology:
 
+class TestRegisterKuOntology:
     def test_valid_factual_ku_completes(self, tmp_path):
         result = register_ku_ontology(
             config=_config(),
@@ -132,7 +130,9 @@ class TestRegisterKuOntology:
     def test_grade_mandate_verified_non_default_allowed(self, tmp_path):
         result = register_ku_ontology(
             config=_config(),
-            input_data=_input(_ku("factual", grade="verified", grounded_by={"method": "peer_review"})),
+            input_data=_input(
+                _ku("factual", grade="verified", grounded_by={"method": "peer_review"})
+            ),
             output_dir=tmp_path,
         )
         assert result["status"] == "completed"
@@ -201,8 +201,10 @@ class TestRegisterKuOntology:
 
     def test_on_step_callback_called(self, tmp_path):
         steps = []
+
         def on_step(step, state):
             steps.append((step, state))
+
         result = register_ku_ontology(
             config=_config(),
             input_data=_input(_ku("factual")),
@@ -224,9 +226,17 @@ class TestRegisterKuOntology:
 
     def test_valid_types_injectable(self, tmp_path):
         # Inject custom vocab that includes "domain_specific" not in default set
-        custom_vkt = frozenset(["factual", "conceptual", "positional",
-                                  "procedural", "explanatory", "metacognitive",
-                                  "domain_specific"])
+        custom_vkt = frozenset(
+            [
+                "factual",
+                "conceptual",
+                "positional",
+                "procedural",
+                "explanatory",
+                "metacognitive",
+                "domain_specific",
+            ]
+        )
         ku = _ku("domain_specific")
         result = register_ku_ontology(
             config=_config(knowledge_type="domain_specific"),

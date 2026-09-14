@@ -1,4 +1,5 @@
 """Tests for systemic_risk_dashboard."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -26,7 +27,10 @@ class TestSystemicRiskDashboard:
     def test_basic_output_keys(self, returns_60x4):
         result = systemic_risk_dashboard(returns_60x4)
         assert set(result.keys()) == {
-            "systemic_metrics", "network_centrality", "clearing_result", "risk_summary"
+            "systemic_metrics",
+            "network_centrality",
+            "clearing_result",
+            "risk_summary",
         }
 
     def test_systemic_metrics_has_covar_mes(self, returns_60x4):

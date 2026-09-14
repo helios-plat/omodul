@@ -1,12 +1,13 @@
 """Strategy functions: end-to-end pipelines using oskill/oprim directly."""
+
 from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-
-from oprim.finance import drawdown_curve
 from oprim.crypto import sha256_hash
+from oprim.finance import drawdown_curve
 from oprim.serialization import canonical_json
+
 try:
     from oskill.regime import bocpd
 except ImportError:
@@ -29,10 +30,16 @@ except ImportError:
     crypto_market_impact_sigmoid = None
 
 
-def _bocpd_fallback(returns: np.ndarray, hazard: float = 0.01, confidence_threshold: float = 0.6) -> dict:
+def _bocpd_fallback(
+    returns: np.ndarray, hazard: float = 0.01, confidence_threshold: float = 0.6
+) -> dict:
     n = len(returns)
     prob = 1.0 - hazard ** max(1, n // 4)
-    return {"current_regime_probability": min(prob, 0.99), "current_run_length": n, "regime_changes": []}
+    return {
+        "current_regime_probability": min(prob, 0.99),
+        "current_run_length": n,
+        "regime_changes": [],
+    }
 
 
 def _basis_decomposition_fallback(
@@ -54,7 +61,9 @@ def _position_sizing_vol_target_fallback(
 ) -> dict:
     if instrument_vol_annual <= 0:
         return {"target_notional_usd": 0.0, "fraction_of_capital": 0.0}
-    fraction = min(signal_strength * (portfolio_target_vol / instrument_vol_annual), max_position_pct)
+    fraction = min(
+        signal_strength * (portfolio_target_vol / instrument_vol_annual), max_position_pct
+    )
     return {"target_notional_usd": fraction * current_capital, "fraction_of_capital": fraction}
 
 
@@ -70,7 +79,11 @@ def _crypto_impact_fallback(
 
 
 def _ofi_fallback(
-    bid_prices: np.ndarray, bid_sizes: np.ndarray, ask_prices: np.ndarray, ask_sizes: np.ndarray, window: int = 60
+    bid_prices: np.ndarray,
+    bid_sizes: np.ndarray,
+    ask_prices: np.ndarray,
+    ask_sizes: np.ndarray,
+    window: int = 60,
 ) -> np.ndarray:
     bp = np.asarray(bid_prices, dtype=float)
     bs = np.asarray(bid_sizes, dtype=float)
@@ -189,10 +202,12 @@ def bocpd_trend_following(market_state: dict, config: dict) -> dict:
         baseline_realized_vol,
         recent_realized_vol=realized_vol_30d,
     )
-    stack_calls.append({
-        "function": "oprim.finance.drawdown_curve",
-        "args_hash": _args_hash(len(equity_curve)),
-    })
+    stack_calls.append(
+        {
+            "function": "oprim.finance.drawdown_curve",
+            "args_hash": _args_hash(len(equity_curve)),
+        }
+    )
     precondition_checks.append(f"risk_gate_status: {status}")
 
     signals_out: dict = {}
@@ -239,10 +254,12 @@ def bocpd_trend_following(market_state: dict, config: dict) -> dict:
             hazard=bocpd_hazard,
             confidence_threshold=confidence_threshold,
         )
-        stack_calls.append({
-            "function": "oskill.regime.bocpd",
-            "args_hash": _args_hash((sym, bocpd_hazard, len(returns_arr))),
-        })
+        stack_calls.append(
+            {
+                "function": "oskill.regime.bocpd",
+                "args_hash": _args_hash((sym, bocpd_hazard, len(returns_arr))),
+            }
+        )
 
         confidence = float(bocpd_result["current_regime_probability"])
         regime_changes = len(bocpd_result["regime_changes"])
@@ -304,11 +321,15 @@ def bocpd_trend_following(market_state: dict, config: dict) -> dict:
                 current_capital=capital_usd,
                 max_position_pct=max_position_pct,
             )
-            stack_calls.append({
-                "function": "oskill.portfolio.position_sizing_vol_target",
-                "args_hash": _args_hash((sym, abs(effective_strength))),
-            })
-            raw_target_notionals[sym] = float(float(sizing["target_notional_usd"]) * np.sign(effective_strength))
+            stack_calls.append(
+                {
+                    "function": "oskill.portfolio.position_sizing_vol_target",
+                    "args_hash": _args_hash((sym, abs(effective_strength))),
+                }
+            )
+            raw_target_notionals[sym] = float(
+                float(sizing["target_notional_usd"]) * np.sign(effective_strength)
+            )
 
     # Scale down if needed
     total_gross = sum(abs(v) for v in raw_target_notionals.values())
@@ -323,7 +344,9 @@ def bocpd_trend_following(market_state: dict, config: dict) -> dict:
         target_notional = raw_target_notionals.get(sym, 0.0)
         current = float(current_positions.get(sym, 0.0))
         delta = target_notional - current
-        needs_rebalance = abs(delta) / capital_usd >= rebalance_threshold if capital_usd > 0 else False
+        needs_rebalance = (
+            abs(delta) / capital_usd >= rebalance_threshold if capital_usd > 0 else False
+        )
 
         urgency = "high" if needs_rebalance else "normal"
         target_positions[sym] = {
@@ -348,16 +371,20 @@ def bocpd_trend_following(market_state: dict, config: dict) -> dict:
                 slippage = slice_notional * impact_bps / 10000.0
                 total_impact_bps += impact_bps
                 total_slippage += slippage
-                impact_schedule.append({
-                    "slice_index": i,
-                    "offset_sec": i * slice_duration_sec,
-                    "notional_usd": slice_notional,
-                    "expected_impact_bps": impact_bps,
-                })
-            stack_calls.append({
-                "function": "oskill.cost.crypto_market_impact_sigmoid",
-                "args_hash": _args_hash((sym, slice_notional)),
-            })
+                impact_schedule.append(
+                    {
+                        "slice_index": i,
+                        "offset_sec": i * slice_duration_sec,
+                        "notional_usd": slice_notional,
+                        "expected_impact_bps": impact_bps,
+                    }
+                )
+            stack_calls.append(
+                {
+                    "function": "oskill.cost.crypto_market_impact_sigmoid",
+                    "args_hash": _args_hash((sym, slice_notional)),
+                }
+            )
             execution_plans[sym] = {
                 "schedule": impact_schedule,
                 "total_expected_impact_bps": total_impact_bps,
@@ -369,7 +396,10 @@ def bocpd_trend_following(market_state: dict, config: dict) -> dict:
         "risk_status": status,
         "daily_loss": daily_loss,
         "weekly_loss": weekly_loss,
-        "signals": {sym: {"direction": s["direction"], "strength": s["strength"]} for sym, s in signals_out.items()},
+        "signals": {
+            sym: {"direction": s["direction"], "strength": s["strength"]}
+            for sym, s in signals_out.items()
+        },
         "portfolio": {sym: p["target_notional_usd"] for sym, p in target_positions.items()},
     }
 
@@ -446,10 +476,12 @@ def microstructure_scalper(market_state: dict, config: dict) -> dict:
         baseline_realized_vol,
         recent_realized_vol=realized_vol_30d,
     )
-    stack_calls.append({
-        "function": "oprim.finance.drawdown_curve",
-        "args_hash": _args_hash(len(equity_curve)),
-    })
+    stack_calls.append(
+        {
+            "function": "oprim.finance.drawdown_curve",
+            "args_hash": _args_hash(len(equity_curve)),
+        }
+    )
     precondition_checks.append(f"risk_gate_status: {status}")
 
     signals_out: dict = {}
@@ -484,7 +516,12 @@ def microstructure_scalper(market_state: dict, config: dict) -> dict:
         # Check max_hold_seconds — if position is old, flatten
         age = float(position_ages.get(sym, 0.0))
         if age > max_hold_seconds and float(current_positions.get(sym, 0.0)) != 0.0:
-            signals_out[sym] = {"direction": "neutral", "strength": 1.0, "confidence": 1.0, "flatten": True}
+            signals_out[sym] = {
+                "direction": "neutral",
+                "strength": 1.0,
+                "confidence": 1.0,
+                "flatten": True,
+            }
             target_positions[sym] = {"target_notional_usd": 0.0, "urgency": "high"}
             execution_plans[sym] = {
                 "limit_offset_bps": limit_offset_bps,
@@ -504,13 +541,13 @@ def microstructure_scalper(market_state: dict, config: dict) -> dict:
         ask_sizes = np.asarray(features.get(f"ask_sizes_{sym}", [1.0]), dtype=float)
 
         _ofi = order_flow_imbalance or _ofi_fallback
-        ofi_arr = _ofi(
-            bid_prices, bid_sizes, ask_prices, ask_sizes, window=ofi_window
+        ofi_arr = _ofi(bid_prices, bid_sizes, ask_prices, ask_sizes, window=ofi_window)
+        stack_calls.append(
+            {
+                "function": "oskill.microstructure.order_flow_imbalance",
+                "args_hash": _args_hash((sym, ofi_window)),
+            }
         )
-        stack_calls.append({
-            "function": "oskill.microstructure.order_flow_imbalance",
-            "args_hash": _args_hash((sym, ofi_window)),
-        })
 
         window_mean = float(np.mean(ofi_arr))
         window_std = float(np.std(ofi_arr))
@@ -558,10 +595,12 @@ def microstructure_scalper(market_state: dict, config: dict) -> dict:
                 daily_volume_usd,
                 realized_vol_30d,
             )
-            stack_calls.append({
-                "function": "oskill.cost.crypto_market_impact_sigmoid",
-                "args_hash": _args_hash((sym, abs(target_notional))),
-            })
+            stack_calls.append(
+                {
+                    "function": "oskill.cost.crypto_market_impact_sigmoid",
+                    "args_hash": _args_hash((sym, abs(target_notional))),
+                }
+            )
             estimated_bps = float(impact_result["impact_bps"])
             execute = estimated_bps <= max_slippage_bps
             execution_plans[sym] = {
@@ -650,10 +689,12 @@ def funding_rate_arbitrage(market_state: dict, config: dict) -> dict:
         baseline_realized_vol,
         recent_realized_vol=realized_vol_30d,
     )
-    stack_calls.append({
-        "function": "oprim.finance.drawdown_curve",
-        "args_hash": _args_hash(len(equity_curve)),
-    })
+    stack_calls.append(
+        {
+            "function": "oprim.finance.drawdown_curve",
+            "args_hash": _args_hash(len(equity_curve)),
+        }
+    )
     precondition_checks.append(f"risk_gate_status: {status}")
 
     signals_out: dict = {}
@@ -705,10 +746,12 @@ def funding_rate_arbitrage(market_state: dict, config: dict) -> dict:
 
         _bd = basis_decomposition or _basis_decomposition_fallback
         bd_result = _bd(spot, perp, fund, funding_interval_hours=8.0)
-        stack_calls.append({
-            "function": "oskill.derivatives.basis_decomposition",
-            "args_hash": _args_hash((sym, len(spot))),
-        })
+        stack_calls.append(
+            {
+                "function": "oskill.derivatives.basis_decomposition",
+                "args_hash": _args_hash((sym, len(spot))),
+            }
+        )
 
         annualized_basis_bps = float(bd_result["annualized_basis_pct"][-1]) * 10000
         residual_bps = float(abs(bd_result["residual"][-1]) / spot[-1]) * 10000
@@ -758,11 +801,15 @@ def funding_rate_arbitrage(market_state: dict, config: dict) -> dict:
                 current_capital=capital_usd,
                 max_position_pct=max_position_pct,
             )
-            stack_calls.append({
-                "function": "oskill.portfolio.position_sizing_vol_target",
-                "args_hash": _args_hash((sym, abs(effective_strength))),
-            })
-            raw_target_notionals[sym] = float(float(sizing["target_notional_usd"]) * np.sign(effective_strength))
+            stack_calls.append(
+                {
+                    "function": "oskill.portfolio.position_sizing_vol_target",
+                    "args_hash": _args_hash((sym, abs(effective_strength))),
+                }
+            )
+            raw_target_notionals[sym] = float(
+                float(sizing["target_notional_usd"]) * np.sign(effective_strength)
+            )
 
     # Enforce leverage cap
     total_gross = sum(abs(v) for v in raw_target_notionals.values())
@@ -778,7 +825,9 @@ def funding_rate_arbitrage(market_state: dict, config: dict) -> dict:
         target_notional = raw_target_notionals.get(sym, 0.0)
         current = float(current_positions.get(sym, 0.0))
         delta = target_notional - current
-        needs_rebalance = abs(delta) / capital_usd >= rebalance_threshold if capital_usd > 0 else False
+        needs_rebalance = (
+            abs(delta) / capital_usd >= rebalance_threshold if capital_usd > 0 else False
+        )
         urgency = "high" if needs_rebalance else "normal"
         target_positions[sym] = {
             "target_notional_usd": target_notional,
@@ -797,16 +846,20 @@ def funding_rate_arbitrage(market_state: dict, config: dict) -> dict:
                 sl = slice_notional * ibps / 10000.0
                 total_impact_bps += ibps
                 total_slippage += sl
-                impact_schedule.append({
-                    "slice_index": i,
-                    "offset_sec": i * slice_duration_sec,
-                    "notional_usd": slice_notional,
-                    "expected_impact_bps": ibps,
-                })
-            stack_calls.append({
-                "function": "oskill.cost.crypto_market_impact_sigmoid",
-                "args_hash": _args_hash((sym, slice_notional)),
-            })
+                impact_schedule.append(
+                    {
+                        "slice_index": i,
+                        "offset_sec": i * slice_duration_sec,
+                        "notional_usd": slice_notional,
+                        "expected_impact_bps": ibps,
+                    }
+                )
+            stack_calls.append(
+                {
+                    "function": "oskill.cost.crypto_market_impact_sigmoid",
+                    "args_hash": _args_hash((sym, slice_notional)),
+                }
+            )
             execution_plans[sym] = {
                 "schedule": impact_schedule,
                 "total_expected_impact_bps": total_impact_bps,

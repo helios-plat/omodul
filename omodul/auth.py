@@ -7,15 +7,14 @@ omodul/auth.py
 from __future__ import annotations
 
 import uuid
-from datetime import date, datetime, timezone
-from typing import Optional
+from datetime import UTC, date, datetime
 
+from obase.auth import create_access_token, decode_access_token  # noqa: F401
+from obase.sms import send_otp, verify_otp
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from obase.auth import create_access_token, decode_access_token  # noqa: F401
-from obase.sms import send_otp, verify_otp
 from omodul.base import BaseConfig, standard_return
 
 
@@ -35,7 +34,7 @@ class RegisterStudentInput(BaseModel):
     name: str
     birth_date: date
     grade: str
-    guardian_phone: Optional[str] = None
+    guardian_phone: str | None = None
     guardian_consent: bool = False
 
 
@@ -51,7 +50,8 @@ async def send_code_workflow(config: AuthConfig, input_data: SendCodeInput) -> d
         findings={"ok": True, "message": "Code sent (dev mock)"},
         status="completed",
         trail=[{"step": "send_otp", "phone": input_data.phone, "mock_code": code}]
-        if "decision_trail" in config._enabled_pillars else None,
+        if "decision_trail" in config._enabled_pillars
+        else None,
     )
 
 
@@ -64,7 +64,7 @@ async def register_student_workflow(
     from services.models import GuardianConsent, User, UserRole  # lazy import avoids cycle
 
     # 合规：年龄校验
-    today = datetime.now(timezone.utc).date()
+    today = datetime.now(UTC).date()
     age = (today - input_data.birth_date).days // 365
     if age < 14:
         if not input_data.guardian_phone or not input_data.guardian_consent:
@@ -103,7 +103,10 @@ async def register_student_workflow(
 
     token = create_access_token({"sub": str(user.id), "role": user.role.value})
     return standard_return(
-        findings={"token": token, "user": {"id": str(user.id), "name": user.name, "phone": user.phone}},
+        findings={
+            "token": token,
+            "user": {"id": str(user.id), "name": user.name, "phone": user.phone},
+        },
         status="completed",
     )
 

@@ -3,6 +3,7 @@ omodul.web_research_task — Web research with optional LLM synthesis and report
 
 Pillars: report, cost
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -15,7 +16,11 @@ from typing import Any, ClassVar
 from pydantic import BaseModel, ConfigDict
 
 from omodul._base import (
-    BaseConfig, CostTracker, build_result, extract_text, write_report,
+    BaseConfig,
+    CostTracker,
+    build_result,
+    extract_text,
+    write_report,
 )
 
 _current_cost_m10: ContextVar[CostTracker] = ContextVar("_current_cost_m10")
@@ -57,9 +62,9 @@ async def web_research_task(
 
     try:
         if input_data.researcher is not None:
-            result = await _call(input_data.researcher,
-                                 query=input_data.query,
-                                 max_pages=config.max_pages)
+            result = await _call(
+                input_data.researcher, query=input_data.query, max_pages=config.max_pages
+            )
         else:
             result = {"snippets": [], "urls": []}
 
@@ -72,11 +77,16 @@ async def web_research_task(
 
         if input_data.llm_caller is not None:
             joined = "\n\n".join(result["snippets"])
-            messages = [{"role": "user",
-                         "content": f"Synthesise the following research snippets into a concise summary:\n\n{joined}"}]
-            response = await _call(input_data.llm_caller,
-                                   messages=messages,
-                                   max_tokens=2048)
+            messages = [
+                {
+                    "role": "user",
+                    "content": (
+                        "Synthesise the following research snippets into a concise "
+                        f"summary:\n\n{joined}"
+                    ),
+                }
+            ]
+            response = await _call(input_data.llm_caller, messages=messages, max_tokens=2048)
             cost.add_from_response(response, model=config.llm_model)
             summary = extract_text(response) or joined
         else:

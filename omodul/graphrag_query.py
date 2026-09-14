@@ -14,13 +14,13 @@ from __future__ import annotations
 import json
 import os
 from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, ClassVar
 
+from oprim import entity_graph_search, vector_encode
 from pydantic import ConfigDict
 
 from omodul._base_config import BaseConfig
-from oprim import entity_graph_search, vector_encode
 
 _enabled_pillars: set[str] = {"decision_trail"}
 
@@ -137,7 +137,7 @@ def graphrag_query(
             "enabled_pillars": sorted(_enabled_pillars),
             "status": status,
             "steps": trail,
-            "ts": datetime.now(timezone.utc).isoformat(),
+            "ts": datetime.now(UTC).isoformat(),
         }
         if output_dir and findings is not None:
             os.makedirs(output_dir, exist_ok=True)

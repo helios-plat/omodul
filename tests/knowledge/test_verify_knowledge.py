@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import pytest
 from omodul.verify_knowledge import VerifyKnowledgeConfig, verify_knowledge
-
 
 # ---------------------------------------------------------------------------
 # Mock backend

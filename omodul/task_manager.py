@@ -60,9 +60,7 @@ class TaskManager:
         )
         final_status = SUCCESS if done else (status if status in (RUNNING, PAUSED) else RUNNING)
         persist_index = step_index if done else next_index
-        self.store.checkpoint(
-            task_id, status=final_status, current_step=persist_index, steps=steps
-        )
+        self.store.checkpoint(task_id, status=final_status, current_step=persist_index, steps=steps)
         return {
             "status": final_status,
             "current_step": persist_index,
@@ -99,9 +97,7 @@ class TaskManager:
         """
         ctx = self.get_resume_context(task_id)
         rolled = rollback_to(ctx["steps"], to_step)
-        self.store.checkpoint(
-            task_id, status=RUNNING, current_step=to_step, steps=rolled
-        )
+        self.store.checkpoint(task_id, status=RUNNING, current_step=to_step, steps=rolled)
         _log.info("task_manager: task %s rolled back to step %d", task_id, to_step)
         return {
             "status": RUNNING,

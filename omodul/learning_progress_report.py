@@ -5,6 +5,7 @@ produce a structured progress report.
 
 Pillars: fingerprint + decision_trail + report
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -67,10 +68,14 @@ async def learning_progress_report(
             sessions=pattern.sessions_analyzed,
         )
 
-        fp = compute_fingerprint({"user_id": input_data.user_id, "period_key": input_data.period_key})
+        fp = compute_fingerprint(
+            {"user_id": input_data.user_id, "period_key": input_data.period_key}
+        )
 
-        trend_dir = "improving" if pattern.overall_trend > 0.01 else (
-            "declining" if pattern.overall_trend < -0.01 else "stable"
+        trend_dir = (
+            "improving"
+            if pattern.overall_trend > 0.01
+            else ("declining" if pattern.overall_trend < -0.01 else "stable")
         )
         report = (
             f"# Learning Progress Report\n\n"

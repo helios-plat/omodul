@@ -6,6 +6,7 @@ Supports on_step SSE streaming callback.
 Red line: LLM must never reveal correct_answer (enforced by oskill layer).
 Pillars: fingerprint + decision_trail + cost
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -22,7 +23,7 @@ class SocraticConfig(BaseConfig):
     _enabled_pillars: ClassVar[set[str]] = {"fingerprint", "decision_trail", "cost"}
     _fingerprint_fields: ClassVar[set[str]] = {"question_hash", "user_id"}
 
-    mode: str = "mixed"       # "deep" | "mixed" | "sprint"
+    mode: str = "mixed"  # "deep" | "mixed" | "sprint"
     max_turns: int = 20
     hint_level: int = 1
     model: str = "claude-sonnet-4-6"
@@ -80,8 +81,12 @@ async def socratic_session_workflow(
             trail.record(event="initial_question")
             if on_step:
                 on_step("socratic_session_workflow", "initial_question")
-            fp = compute_fingerprint({"question_hash": str(hash(input_data.question_text))[:12],
-                                      "user_id": input_data.user_id})
+            fp = compute_fingerprint(
+                {
+                    "question_hash": str(hash(input_data.question_text))[:12],
+                    "user_id": input_data.user_id,
+                }
+            )
             return build_result(
                 status="ok",
                 fingerprint=fp,
@@ -104,19 +109,25 @@ async def socratic_session_workflow(
                 model=config.model,
                 hint_level=config.hint_level,
             )
-            turns.append({
-                "turn": out.turn_number,
-                "student": msg,
-                "assistant": out.assistant_text,
-                "step_check": out.step_check_triggered,
-                "answer_leaked": out.answer_leaked,
-            })
+            turns.append(
+                {
+                    "turn": out.turn_number,
+                    "student": msg,
+                    "assistant": out.assistant_text,
+                    "step_check": out.step_check_triggered,
+                    "answer_leaked": out.answer_leaked,
+                }
+            )
             trail.record(event=f"turn_{i + 1}", leaked=out.answer_leaked)
             if on_step:
                 on_step("socratic_session_workflow", f"turn_{i + 1}::{out.assistant_text}")
 
-        fp = compute_fingerprint({"question_hash": str(hash(input_data.question_text))[:12],
-                                  "user_id": input_data.user_id})
+        fp = compute_fingerprint(
+            {
+                "question_hash": str(hash(input_data.question_text))[:12],
+                "user_id": input_data.user_id,
+            }
+        )
         latest_reply = turns[-1]["assistant"] if turns else ""
         return build_result(
             status="ok",
@@ -144,4 +155,7 @@ async def socratic_session_workflow(
 
 class _MockCaller:
     async def __call__(self, **kwargs: Any) -> dict:
-        return {"content": "请继续思考，这一步你是怎么想的？", "usage": {"input_tokens": 0, "output_tokens": 0}}
+        return {
+            "content": "请继续思考，这一步你是怎么想的？",
+            "usage": {"input_tokens": 0, "output_tokens": 0},
+        }

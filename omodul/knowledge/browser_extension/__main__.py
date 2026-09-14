@@ -1,4 +1,5 @@
 """Entry point: python -m omodul.knowledge.browser_extension [init|serve]"""
+
 from __future__ import annotations
 
 import sys
@@ -7,6 +8,7 @@ import sys
 def main():
     if len(sys.argv) > 1 and sys.argv[1] == "init":
         from .auth import init_token
+
         token = init_token()
         print("Token generated and saved to ~/.stratum/secrets/browser_ext_token.txt")
         print("\nCopy this token into the browser extension Options page:\n")
@@ -14,6 +16,7 @@ def main():
         return
 
     import uvicorn
+
     from .server import app
 
     print("Starting Stratum Browser Extension API on http://127.0.0.1:14567")

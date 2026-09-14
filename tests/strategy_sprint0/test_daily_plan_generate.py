@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import date
-
 import pytest
 
 from omodul.strategy.daily_plan_generator import daily_plan_generate
@@ -56,9 +54,13 @@ class TestDailyPlanGenerate:
     @pytest.mark.asyncio
     async def test_candidate_scoring(self):
         watchlist = [
-            {"symbol": "AAPL", "sector": "Tech", "themes": ["AI"]},   # high_score_event + sector + theme → 65
-            {"symbol": "GOOG", "sector": "Tech", "themes": []},       # sector only → 20
-            {"symbol": "XOM", "sector": "Energy", "themes": []},      # no match → 0
+            {
+                "symbol": "AAPL",
+                "sector": "Tech",
+                "themes": ["AI"],
+            },  # high_score_event + sector + theme → 65
+            {"symbol": "GOOG", "sector": "Tech", "themes": []},  # sector only → 20
+            {"symbol": "XOM", "sector": "Energy", "themes": []},  # no match → 0
         ]
         result = await daily_plan_generate(
             regime_state={"current_state": "BULL"},
@@ -93,8 +95,8 @@ class TestDailyPlanGenerate:
     @pytest.mark.asyncio
     async def test_holdings_review_logic(self):
         holdings = [
-            {"symbol": "WIN", "pnl_pct": 0.25},   # consider_partial_exit
-            {"symbol": "LOSS", "pnl_pct": -0.10}, # consider_exit
+            {"symbol": "WIN", "pnl_pct": 0.25},  # consider_partial_exit
+            {"symbol": "LOSS", "pnl_pct": -0.10},  # consider_exit
             {"symbol": "HOLD", "pnl_pct": 0.05},  # hold
         ]
         result = await daily_plan_generate(
@@ -222,6 +224,7 @@ class TestDailyPlanGenerate:
     @pytest.mark.asyncio
     async def test_cost_tracker_exception_graceful(self):
         """Cover lines 145-146: cost_tracker raises, no crash."""
+
         def bad_tracker(info):
             raise RuntimeError("tracker down")
 

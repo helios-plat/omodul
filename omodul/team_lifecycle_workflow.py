@@ -39,15 +39,23 @@ def team_lifecycle_workflow(
 
     goal = str(input_data.get("goal") or "")
     members_in = list(input_data.get("members") or [])
-    leader = str(input_data.get("leader_name") or (members_in[0].get("name") if members_in else "leader"))
+    leader = str(
+        input_data.get("leader_name") or (members_in[0].get("name") if members_in else "leader")
+    )
 
     # 1. create team
     try:
         from obase.team_registry import TeamRegistry
+
         reg = TeamRegistry(output_dir)
         if reg.get_team(team_name):
             reg.cleanup(team_name)
-        cfg = reg.create_team(team_name, description=goal, lead_agent_id="", budget_cents=float(config.get("budget_cents", 0)))
+        cfg = reg.create_team(
+            team_name,
+            description=goal,
+            lead_agent_id="",
+            budget_cents=float(config.get("budget_cents", 0)),
+        )
     except Exception as exc:
         return {"status": "failed", "error": f"team creation: {exc}"}
 
@@ -65,10 +73,23 @@ def team_lifecycle_workflow(
     # 3. plan: goal → tasks
     try:
         from oskill.team_plan_gen import team_plan_gen
+
         llm = config.get("llm_caller")
-        tasks = team_plan_gen(goal, members=members, llm_caller=llm, context={"use_llm": llm is not None})
+        tasks = team_plan_gen(
+            goal, members=members, llm_caller=llm, context={"use_llm": llm is not None}
+        )
     except Exception:
-        tasks = [{"id": "t1", "subject": goal, "description": goal, "priority": "high", "blocks": [], "blocked_by": [], "suggested_owner": leader}]
+        tasks = [
+            {
+                "id": "t1",
+                "subject": goal,
+                "description": goal,
+                "priority": "high",
+                "blocks": [],
+                "blocked_by": [],
+                "suggested_owner": leader,
+            }
+        ]
 
     # 4. register tasks
     for t in tasks[: int(config.get("max_tasks", 20))]:
@@ -80,7 +101,8 @@ def team_lifecycle_workflow(
     # 5. route: assign tasks to members
     all_tasks = reg.get_tasks(team_name)
     try:
-        from oprim.task_router import route_tasks, dispatch_decision
+        from oprim.task_router import dispatch_decision, route_tasks
+
         decisions = route_tasks(all_tasks, members, context={})
         dispatch = dispatch_decision(decisions, message_type="message")
     except Exception:
@@ -101,6 +123,7 @@ def team_lifecycle_workflow(
         # Git worktree isolation per agent
         try:
             from oprim.git_worktree_add import git_worktree_add
+
             git_worktree_add(f"swarm/{d['agent']}", repo=str(output_dir))
         except Exception:
             pass
@@ -108,8 +131,11 @@ def team_lifecycle_workflow(
     # P2P mailbox integration
     try:
         from oprim.p2p_mailbox import P2PMailbox
+
         box = P2PMailbox(team_name=team_name, agent_name=leader)
-        box.broadcast(f"New swarm tasks assigned. Ready queue: {len(dispatch.get('dispatched', []))} items.")
+        box.broadcast(
+            f"New swarm tasks assigned. Ready queue: {len(dispatch.get('dispatched', []))} items."
+        )
         box.close()
     except Exception:
         pass
@@ -117,6 +143,7 @@ def team_lifecycle_workflow(
     # Kanban auto-unblock: simulate completing first task → wake next
     try:
         from oprim.kanban_task_update import kanban_task_update
+
         all_ts = reg.get_tasks(team_name)
         if all_ts:
             kanban_task_update(all_ts[0]["id"], "completed", all_ts)

@@ -1,4 +1,5 @@
 """Tests for omodul.web_research_task."""
+
 from __future__ import annotations
 
 import asyncio

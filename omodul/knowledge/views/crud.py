@@ -1,9 +1,10 @@
 """Views CRUD — sync DuckDB operations for the views table."""
+
 from __future__ import annotations
 
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import oprim.meta_db as _oprim_meta_db_mod
@@ -44,18 +45,22 @@ def _row_to_view(row: tuple) -> dict:
 def create_view(user_id: str, spec: dict) -> dict:
     db = _open_db()
     view_id = str(uuid.uuid4())
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     db.execute(
         f"INSERT INTO views ({_SELECT_COLS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         [
-            view_id, user_id, spec["name"], spec.get("description"),
+            view_id,
+            user_id,
+            spec["name"],
+            spec.get("description"),
             json.dumps(spec.get("default_filter", {})),
             json.dumps(spec.get("default_llm", {})),
             spec.get("default_system_prompt"),
             spec.get("icon"),
             bool(spec.get("is_default", False)),
             bool(spec.get("is_builtin", False)),
-            now, now,
+            now,
+            now,
         ],
     )
     db.close()
@@ -64,9 +69,7 @@ def create_view(user_id: str, spec: dict) -> dict:
 
 def get_view(view_id: str) -> dict | None:
     db = _open_db()
-    rows = db.fetchall(
-        f"SELECT {_SELECT_COLS} FROM views WHERE id = ?", [view_id]
-    )
+    rows = db.fetchall(f"SELECT {_SELECT_COLS} FROM views WHERE id = ?", [view_id])
     db.close()
     return _row_to_view(rows[0]) if rows else None
 
@@ -74,8 +77,7 @@ def get_view(view_id: str) -> dict | None:
 def list_views(user_id: str) -> list[dict]:
     db = _open_db()
     rows = db.fetchall(
-        f"SELECT {_SELECT_COLS} FROM views "
-        "WHERE user_id = ? ORDER BY is_default DESC, name ASC",
+        f"SELECT {_SELECT_COLS} FROM views WHERE user_id = ? ORDER BY is_default DESC, name ASC",
         [user_id],
     )
     db.close()
@@ -83,10 +85,16 @@ def list_views(user_id: str) -> list[dict]:
 
 
 def update_view(view_id: str, updates: dict) -> dict | None:
-    _ALLOWED = {"name", "description", "default_filter", "default_llm",
-                "default_system_prompt", "icon"}
+    _ALLOWED = {
+        "name",
+        "description",
+        "default_filter",
+        "default_llm",
+        "default_system_prompt",
+        "icon",
+    }
     db = _open_db()
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     for key, val in updates.items():
         if key not in _ALLOWED:
             continue
@@ -109,7 +117,7 @@ def delete_view(view_id: str) -> None:
 def set_default(user_id: str, view_id: str) -> None:
     """Switch the user's default view (single-default constraint)."""
     db = _open_db()
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     db.execute(
         "UPDATE views SET is_default = FALSE, updated_at = ? WHERE user_id = ?",
         [now, user_id],
@@ -124,8 +132,7 @@ def set_default(user_id: str, view_id: str) -> None:
 def get_default_view(user_id: str) -> dict | None:
     db = _open_db()
     rows = db.fetchall(
-        f"SELECT {_SELECT_COLS} FROM views "
-        "WHERE user_id = ? AND is_default = TRUE LIMIT 1",
+        f"SELECT {_SELECT_COLS} FROM views WHERE user_id = ? AND is_default = TRUE LIMIT 1",
         [user_id],
     )
     db.close()

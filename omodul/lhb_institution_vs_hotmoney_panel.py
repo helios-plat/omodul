@@ -16,7 +16,7 @@ import traceback
 from collections.abc import Callable
 from datetime import UTC, date, datetime
 from pathlib import Path
-from typing import Any, ClassVar, Set
+from typing import Any, ClassVar
 
 from obase.cost_tracker import CostTracker
 from pydantic import BaseModel, Field
@@ -29,8 +29,8 @@ from omodul._fingerprint import compute_fingerprint
 class LhbPanelConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "lhb_institution_vs_hotmoney_panel"
     _omodul_version: ClassVar[str] = "1.0.0"
-    _enabled_pillars: ClassVar[Set[str]] = {"fingerprint", "decision_trail"}
-    _fingerprint_fields: ClassVar[Set[str]] = {"trade_date", "symbol_scope"}
+    _enabled_pillars: ClassVar[set[str]] = {"fingerprint", "decision_trail"}
+    _fingerprint_fields: ClassVar[set[str]] = {"trade_date", "symbol_scope"}
 
     trade_date: date
     symbol_scope: str = "all"
@@ -76,9 +76,9 @@ def lhb_institution_vs_hotmoney_panel(
 
     Returns dict with: findings, fingerprint, decision_trail, status, error.
     """
+    import oprim
     from oskill.seat_winrate_aggregator import SeatTradeInput, seat_winrate_aggregator
     from oskill.unknown_seats_audit_loop import unknown_seats_audit_loop
-    import oprim
 
     started_at = datetime.now(UTC)
     if output_dir:

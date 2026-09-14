@@ -27,11 +27,16 @@ class TestStrategyBacktestReport:
         # Generate daily factor data with same index as spy_returns
         rng = np.random.default_rng(42)
         n = 100
-        daily_factors = pd.DataFrame({
-            "Mkt-RF": rng.normal(0.0003, 0.01, n),
-            "SMB": rng.normal(0.0001, 0.005, n),
-        }, index=spy_returns.index[:n])
-        result = strategy_backtest_report(spy_returns.iloc[:n], factor_returns=daily_factors, n_bootstrap=50)
+        daily_factors = pd.DataFrame(
+            {
+                "Mkt-RF": rng.normal(0.0003, 0.01, n),
+                "SMB": rng.normal(0.0001, 0.005, n),
+            },
+            index=spy_returns.index[:n],
+        )
+        result = strategy_backtest_report(
+            spy_returns.iloc[:n], factor_returns=daily_factors, n_bootstrap=50
+        )
         assert result["factor_attribution"] is not None
 
     def test_markdown_format(self, spy_returns):
@@ -68,13 +73,17 @@ class TestStrategyDecayMonitor:
         rng = np.random.default_rng(42)
         live = pd.Series(rng.normal(-0.005, 0.01, 120))  # negative mean
         baseline = pd.Series(rng.normal(0.002, 0.01, 120))
-        result = strategy_decay_monitor(live, baseline, rolling_window=60, consecutive_periods_dead=20)
+        result = strategy_decay_monitor(
+            live, baseline, rolling_window=60, consecutive_periods_dead=20
+        )
         # Should detect degradation
         assert result["decay_state"] in ("DEGRADING", "CRITICAL", "DEAD")
 
     def test_short_returns_raises(self):
         with pytest.raises(ValueError, match="rolling_window"):
-            strategy_decay_monitor(pd.Series([0.01] * 10), pd.Series([0.01] * 10), rolling_window=60)
+            strategy_decay_monitor(
+                pd.Series([0.01] * 10), pd.Series([0.01] * 10), rolling_window=60
+            )
 
     def test_rolling_sharpe_output(self):
         rng = np.random.default_rng(42)
@@ -101,8 +110,13 @@ class TestFactorAttributionReport:
         asset = pd.Series(rng.normal(0.001, 0.02, n))
         factor_sets = {
             "FF2": pd.DataFrame({"MKT": rng.normal(0, 0.015, n), "SMB": rng.normal(0, 0.01, n)}),
-            "FF3": pd.DataFrame({"MKT": rng.normal(0, 0.015, n), "SMB": rng.normal(0, 0.01, n),
-                                  "HML": rng.normal(0, 0.01, n)}),
+            "FF3": pd.DataFrame(
+                {
+                    "MKT": rng.normal(0, 0.015, n),
+                    "SMB": rng.normal(0, 0.01, n),
+                    "HML": rng.normal(0, 0.01, n),
+                }
+            ),
         }
         result = factor_attribution_report(asset, factor_sets, n_bootstrap=50)
         assert len(result["models"]) == 2
@@ -114,12 +128,15 @@ class TestFactorAttributionReport:
 
     def test_short_returns_raises(self):
         with pytest.raises(ValueError, match="at least 30"):
-            factor_attribution_report(pd.Series([0.01] * 10), {"X": pd.DataFrame({"F": [0.01] * 10})})
+            factor_attribution_report(
+                pd.Series([0.01] * 10), {"X": pd.DataFrame({"F": [0.01] * 10})}
+            )
 
 
 # ──────────────────────────────────────────────
 # Sprint 0: strategy_backtest_report extensions
 # ──────────────────────────────────────────────
+
 
 class TestStrategyBacktestReportSprint0:
     def _ret(self, n=120):
@@ -131,17 +148,19 @@ class TestStrategyBacktestReportSprint0:
 
         def detector(returns):
             events_found.append(len(returns))
-            return [{"date": returns.index[0] if hasattr(returns.index[0], 'date') else 0,
-                     "type": "signal"}]
+            return [
+                {
+                    "date": returns.index[0] if hasattr(returns.index[0], "date") else 0,
+                    "type": "signal",
+                }
+            ]
 
-        result = strategy_backtest_report(
-            self._ret(), signal_detectors=[detector], n_bootstrap=50
-        )
+        result = strategy_backtest_report(self._ret(), signal_detectors=[detector], n_bootstrap=50)
         assert "signal_events" in result
         assert len(result["signal_events"]) == 1
 
     def test_regime_grouping_breakdown(self):
-        from datetime import date
+
         ret = self._ret()
         ret.index = pd.date_range("2023-01-01", periods=len(ret), freq="B")
 
@@ -155,10 +174,13 @@ class TestStrategyBacktestReportSprint0:
         )
         assert "regime_grouping_breakdown" in result
         assert result["regime_grouping_breakdown"] is not None
-        assert "bull" in result["regime_grouping_breakdown"] or "bear" in result["regime_grouping_breakdown"]
+        assert (
+            "bull" in result["regime_grouping_breakdown"]
+            or "bear" in result["regime_grouping_breakdown"]
+        )
 
     def test_regime_grouping_breakdown_contents(self):
-        from datetime import date
+
         ret = self._ret(200)
         dates = pd.date_range("2023-01-01", periods=200, freq="B")
         ret.index = dates

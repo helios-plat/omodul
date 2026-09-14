@@ -6,10 +6,7 @@ import os
 import tempfile
 from types import SimpleNamespace
 
-import pytest
-
 from omodul.graphrag_query import GraphRAGQueryConfig, graphrag_query
-
 
 # ---------------------------------------------------------------------------
 # MockBackend
@@ -257,7 +254,7 @@ def test_output_dir_writes_decision_trail():
     backend = MockBackend()
     config = _make_config(backend=backend)
     with tempfile.TemporaryDirectory() as tmpdir:
-        result = graphrag_query(config, {"query": "test"}, output_dir=tmpdir)
+        graphrag_query(config, {"query": "test"}, output_dir=tmpdir)
         trail_path = os.path.join(tmpdir, "decision_trail.json")
         assert os.path.exists(trail_path)
 

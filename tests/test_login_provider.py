@@ -1,4 +1,5 @@
 """Tests for omodul.login_provider."""
+
 from __future__ import annotations
 
 import asyncio
@@ -61,7 +62,9 @@ async def test_exception_returns_failed(tmp_path):
 # ---------------------------------------------------------------------------
 async def test_validator_false_returns_auth_error(tmp_path):
     validator = AsyncMock(return_value=False)
-    inp = InputData(provider="anthropic", auth_mode="api_key", api_key="bad-key", validator=validator)
+    inp = InputData(
+        provider="anthropic", auth_mode="api_key", api_key="bad-key", validator=validator
+    )
     result = await login_provider(Config(), inp, tmp_path)
     assert result["status"] == "failed"
     assert result["error"]["type"] == "AuthError"
@@ -72,7 +75,9 @@ async def test_validator_false_returns_auth_error(tmp_path):
 # ---------------------------------------------------------------------------
 async def test_validator_true_returns_completed(tmp_path):
     validator = AsyncMock(return_value=True)
-    inp = InputData(provider="anthropic", auth_mode="api_key", api_key="sk-real", validator=validator)
+    inp = InputData(
+        provider="anthropic", auth_mode="api_key", api_key="sk-real", validator=validator
+    )
     result = await login_provider(Config(), inp, tmp_path)
     assert result["status"] == "completed"
 
@@ -134,7 +139,9 @@ async def test_concurrent_calls_independent(tmp_path):
 # ---------------------------------------------------------------------------
 async def test_validator_called_with_correct_args(tmp_path):
     validator = AsyncMock(return_value=True)
-    inp = InputData(provider="anthropic", auth_mode="api_key", api_key="sk-check", validator=validator)
+    inp = InputData(
+        provider="anthropic", auth_mode="api_key", api_key="sk-check", validator=validator
+    )
     await login_provider(Config(), inp, tmp_path)
     validator.assert_called_once()
     kwargs = validator.call_args[1]

@@ -1,4 +1,5 @@
 """Tests for omodul.index_codebase."""
+
 from __future__ import annotations
 
 import asyncio
@@ -6,7 +7,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from omodul.index_codebase import Config, InputData, index_codebase, compute_fingerprint_for
+from omodul.index_codebase import Config, InputData, compute_fingerprint_for, index_codebase
 
 
 # ---------------------------------------------------------------------------

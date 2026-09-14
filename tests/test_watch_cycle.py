@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import sys
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -183,7 +182,9 @@ async def test_watch_cycle_webhook_called_for_alert(
     mock_insert.return_value = 1
 
     config = _make_config()
-    await watch_cycle(config, _make_input(webhook="https://hooks.example.com/alert"), tmp_path / "out")
+    await watch_cycle(
+        config, _make_input(webhook="https://hooks.example.com/alert"), tmp_path / "out"
+    )
 
     mock_webhook.assert_called_once()
     call_kwargs = mock_webhook.call_args.kwargs

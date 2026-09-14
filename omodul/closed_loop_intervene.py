@@ -21,16 +21,19 @@ from __future__ import annotations
 import inspect
 import json
 import random
-from dataclasses import asdict, dataclass, field
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, ClassVar, List, Optional
+from typing import Any, ClassVar
+
+from oprim._audit_emit import AuditEmitter, JsonlSink
+from oprim._expected_utility_select import (
+    InterventionCandidate,
+    from_diagnosis_report,
+    select_intervention,
+)
+from oskill._online_cpd_update import CategoricalCPD, config_key, update_cpd
 
 from omodul._base import BaseConfig, Trail, build_result, compute_fingerprint, write_report
-from oprim._audit_emit import AuditEmitter, JsonlSink
-from oprim._expected_utility_select import (InterventionCandidate,
-                                            from_diagnosis_report,
-                                            select_intervention)
-from oskill._online_cpd_update import CategoricalCPD, config_key, update_cpd
 
 
 class ClosedLoopConfig(BaseConfig):
@@ -41,46 +44,50 @@ class ClosedLoopConfig(BaseConfig):
     _fingerprint_fields: ClassVar[set[str]] = {"cpd", "interventions"}
     _enabled_pillars: ClassVar[set[str]] = {"report", "decision_trail", "fingerprint"}
 
-    lambda_cost: float = 1.0                    # 成本权重 λ
-    risk_aversion: float = 1.0                  # 风险厌恶 ρ
-    drop_negative: bool = True                  # 丢弃非正效用动作(不输出 least-bad)
-    update_mode: str = "dirichlet"              # dirichlet | ema
+    lambda_cost: float = 1.0  # 成本权重 λ
+    risk_aversion: float = 1.0  # 风险厌恶 ρ
+    drop_negative: bool = True  # 丢弃非正效用动作(不输出 least-bad)
+    update_mode: str = "dirichlet"  # dirichlet | ema
     dirichlet_strength: float = 1.0
     ema_alpha: float = 0.1
-    simulate: bool = True                       # True: 用当前 CPD 蒙特卡洛模拟干预结果
-    rounds: int = 1                             # 闭环轮数(每轮: 选择→执行→更新)
+    simulate: bool = True  # True: 用当前 CPD 蒙特卡洛模拟干预结果
+    rounds: int = 1  # 闭环轮数(每轮: 选择→执行→更新)
     seed: int = 0
-    parent_name: str = "mode"                   # 干预的父变量名(元数据)
-    baseline_config: str = "degraded"           # 基线(不干预)父配置
+    parent_name: str = "mode"  # 干预的父变量名(元数据)
+    baseline_config: str = "degraded"  # 基线(不干预)父配置
     fault_state: str = "fault"
-    execute_fn: Optional[Callable] = None       # 注入执行器: (action_id, target_value) -> {"success": bool}
-    audit_path: Optional[str] = None            # 审计 JSONL 路径; None = 不写审计
+    execute_fn: Callable | None = None  # 注入执行器: (action_id, target_value) -> {"success": bool}
+    audit_path: str | None = None  # 审计 JSONL 路径; None = 不写审计
 
 
 class ClosedLoopInput:
     """闭环事务输入(简单容器, 非 Pydantic —— 允许直接传 dataclass 值)。"""
 
-    def __init__(self,
-                 cpd: CategoricalCPD,
-                 *,
-                 diagnosis: Optional[dict] = None,
-                 interventions: Optional[List[dict]] = None,
-                 description: str = "",
-                 threat_level: float = 0.0,
-                 capability_nonce: Optional[str] = None,
-                 graph_version: Optional[int] = None,
-                 notes: str = ""):
+    def __init__(
+        self,
+        cpd: CategoricalCPD,
+        *,
+        diagnosis: dict | None = None,
+        interventions: list[dict] | None = None,
+        description: str = "",
+        threat_level: float = 0.0,
+        capability_nonce: str | None = None,
+        graph_version: int | None = None,
+        notes: str = "",
+    ):
         self.cpd = cpd
         self.diagnosis = diagnosis
         self.interventions = interventions
         self.description = description
-        self.threat_level = threat_level          # 0..1, 审计 inputs
+        self.threat_level = threat_level  # 0..1, 审计 inputs
         self.capability_nonce = capability_nonce  # 谁授权的, 审计 execution
-        self.graph_version = graph_version        # 用的哪版因果图, 审计 inputs
+        self.graph_version = graph_version  # 用的哪版因果图, 审计 inputs
         self.notes = notes
 
 
-def _build_candidates(input_data: ClosedLoopInput, cfg: ClosedLoopConfig) -> List[InterventionCandidate]:
+def _build_candidates(
+    input_data: ClosedLoopInput, cfg: ClosedLoopConfig
+) -> list[InterventionCandidate]:
     """候选来源优先级: 显式 interventions > Phase2 诊断报告 > CPD 自动推导。"""
     if input_data.interventions:
         try:
@@ -97,13 +104,15 @@ def _build_candidates(input_data: ClosedLoopInput, cfg: ClosedLoopConfig) -> Lis
                     dp = base_fault - input_data.cpd.p_fault(config_key(target), cfg.fault_state)
                 except KeyError:
                     dp = 0.0
-            out.append(InterventionCandidate(
-                action_id=str(it.get("action_id") or it.get("id")),
-                delta_p=dp,
-                cost=float(it.get("cost", 0.0)),
-                risk=float(it.get("risk", 0.0)),
-                description=str(it.get("description", "")),
-            ))
+            out.append(
+                InterventionCandidate(
+                    action_id=str(it.get("action_id") or it.get("id")),
+                    delta_p=dp,
+                    cost=float(it.get("cost", 0.0)),
+                    risk=float(it.get("risk", 0.0)),
+                    description=str(it.get("description", "")),
+                )
+            )
         return [c for c in out if c.action_id]
 
     if input_data.diagnosis:
@@ -123,11 +132,15 @@ def _build_candidates(input_data: ClosedLoopInput, cfg: ClosedLoopConfig) -> Lis
             dp = base_fault - input_data.cpd.p_fault(cfg_key, cfg.fault_state)
         except KeyError:
             continue
-        out.append(InterventionCandidate(
-            action_id=f"do_{cfg.parent_name}={v}", delta_p=dp,
-            cost=0.0, risk=0.0,
-            description=f"干预: 将 {cfg.parent_name} 设为 {v} (CPD 自动推导)",
-        ))
+        out.append(
+            InterventionCandidate(
+                action_id=f"do_{cfg.parent_name}={v}",
+                delta_p=dp,
+                cost=0.0,
+                risk=0.0,
+                description=f"干预: 将 {cfg.parent_name} 设为 {v} (CPD 自动推导)",
+            )
+        )
     return out
 
 
@@ -155,11 +168,13 @@ async def closed_loop_intervene(
     if on_step:
         on_step({"type": "closed_loop", "stage": "begin", "rounds": config.rounds})
 
-    fingerprint = compute_fingerprint({
-        "cpd": cpd.to_dict(),
-        "interventions": input_data.interventions or [],
-        "diagnosis": input_data.diagnosis or {},
-    })
+    fingerprint = compute_fingerprint(
+        {
+            "cpd": cpd.to_dict(),
+            "interventions": input_data.interventions or [],
+            "diagnosis": input_data.diagnosis or {},
+        }
+    )
 
     # ── 审计: diagnose (用的是哪版图/CPD, 威胁水平多少) ──────────────
     if emitter is not None:
@@ -174,21 +189,31 @@ async def closed_loop_intervene(
             context={"notes": input_data.notes, "description": input_data.description},
         )
 
-    executed: List[dict[str, Any]] = []
+    executed: list[dict[str, Any]] = []
     for rnd in range(max(1, config.rounds)):
         candidates = _build_candidates(input_data, config)
-        sel = select_intervention(candidates,
-                                  lambda_cost=config.lambda_cost,
-                                  risk_aversion=config.risk_aversion,
-                                  drop_negative=config.drop_negative)
-        trail.record(event="select", round=rnd, best=sel.best.action_id if sel.best else None,
-                     ranked=len(sel.ranked), rejected=len(sel.rejected))
+        sel = select_intervention(
+            candidates,
+            lambda_cost=config.lambda_cost,
+            risk_aversion=config.risk_aversion,
+            drop_negative=config.drop_negative,
+        )
+        trail.record(
+            event="select",
+            round=rnd,
+            best=sel.best.action_id if sel.best else None,
+            ranked=len(sel.ranked),
+            rejected=len(sel.rejected),
+        )
 
         # ── 审计: decide (为什么选这个动作 + 全部效用排序) ──────────
         if emitter is not None:
             emitter.decide(
-                inputs={"cpd_version": cpd.version, "round": rnd,
-                        "threat_level": round(input_data.threat_level, 6)},
+                inputs={
+                    "cpd_version": cpd.version,
+                    "round": rnd,
+                    "threat_level": round(input_data.threat_level, 6),
+                },
                 decision={
                     "chosen_strategy": sel.best.action_id if sel.best else None,
                     "utilities": {c.action_id: round(u, 6) for c, u in sel.ranked},
@@ -197,8 +222,7 @@ async def closed_loop_intervene(
             )
 
         if sel.best is None:
-            trail.record(event="no_action", round=rnd,
-                         reason="无正效用干预(不输出 least-bad)")
+            trail.record(event="no_action", round=rnd, reason="无正效用干预(不输出 least-bad)")
             if on_step:
                 on_step({"type": "closed_loop", "stage": "no_action", "round": rnd})
             break
@@ -228,27 +252,41 @@ async def closed_loop_intervene(
         observed_state = "success" if success else config.fault_state
         # 因果观测协议: 记录**实现态** parent_config, 而非意图态 ——
         # 干预未生效时(apply 失败)观测属于实际停留的配置, 记错会污染 CPD
-        realized_config = str(outcome.get("parent_config") or parent_config) \
-            if config.execute_fn is not None else parent_config
+        realized_config = (
+            str(outcome.get("parent_config") or parent_config)
+            if config.execute_fn is not None
+            else parent_config
+        )
         cpd_version_before = cpd.version
 
         # ── 在线 CPD 更新 ───────────────────────────────────────────
         if config.update_mode == "dirichlet":
-            cpd = update_cpd(cpd, realized_config, observed_state, mode="dirichlet",
-                             strength=config.dirichlet_strength)
+            cpd = update_cpd(
+                cpd,
+                realized_config,
+                observed_state,
+                mode="dirichlet",
+                strength=config.dirichlet_strength,
+            )
         else:
-            cpd = update_cpd(cpd, realized_config, observed_state, mode="ema",
-                             alpha=config.ema_alpha)
+            cpd = update_cpd(
+                cpd, realized_config, observed_state, mode="ema", alpha=config.ema_alpha
+            )
 
-        executed.append({
-            "round": rnd, "action_id": best.action_id,
-            "target_config": parent_config, "realized_config": realized_config,
-            "delta_p": best.delta_p,
-            "utility": best.delta_p - config.lambda_cost * best.cost
-                       - config.risk_aversion * best.risk,
-            "outcome": "success" if success else "failure",
-            "observed_state": observed_state,
-        })
+        executed.append(
+            {
+                "round": rnd,
+                "action_id": best.action_id,
+                "target_config": parent_config,
+                "realized_config": realized_config,
+                "delta_p": best.delta_p,
+                "utility": best.delta_p
+                - config.lambda_cost * best.cost
+                - config.risk_aversion * best.risk,
+                "outcome": "success" if success else "failure",
+                "observed_state": observed_state,
+            }
+        )
         trail.record(event="execute", round=rnd, action=best.action_id, success=success)
 
         # ── 审计: execute + learn (执行了什么 primitive, 谁授权的, 学到了什么) ──
@@ -272,8 +310,15 @@ async def closed_loop_intervene(
                 },
             )
         if on_step:
-            on_step({"type": "closed_loop", "stage": "executed", "round": rnd,
-                     "action": best.action_id, "success": success})
+            on_step(
+                {
+                    "type": "closed_loop",
+                    "stage": "executed",
+                    "round": rnd,
+                    "action": best.action_id,
+                    "success": success,
+                }
+            )
 
     # ── 汇总 ────────────────────────────────────────────────────────
     p_before = {
@@ -289,15 +334,12 @@ async def closed_loop_intervene(
 
     # 持久化更新后的 CPD (跨进程在线积累)
     cpd_path = output_dir / "cpd_after.json"
-    cpd_path.write_text(json.dumps(cpd.to_dict(), ensure_ascii=False, indent=2),
-                        encoding="utf-8")
+    cpd_path.write_text(json.dumps(cpd.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8")
 
     audit_trace_id = emitter.trace_id if emitter else None
 
-    report = _render_report(config, input_data, executed, p_before, p_after,
-                            fingerprint, cpd_path)
-    report_path = write_report(report, output_dir=output_dir,
-                               name=f"closed_loop_{fingerprint[:8]}")
+    report = _render_report(config, input_data, executed, p_before, p_after, fingerprint, cpd_path)
+    report_path = write_report(report, output_dir=output_dir, name=f"closed_loop_{fingerprint[:8]}")
     trail.write(output_dir, suffix=f"_{fingerprint[:8]}")
 
     status = "executed" if executed else "no_action"
@@ -322,9 +364,15 @@ async def closed_loop_intervene(
     )
 
 
-def _render_report(config: ClosedLoopConfig, input_data: ClosedLoopInput,
-                   executed: List[dict], p_before: dict, p_after: dict,
-                   fingerprint: str, cpd_path: Path) -> str:
+def _render_report(
+    config: ClosedLoopConfig,
+    input_data: ClosedLoopInput,
+    executed: list[dict],
+    p_before: dict,
+    p_after: dict,
+    fingerprint: str,
+    cpd_path: Path,
+) -> str:
     lines = [
         f"# 闭环干预事务报告 — {fingerprint}",
         "",
@@ -335,17 +383,27 @@ def _render_report(config: ClosedLoopConfig, input_data: ClosedLoopInput,
         "",
     ]
     for e in executed:
-        lines.append(f"- R{e['round']} `{e['action_id']}` → {e['target_config']}: "
-                     f"**{e['outcome']}** (ΔP={e['delta_p']:.4f}, U={e['utility']:.4f})")
+        lines.append(
+            f"- R{e['round']} `{e['action_id']}` → {e['target_config']}: "
+            f"**{e['outcome']}** (ΔP={e['delta_p']:.4f}, U={e['utility']:.4f})"
+        )
     if not executed:
         lines.append("- 无正效用干预, 未执行任何动作 (不输出 least-bad)。")
-    lines += ["", "## P(fault) 演化 (干预前 → 干预后)", "",
-              "| 父配置 | 干预前 | 干预后 |", "|---|---|---|"]
+    lines += [
+        "",
+        "## P(fault) 演化 (干预前 → 干预后)",
+        "",
+        "| 父配置 | 干预前 | 干预后 |",
+        "|---|---|---|",
+    ]
     for cfg_key in sorted(set(p_before) | set(p_after)):
         lines.append(f"| {cfg_key} | {p_before.get(cfg_key, '—')} | {p_after.get(cfg_key, '—')} |")
     lines += ["", f"- 更新后 CPD 已持久化: `{cpd_path}`"]
-    lines += ["", "> 本报告由 omodul.closed_loop_intervene 生成。观测回灌后, "
-                  "下一轮 ΔP 估计将自动使用更新后的因果模型。"]
+    lines += [
+        "",
+        "> 本报告由 omodul.closed_loop_intervene 生成。观测回灌后, "
+        "下一轮 ΔP 估计将自动使用更新后的因果模型。",
+    ]
     return "\n".join(lines)
 
 

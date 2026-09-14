@@ -1,18 +1,18 @@
 """Tests for M-1: process_media_substrate."""
+
 from __future__ import annotations
 
 import asyncio
-import json
 from dataclasses import dataclass
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
-
 
 # ---------------------------------------------------------------------------
 # Stubs so we don't need oprim/__init__.py to fully import
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class _MediaResult:
@@ -69,6 +69,7 @@ _TRANSCRIPT = _TranscriptResult(
 
 def _make_config(transcribe=True, asr_backend="local"):
     from omodul.process_media_substrate import MediaConfig
+
     return MediaConfig(
         video_url="https://yt.be/abc123",
         user_id_hash="u001hash",
@@ -79,26 +80,32 @@ def _make_config(transcribe=True, asr_backend="local"):
 
 def _make_input():
     from omodul.process_media_substrate import MediaInput
+
     return MediaInput()
 
 
 def _make_llm(md="# Title\n\n## Topic\n- Key point [00:00](https://yt.be/abc123?t=0)\n"):
     async def caller(*, messages, max_tokens=4096, **kw):
         return {"content": [{"type": "text", "text": md}], "usage": {}}
+
     return caller
 
 
 def _patch_all(media=_SUBTITLE_MEDIA, transcript=_TRANSCRIPT, ingest_id="sid001"):
     return [
         patch("omodul.process_media_substrate.media_extract", AsyncMock(return_value=media)),
-        patch("omodul.process_media_substrate.transcribe_audio", AsyncMock(return_value=transcript)),
-        patch("omodul.process_media_substrate.media_to_structured_md", AsyncMock(
-            return_value="# Title\n\n## Section\n- Point\n"
-        )),
-        patch("omodul.process_media_substrate.ingest_substrate", AsyncMock(
-            return_value=_IngestResult(substrate_id=ingest_id)
-        )),
-        patch("omodul.process_media_substrate.ProviderRegistry") ,
+        patch(
+            "omodul.process_media_substrate.transcribe_audio", AsyncMock(return_value=transcript)
+        ),
+        patch(
+            "omodul.process_media_substrate.media_to_structured_md",
+            AsyncMock(return_value="# Title\n\n## Section\n- Point\n"),
+        ),
+        patch(
+            "omodul.process_media_substrate.ingest_substrate",
+            AsyncMock(return_value=_IngestResult(substrate_id=ingest_id)),
+        ),
+        patch("omodul.process_media_substrate.ProviderRegistry"),
     ]
 
 
@@ -106,10 +113,21 @@ class TestProcessMediaSubstrate:
     async def test_subtitle_flow_returns_completed(self, tmp_path):
         from omodul.process_media_substrate import process_media_substrate
 
-        with patch("omodul.process_media_substrate.media_extract", AsyncMock(return_value=_SUBTITLE_MEDIA)), \
-             patch("omodul.process_media_substrate.media_to_structured_md", AsyncMock(return_value="# T\n")), \
-             patch("omodul.process_media_substrate.ingest_substrate", AsyncMock(return_value=_IngestResult(substrate_id="s1"))), \
-             patch("omodul.process_media_substrate.ProviderRegistry") as mock_reg:
+        with (
+            patch(
+                "omodul.process_media_substrate.media_extract",
+                AsyncMock(return_value=_SUBTITLE_MEDIA),
+            ),
+            patch(
+                "omodul.process_media_substrate.media_to_structured_md",
+                AsyncMock(return_value="# T\n"),
+            ),
+            patch(
+                "omodul.process_media_substrate.ingest_substrate",
+                AsyncMock(return_value=_IngestResult(substrate_id="s1")),
+            ),
+            patch("omodul.process_media_substrate.ProviderRegistry") as mock_reg,
+        ):
             mock_reg.get.return_value.llm.return_value = _make_llm()
             result = await process_media_substrate(_make_config(), _make_input(), tmp_path)
 
@@ -120,13 +138,28 @@ class TestProcessMediaSubstrate:
     async def test_no_subtitle_transcription_flow(self, tmp_path):
         from omodul.process_media_substrate import process_media_substrate
 
-        with patch("omodul.process_media_substrate.media_extract", AsyncMock(return_value=_AUDIO_MEDIA)), \
-             patch("omodul.process_media_substrate.transcribe_audio", AsyncMock(return_value=_TRANSCRIPT)), \
-             patch("omodul.process_media_substrate.media_to_structured_md", AsyncMock(return_value="# T\n")), \
-             patch("omodul.process_media_substrate.ingest_substrate", AsyncMock(return_value=_IngestResult(substrate_id="s2"))), \
-             patch("omodul.process_media_substrate.ProviderRegistry") as mock_reg:
+        with (
+            patch(
+                "omodul.process_media_substrate.media_extract", AsyncMock(return_value=_AUDIO_MEDIA)
+            ),
+            patch(
+                "omodul.process_media_substrate.transcribe_audio",
+                AsyncMock(return_value=_TRANSCRIPT),
+            ),
+            patch(
+                "omodul.process_media_substrate.media_to_structured_md",
+                AsyncMock(return_value="# T\n"),
+            ),
+            patch(
+                "omodul.process_media_substrate.ingest_substrate",
+                AsyncMock(return_value=_IngestResult(substrate_id="s2")),
+            ),
+            patch("omodul.process_media_substrate.ProviderRegistry") as mock_reg,
+        ):
             mock_reg.get.return_value.llm.return_value = _make_llm()
-            result = await process_media_substrate(_make_config(transcribe=True), _make_input(), tmp_path)
+            result = await process_media_substrate(
+                _make_config(transcribe=True), _make_input(), tmp_path
+            )
 
         assert result["status"] == "completed"
         assert result["transcribed"] is True
@@ -135,13 +168,25 @@ class TestProcessMediaSubstrate:
         from omodul.process_media_substrate import process_media_substrate
 
         transcribe_mock = AsyncMock(return_value=_TRANSCRIPT)
-        with patch("omodul.process_media_substrate.media_extract", AsyncMock(return_value=_AUDIO_MEDIA)), \
-             patch("omodul.process_media_substrate.transcribe_audio", transcribe_mock), \
-             patch("omodul.process_media_substrate.media_to_structured_md", AsyncMock(return_value="# T\n")), \
-             patch("omodul.process_media_substrate.ingest_substrate", AsyncMock(return_value=_IngestResult(substrate_id="s3"))), \
-             patch("omodul.process_media_substrate.ProviderRegistry") as mock_reg:
+        with (
+            patch(
+                "omodul.process_media_substrate.media_extract", AsyncMock(return_value=_AUDIO_MEDIA)
+            ),
+            patch("omodul.process_media_substrate.transcribe_audio", transcribe_mock),
+            patch(
+                "omodul.process_media_substrate.media_to_structured_md",
+                AsyncMock(return_value="# T\n"),
+            ),
+            patch(
+                "omodul.process_media_substrate.ingest_substrate",
+                AsyncMock(return_value=_IngestResult(substrate_id="s3")),
+            ),
+            patch("omodul.process_media_substrate.ProviderRegistry") as mock_reg,
+        ):
             mock_reg.get.return_value.llm.return_value = _make_llm()
-            result = await process_media_substrate(_make_config(transcribe=False), _make_input(), tmp_path)
+            result = await process_media_substrate(
+                _make_config(transcribe=False), _make_input(), tmp_path
+            )
 
         transcribe_mock.assert_not_called()
         assert result["status"] == "completed"
@@ -150,10 +195,21 @@ class TestProcessMediaSubstrate:
     async def test_fingerprint_in_result(self, tmp_path):
         from omodul.process_media_substrate import process_media_substrate
 
-        with patch("omodul.process_media_substrate.media_extract", AsyncMock(return_value=_SUBTITLE_MEDIA)), \
-             patch("omodul.process_media_substrate.media_to_structured_md", AsyncMock(return_value="# T\n")), \
-             patch("omodul.process_media_substrate.ingest_substrate", AsyncMock(return_value=_IngestResult(substrate_id="s4"))), \
-             patch("omodul.process_media_substrate.ProviderRegistry") as mock_reg:
+        with (
+            patch(
+                "omodul.process_media_substrate.media_extract",
+                AsyncMock(return_value=_SUBTITLE_MEDIA),
+            ),
+            patch(
+                "omodul.process_media_substrate.media_to_structured_md",
+                AsyncMock(return_value="# T\n"),
+            ),
+            patch(
+                "omodul.process_media_substrate.ingest_substrate",
+                AsyncMock(return_value=_IngestResult(substrate_id="s4")),
+            ),
+            patch("omodul.process_media_substrate.ProviderRegistry") as mock_reg,
+        ):
             mock_reg.get.return_value.llm.return_value = _make_llm()
             result = await process_media_substrate(_make_config(), _make_input(), tmp_path)
 
@@ -162,6 +218,7 @@ class TestProcessMediaSubstrate:
 
     async def test_fingerprint_deterministic(self):
         from omodul.process_media_substrate import compute_fingerprint_for_process_media_substrate
+
         f1 = compute_fingerprint_for_process_media_substrate("https://yt.be/x", "user1")
         f2 = compute_fingerprint_for_process_media_substrate("https://yt.be/x", "user1")
         assert f1 == f2 and len(f1) == 24
@@ -169,10 +226,21 @@ class TestProcessMediaSubstrate:
     async def test_decision_trail_written(self, tmp_path):
         from omodul.process_media_substrate import process_media_substrate
 
-        with patch("omodul.process_media_substrate.media_extract", AsyncMock(return_value=_SUBTITLE_MEDIA)), \
-             patch("omodul.process_media_substrate.media_to_structured_md", AsyncMock(return_value="# T\n")), \
-             patch("omodul.process_media_substrate.ingest_substrate", AsyncMock(return_value=_IngestResult(substrate_id="s5"))), \
-             patch("omodul.process_media_substrate.ProviderRegistry") as mock_reg:
+        with (
+            patch(
+                "omodul.process_media_substrate.media_extract",
+                AsyncMock(return_value=_SUBTITLE_MEDIA),
+            ),
+            patch(
+                "omodul.process_media_substrate.media_to_structured_md",
+                AsyncMock(return_value="# T\n"),
+            ),
+            patch(
+                "omodul.process_media_substrate.ingest_substrate",
+                AsyncMock(return_value=_IngestResult(substrate_id="s5")),
+            ),
+            patch("omodul.process_media_substrate.ProviderRegistry") as mock_reg,
+        ):
             mock_reg.get.return_value.llm.return_value = _make_llm()
             await process_media_substrate(_make_config(), _make_input(), tmp_path)
 
@@ -182,10 +250,21 @@ class TestProcessMediaSubstrate:
     async def test_cost_usd_in_result(self, tmp_path):
         from omodul.process_media_substrate import process_media_substrate
 
-        with patch("omodul.process_media_substrate.media_extract", AsyncMock(return_value=_SUBTITLE_MEDIA)), \
-             patch("omodul.process_media_substrate.media_to_structured_md", AsyncMock(return_value="# T\n")), \
-             patch("omodul.process_media_substrate.ingest_substrate", AsyncMock(return_value=_IngestResult(substrate_id="s6"))), \
-             patch("omodul.process_media_substrate.ProviderRegistry") as mock_reg:
+        with (
+            patch(
+                "omodul.process_media_substrate.media_extract",
+                AsyncMock(return_value=_SUBTITLE_MEDIA),
+            ),
+            patch(
+                "omodul.process_media_substrate.media_to_structured_md",
+                AsyncMock(return_value="# T\n"),
+            ),
+            patch(
+                "omodul.process_media_substrate.ingest_substrate",
+                AsyncMock(return_value=_IngestResult(substrate_id="s6")),
+            ),
+            patch("omodul.process_media_substrate.ProviderRegistry") as mock_reg,
+        ):
             mock_reg.get.return_value.llm.return_value = _make_llm()
             result = await process_media_substrate(_make_config(), _make_input(), tmp_path)
 
@@ -196,13 +275,25 @@ class TestProcessMediaSubstrate:
         from omodul.process_media_substrate import process_media_substrate
 
         steps = []
+
         def on_step(*, step, state):
             steps.append((step, state))
 
-        with patch("omodul.process_media_substrate.media_extract", AsyncMock(return_value=_SUBTITLE_MEDIA)), \
-             patch("omodul.process_media_substrate.media_to_structured_md", AsyncMock(return_value="# T\n")), \
-             patch("omodul.process_media_substrate.ingest_substrate", AsyncMock(return_value=_IngestResult(substrate_id="s7"))), \
-             patch("omodul.process_media_substrate.ProviderRegistry") as mock_reg:
+        with (
+            patch(
+                "omodul.process_media_substrate.media_extract",
+                AsyncMock(return_value=_SUBTITLE_MEDIA),
+            ),
+            patch(
+                "omodul.process_media_substrate.media_to_structured_md",
+                AsyncMock(return_value="# T\n"),
+            ),
+            patch(
+                "omodul.process_media_substrate.ingest_substrate",
+                AsyncMock(return_value=_IngestResult(substrate_id="s7")),
+            ),
+            patch("omodul.process_media_substrate.ProviderRegistry") as mock_reg,
+        ):
             mock_reg.get.return_value.llm.return_value = _make_llm()
             await process_media_substrate(_make_config(), _make_input(), tmp_path, on_step=on_step)
 
@@ -215,8 +306,10 @@ class TestProcessMediaSubstrate:
         async def cancel_extract(**kw):
             raise asyncio.CancelledError()
 
-        with patch("omodul.process_media_substrate.media_extract", cancel_extract), \
-             patch("omodul.process_media_substrate.ProviderRegistry"):
+        with (
+            patch("omodul.process_media_substrate.media_extract", cancel_extract),
+            patch("omodul.process_media_substrate.ProviderRegistry"),
+        ):
             with pytest.raises(asyncio.CancelledError):
                 await process_media_substrate(_make_config(), _make_input(), tmp_path)
 
@@ -226,8 +319,10 @@ class TestProcessMediaSubstrate:
         async def broken_extract(**kw):
             raise RuntimeError("network error")
 
-        with patch("omodul.process_media_substrate.media_extract", broken_extract), \
-             patch("omodul.process_media_substrate.ProviderRegistry"):
+        with (
+            patch("omodul.process_media_substrate.media_extract", broken_extract),
+            patch("omodul.process_media_substrate.ProviderRegistry"),
+        ):
             result = await process_media_substrate(_make_config(), _make_input(), tmp_path)
 
         assert result["status"] == "failed"
@@ -236,10 +331,21 @@ class TestProcessMediaSubstrate:
     async def test_report_written_when_transcript_available(self, tmp_path):
         from omodul.process_media_substrate import process_media_substrate
 
-        with patch("omodul.process_media_substrate.media_extract", AsyncMock(return_value=_SUBTITLE_MEDIA)), \
-             patch("omodul.process_media_substrate.media_to_structured_md", AsyncMock(return_value="# T\n## S\n- p\n")), \
-             patch("omodul.process_media_substrate.ingest_substrate", AsyncMock(return_value=_IngestResult(substrate_id="s8"))), \
-             patch("omodul.process_media_substrate.ProviderRegistry") as mock_reg:
+        with (
+            patch(
+                "omodul.process_media_substrate.media_extract",
+                AsyncMock(return_value=_SUBTITLE_MEDIA),
+            ),
+            patch(
+                "omodul.process_media_substrate.media_to_structured_md",
+                AsyncMock(return_value="# T\n## S\n- p\n"),
+            ),
+            patch(
+                "omodul.process_media_substrate.ingest_substrate",
+                AsyncMock(return_value=_IngestResult(substrate_id="s8")),
+            ),
+            patch("omodul.process_media_substrate.ProviderRegistry") as mock_reg,
+        ):
             mock_reg.get.return_value.llm.return_value = _make_llm()
             result = await process_media_substrate(_make_config(), _make_input(), tmp_path)
 

@@ -14,9 +14,9 @@ import traceback
 from pathlib import Path
 from typing import Any, ClassVar, Literal
 
+from obase.persistence import PgPool, update_one
 from pydantic import BaseModel
 
-from obase.persistence import PgPool, update_one
 from omodul._base_config import BaseConfig
 from omodul._fingerprint import compute_fingerprint
 

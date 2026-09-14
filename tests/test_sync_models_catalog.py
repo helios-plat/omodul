@@ -1,4 +1,5 @@
 """Tests for omodul.sync_models_catalog."""
+
 from __future__ import annotations
 
 import asyncio
@@ -6,7 +7,12 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from omodul.sync_models_catalog import Config, InputData, sync_models_catalog, compute_fingerprint_for
+from omodul.sync_models_catalog import (
+    Config,
+    InputData,
+    compute_fingerprint_for,
+    sync_models_catalog,
+)
 
 
 def _models(providers=("anthropic", "openai", "google", "meta")):

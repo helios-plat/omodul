@@ -80,9 +80,7 @@ async def phase_closed_loop_plan(
         trail.record(event="context_assembled", step_no=1)
         if on_step:
             on_step({"step": 1, "action": "context_assembled"})
-        caller = input_data.llm_caller or getattr(input_data, "model_extra", {}).get(
-            "llm_caller"
-        )
+        caller = input_data.llm_caller or getattr(input_data, "model_extra", {}).get("llm_caller")
         if caller is None and isinstance(input_data, PlanInput):
             extra = getattr(input_data, "__pydantic_extra__", None) or {}
             caller = extra.get("llm_caller")

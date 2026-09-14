@@ -1,11 +1,10 @@
 """Tests for omodul.create_session (sync module)."""
+
 from __future__ import annotations
 
 import uuid
 
-import pytest
-
-from omodul.create_session import Config, InputData, create_session, compute_fingerprint_for
+from omodul.create_session import Config, InputData, compute_fingerprint_for, create_session
 
 
 # ---------------------------------------------------------------------------

@@ -11,9 +11,8 @@ from typing import Any, ClassVar, Literal
 
 from obase.cost_tracker import CostTracker
 from obase.docker import docker_container_restart
-from obase.persistence import PgPool
+from obase.persistence import PgPool, update_one
 from obase.persistence import query as execute_query
-from obase.persistence import update_one
 from oprim import http_post_webhook
 from oskill import verify_health_after_action
 from pydantic import BaseModel

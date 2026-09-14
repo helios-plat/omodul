@@ -1,4 +1,5 @@
 """Tests for behavioral_portfolio_workflow."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -25,8 +26,13 @@ def returns_100x10(rng):
 class TestBehavioralPortfolioWorkflow:
     def test_basic_output_keys(self, returns_50x5):
         result = behavioral_portfolio_workflow(returns_50x5, reference_return=0.0)
-        assert set(result.keys()) == {"cpt_weights", "analytical_weight", "llad",
-                                       "well_posed", "comparison"}
+        assert set(result.keys()) == {
+            "cpt_weights",
+            "analytical_weight",
+            "llad",
+            "well_posed",
+            "comparison",
+        }
 
     def test_cpt_weights_shape(self, returns_50x5):
         result = behavioral_portfolio_workflow(returns_50x5, reference_return=0.0)
@@ -51,8 +57,9 @@ class TestBehavioralPortfolioWorkflow:
         expected = (beta / alpha) * la ** (1.0 / beta)
         rng = np.random.default_rng(0)
         R = rng.normal(0.001, 0.02, (50, 2))
-        result = behavioral_portfolio_workflow(R, reference_return=0.0,
-                                               alpha=alpha, beta=beta, loss_aversion=la)
+        result = behavioral_portfolio_workflow(
+            R, reference_return=0.0, alpha=alpha, beta=beta, loss_aversion=la
+        )
         assert abs(result["llad"] - expected) < 1e-8
 
     def test_comparison_keys(self, returns_50x5):

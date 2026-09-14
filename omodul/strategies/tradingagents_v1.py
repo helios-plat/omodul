@@ -14,6 +14,7 @@ Architecture:
 Failure mode: LLM unavailable → return dropped=True, layer 4 publisher
 emits signal_dropped audit event with reason. NO fallback to classic (Cap 10 §2.5).
 """
+
 from __future__ import annotations
 
 import math
@@ -21,10 +22,10 @@ from typing import Any
 
 import numpy as np
 import structlog
-
 from oprim.crypto import sha256_hash
 from oprim.serialization import canonical_json
 from oskill.llm_client import LLMUnavailable
+
 from omodul.llm_workflows import multi_agent_consensus
 
 try:
@@ -42,6 +43,7 @@ log = structlog.get_logger(__name__)
 
 
 # ── Fallbacks (match omodul/strategies/__init__.py convention) ──────────────
+
 
 def _bocpd_fallback(
     returns: np.ndarray,
@@ -79,6 +81,7 @@ position_sizing_vol_target = _sizing_impl or _sizing_fallback
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
 
+
 def _short_hash(obj: Any) -> str:
     raw = canonical_json(obj)
     b = raw.encode() if isinstance(raw, str) else raw
@@ -102,10 +105,12 @@ def _build_consensus_market_state(market_state: dict, symbol: str, recent_n: int
 
     recent_bars = []
     for i, c in enumerate(closes[-recent_n:]):
-        recent_bars.append({
-            "timestamp_ns": (i + 1) * 3_600_000_000_000,
-            "data": {"open": c, "high": c, "low": c, "close": c, "volume": 0},
-        })
+        recent_bars.append(
+            {
+                "timestamp_ns": (i + 1) * 3_600_000_000_000,
+                "data": {"open": c, "high": c, "low": c, "close": c, "volume": 0},
+            }
+        )
 
     daily_closes = list(features.get(f"daily_closes_{symbol}", []))
     if not daily_closes and len(closes) >= 168:
@@ -122,6 +127,7 @@ def _build_consensus_market_state(market_state: dict, symbol: str, recent_n: int
 
 
 # ── Strategy ─────────────────────────────────────────────────────────────────
+
 
 async def tradingagents_v1(
     market_state: dict,
@@ -212,10 +218,12 @@ async def tradingagents_v1(
             log.exception("bocpd_failed", symbol=symbol, error=str(e))
             classic_factor = 0.0
 
-        all_stack_calls.append({
-            "function": "oskill.regime.bocpd",
-            "args_hash": _short_hash({"returns_len": int(len(returns)), "hazard": hazard_rate}),
-        })
+        all_stack_calls.append(
+            {
+                "function": "oskill.regime.bocpd",
+                "args_hash": _short_hash({"returns_len": int(len(returns)), "hazard": hazard_rate}),
+            }
+        )
 
         # 2. LLM consensus
         consensus_market_state = _build_consensus_market_state(market_state, symbol)
@@ -265,7 +273,9 @@ async def tradingagents_v1(
 
         # 3. Factor ensemble
         llm_factor = consensus["llm_factor"]
-        final_factor = max(-1.0, min(1.0, llm_weight * llm_factor + classic_weight * classic_factor))
+        final_factor = max(
+            -1.0, min(1.0, llm_weight * llm_factor + classic_weight * classic_factor)
+        )
 
         # 4. Direction + strength
         if final_factor > direction_threshold:
@@ -304,16 +314,20 @@ async def tradingagents_v1(
                     max_position_pct=1.0,
                 )
                 target_notional = float(sizing.get("target_notional_usd", 0.0))
-                all_stack_calls.append({
-                    "function": "oskill.portfolio.position_sizing_vol_target",
-                    "args_hash": _short_hash({
-                        "target_vol_annual": target_vol_annual,
-                        "realized_vol": realized_vol,
-                        "signal_strength": strength,
-                        "direction": direction,
-                        "capital_usd": capital_usd,
-                    }),
-                })
+                all_stack_calls.append(
+                    {
+                        "function": "oskill.portfolio.position_sizing_vol_target",
+                        "args_hash": _short_hash(
+                            {
+                                "target_vol_annual": target_vol_annual,
+                                "realized_vol": realized_vol,
+                                "signal_strength": strength,
+                                "direction": direction,
+                                "capital_usd": capital_usd,
+                            }
+                        ),
+                    }
+                )
             except Exception:
                 log.exception("position_sizing_failed", symbol=symbol)
                 target_notional = 0.0

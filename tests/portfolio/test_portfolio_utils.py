@@ -1,7 +1,10 @@
 """Tests for omodul/portfolio/__init__.py — kelly, risk_parity, execution_cost_model."""
+
 from __future__ import annotations
+
 import pytest
-from omodul.portfolio import kelly_allocator, risk_parity, execution_cost_model
+
+from omodul.portfolio import execution_cost_model, kelly_allocator, risk_parity
 
 
 class TestKellyAllocator:
@@ -82,8 +85,13 @@ class TestExecutionCostModel:
 
     def test_output_keys(self):
         r = execution_cost_model(50_000.0)
-        assert {"spread_cost_bps", "impact_cost_bps", "timing_cost_bps",
-                "total_cost_bps", "total_cost_usd"} == set(r.keys())
+        assert {
+            "spread_cost_bps",
+            "impact_cost_bps",
+            "timing_cost_bps",
+            "total_cost_bps",
+            "total_cost_usd",
+        } == set(r.keys())
 
     def test_larger_order_higher_impact(self):
         small = execution_cost_model(10_000.0, daily_volume_usd=1e8)

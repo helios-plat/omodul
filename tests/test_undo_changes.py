@@ -1,4 +1,5 @@
 """Tests for omodul.undo_changes."""
+
 from __future__ import annotations
 
 import asyncio
@@ -63,7 +64,9 @@ async def test_snapshot_not_found(tmp_path):
 async def test_restorer_called_when_found(tmp_path):
     lister = AsyncMock(return_value=[{"id": "snap-abc"}])
     restorer = AsyncMock(return_value=None)
-    inp = InputData(snap_id="snap-abc", cwd="/proj", snapshot_lister=lister, snapshot_restorer=restorer)
+    inp = InputData(
+        snap_id="snap-abc", cwd="/proj", snapshot_lister=lister, snapshot_restorer=restorer
+    )
     result = await undo_changes(Config(), inp, tmp_path)
     assert result["status"] == "completed"
     restorer.assert_called_once_with(snap_id="snap-abc", cwd="/proj")

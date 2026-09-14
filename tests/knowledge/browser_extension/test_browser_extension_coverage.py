@@ -2,18 +2,15 @@
 
 from __future__ import annotations
 
-import os
 import sys
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch, call
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
-from omodul.knowledge.browser_extension.page_capture import extract_main_content
-from omodul.knowledge.browser_extension.auth import init_token
-from omodul.knowledge.browser_extension.server import _run_ingest, app
 from fastapi.testclient import TestClient
 
+from omodul.knowledge.browser_extension.auth import init_token
+from omodul.knowledge.browser_extension.page_capture import extract_main_content
+from omodul.knowledge.browser_extension.server import _run_ingest, app
 
 # ── page_capture: fallback path with no title → returns plain text (line 28) ──
 

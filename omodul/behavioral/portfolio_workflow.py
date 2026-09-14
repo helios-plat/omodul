@@ -1,4 +1,5 @@
 """Behavioral Portfolio Workflow — integrates CPT optimization end-to-end."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -48,8 +49,12 @@ def _fallback_cpt_analytical(
     beta: float,
     loss_aversion: float,
 ) -> dict[str, Any]:
-    return {"weight_optimal": 1.0 / returns.shape[0], "cpt_value": 0.0, "llad": 0.0,
-            "well_posed": None}
+    return {
+        "weight_optimal": 1.0 / returns.shape[0],
+        "cpt_value": 0.0,
+        "llad": 0.0,
+        "well_posed": None,
+    }
 
 
 def behavioral_portfolio_workflow(
@@ -114,12 +119,18 @@ def behavioral_portfolio_workflow(
             )
         except Exception:
             opt_result = _fallback_cpt_optimize(
-                returns, alpha=alpha, beta=beta, loss_aversion=loss_aversion,
+                returns,
+                alpha=alpha,
+                beta=beta,
+                loss_aversion=loss_aversion,
                 reference_return=reference_return,
             )
     else:
         opt_result = _fallback_cpt_optimize(
-            returns, alpha=alpha, beta=beta, loss_aversion=loss_aversion,
+            returns,
+            alpha=alpha,
+            beta=beta,
+            loss_aversion=loss_aversion,
             reference_return=reference_return,
         )
 
@@ -138,12 +149,18 @@ def behavioral_portfolio_workflow(
             )
         except Exception:
             anal_result = _fallback_cpt_analytical(
-                returns, reference_return, alpha=alpha, beta=beta,
+                returns,
+                reference_return,
+                alpha=alpha,
+                beta=beta,
                 loss_aversion=loss_aversion,
             )
     else:
         anal_result = _fallback_cpt_analytical(
-            returns, reference_return, alpha=alpha, beta=beta,
+            returns,
+            reference_return,
+            alpha=alpha,
+            beta=beta,
             loss_aversion=loss_aversion,
         )
 

@@ -1,4 +1,5 @@
 """Tests for omodul.strategies."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -8,14 +9,15 @@ import pytest
 
 from omodul.strategies import (
     bocpd_trend_following,
-    microstructure_scalper,
     funding_rate_arbitrage,
+    microstructure_scalper,
 )
 
 REAL_DATA_DIR = Path(__file__).parent / "real_data"
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────
+
 
 def _make_returns(n=100, mean=0.001, std=0.003, seed=42) -> np.ndarray:
     rng = np.random.default_rng(seed)
@@ -36,7 +38,14 @@ def _equity_curve_red(start=10000.0) -> list:
     With n=10: weekly_start=5; arr[5]=start, arr[9]=start*0.75.
     """
     # First 5 flat, then 5-bar drop of -25%
-    curve = [start] * 4 + [start, start * 0.95, start * 0.90, start * 0.85, start * 0.80, start * 0.75]
+    curve = [start] * 4 + [
+        start,
+        start * 0.95,
+        start * 0.90,
+        start * 0.85,
+        start * 0.80,
+        start * 0.75,
+    ]
     return curve
 
 
@@ -113,6 +122,7 @@ def _required_decision_keys() -> set:
 
 
 # ─── BOCPD Trend Following ───────────────────────────────────────────────────
+
 
 class TestBocpdTrendFollowing:
     @pytest.mark.academic_reference
@@ -196,13 +206,13 @@ class TestBocpdTrendFollowing:
         )
         result = bocpd_trend_following(market_state, config)
         total_gross = sum(
-            abs(p["target_notional_usd"])
-            for p in result["target_positions"].values()
+            abs(p["target_notional_usd"]) for p in result["target_positions"].values()
         )
         assert total_gross <= 1.5 * 100_000.0 + 1.0  # 1 USD float tolerance
 
 
 # ─── Microstructure Scalper ──────────────────────────────────────────────────
+
 
 def _make_ob_features(sym, n=100, buy_pressure=True):
     prices = np.linspace(45000, 45100, n)
@@ -293,6 +303,7 @@ class TestMicrostructureScalper:
 
 # ─── Funding Rate Arbitrage ──────────────────────────────────────────────────
 
+
 def _make_funding_features(sym, n=24, funding_level=-0.001):
     spot = np.full(n, 45000.0)
     perp = spot * (1 + 0.0001)
@@ -341,8 +352,7 @@ class TestFundingRateArbitrage:
         config = _funding_config(max_leverage=2.0)
         result = funding_rate_arbitrage(market_state, config)
         total_gross = sum(
-            abs(p["target_notional_usd"])
-            for p in result["target_positions"].values()
+            abs(p["target_notional_usd"]) for p in result["target_positions"].values()
         )
         assert total_gross <= 2.0 * 100_000.0 + 1.0
 
@@ -380,7 +390,7 @@ class TestFundingRateArbitrage:
         assert isinstance(ae["precondition_checks"], list)
 
     def test_funding_rate_arbitrage_threshold_signs(self):
-        """Direct sign comparison: negative threshold_long → long; positive threshold_short → short."""
+        """Direct sign comparison for negative and positive thresholds."""
         symbols = ["BTC-USDT"]
 
         # -5 bps funding < threshold_long=-3 bps → long
@@ -427,6 +437,7 @@ class TestFundingRateArbitrage:
 
 
 # ─── Cross-strategy risk sign fix ────────────────────────────────────────────
+
 
 class TestRiskStatusSignFix:
     def test_bocpd_trend_following_risk_orange_triggers(self):

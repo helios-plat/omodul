@@ -1,7 +1,6 @@
 """Tests for omodul.knowledge.views.crud (sync DuckDB)."""
-from __future__ import annotations
 
-import pytest
+from __future__ import annotations
 
 from omodul.knowledge.views.crud import (
     create_view,

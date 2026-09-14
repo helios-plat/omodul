@@ -50,30 +50,52 @@ def policy_sector_classify_workflow(
         trail.append({"step": "load_policies", "status": "ok", "detail": f"{len(policies)} loaded"})
 
         # Step 2: Validate schema
-        trail.append({"step": "validate_schema", "status": "ok", "detail": config.sector_schema_version})
+        trail.append(
+            {"step": "validate_schema", "status": "ok", "detail": config.sector_schema_version}
+        )
 
         # Step 3: Classify via LLM (B7)
         if llm is not None and policies:
             from oskill.llm.batch_classify import llm_batch_classify
+
             items = [{"text": p.get("title", "") + " " + p.get("content", "")} for p in policies]
             result = llm_batch_classify(items=items, labels=sectors, llm=llm, multi_label=True)
             findings["classifications"] = result["results"]
             cost_usd += result["cost_usd"]
-            trail.append({"step": "llm_classify", "status": "ok", "detail": f"{len(result['results'])} classified"})
+            trail.append(
+                {
+                    "step": "llm_classify",
+                    "status": "ok",
+                    "detail": f"{len(result['results'])} classified",
+                }
+            )
         else:
-            trail.append({"step": "llm_classify", "status": "skipped", "detail": "no llm or empty policies"})
+            trail.append(
+                {"step": "llm_classify", "status": "skipped", "detail": "no llm or empty policies"}
+            )
 
         # Step 4: Filter by confidence
-        trail.append({"step": "confidence_filter", "status": "ok", "detail": f"threshold={config.confidence_threshold}"})
+        trail.append(
+            {
+                "step": "confidence_filter",
+                "status": "ok",
+                "detail": f"threshold={config.confidence_threshold}",
+            }
+        )
 
         # Step 5: Truncate labels
         for c in findings["classifications"]:
             if len(c.get("labels", [])) > config.max_labels:
-                c["labels"] = c["labels"][:config.max_labels]
-        trail.append({"step": "truncate_labels", "status": "ok", "detail": f"max={config.max_labels}"})
+                c["labels"] = c["labels"][: config.max_labels]
+        trail.append(
+            {"step": "truncate_labels", "status": "ok", "detail": f"max={config.max_labels}"}
+        )
 
         # Step 6: Generate report
-        report = f"# Policy-Sector Classification\n\nClassified {len(policies)} policies into {len(sectors)} sectors."
+        report = (
+            f"# Policy-Sector Classification\n\nClassified {len(policies)} "
+            f"policies into {len(sectors)} sectors."
+        )
         trail.append({"step": "generate_report", "status": "ok"})
 
     except Exception as e:

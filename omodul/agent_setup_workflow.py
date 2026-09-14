@@ -61,6 +61,7 @@ def agent_setup_workflow(
     soul_path = agents_dir / "SOUL.md"
     try:
         from oprim.soul_config_rewrite import _atomic_write
+
         _atomic_write(soul_path, soul)
         steps.append("wrote_soul")
     except Exception as exc:
@@ -68,7 +69,9 @@ def agent_setup_workflow(
 
     # 3. write config
     cfg = {
-        "name": name, "description": desc, "skills": skills,
+        "name": name,
+        "description": desc,
+        "skills": skills,
         "model_settings": model_settings or {"temperature": 0.7},
         "thinking_enabled": thinking,
     }
@@ -83,6 +86,7 @@ def agent_setup_workflow(
     registered = False
     try:
         from obase.agent_registry import registry
+
         registry.register("agent", name, _make_agent_factory(name, agents_dir))
         registered = True
         steps.append("registered")
@@ -100,7 +104,12 @@ def agent_setup_workflow(
 
 
 def _generate_soul(
-    name: str, desc: str, skills: list[str], model_settings: dict, thinking: bool, config: dict,
+    name: str,
+    desc: str,
+    skills: list[str],
+    model_settings: dict,
+    thinking: bool,
+    config: dict,
 ) -> str:
     skills_text = ", ".join(skills) if skills else "general-purpose"
     thinking_text = "enabled" if thinking else "disabled"
@@ -120,4 +129,5 @@ def _generate_soul(
 def _make_agent_factory(name: str, agents_dir: Path) -> Any:
     def factory(model: str = "claude-sonnet-4-6") -> dict[str, Any]:
         return {"name": name, "model": model, "dir": str(agents_dir)}
+
     return factory

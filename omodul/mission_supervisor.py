@@ -26,14 +26,23 @@ DEFAULT_SECRET_PATTERNS: list[dict[str, str]] = [
     {"name": "openai_key", "pattern": r"sk-[A-Za-z0-9]{20,}"},
     {"name": "anthropic_key", "pattern": r"sk-ant-[A-Za-z0-9_-]{20,}"},
     {"name": "private_key_block", "pattern": r"-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----"},
-    {"name": "generic_secret_assignment",
-     "pattern": r"(?i)(api[_-]?key|secret|password|token)\s*=\s*['\"][^'\"]{12,}['\"]"},
+    {
+        "name": "generic_secret_assignment",
+        "pattern": r"(?i)(api[_-]?key|secret|password|token)\s*=\s*['\"][^'\"]{12,}['\"]",
+    },
 ]
 
 # 保护文件: 出现在 diff 中即违规 (forbidden_ops 缺省)
 DEFAULT_PROTECTED_PATHS: list[str] = [
-    ".env", ".env.*", "*.pem", "*.key", "id_rsa", "id_ed25519",
-    "secrets/", "config/security.yaml", "credentials.json",
+    ".env",
+    ".env.*",
+    "*.pem",
+    "*.key",
+    "id_rsa",
+    "id_ed25519",
+    "secrets/",
+    "config/security.yaml",
+    "credentials.json",
 ]
 
 VERDICTS = ("approve", "request_changes", "block")
@@ -44,8 +53,8 @@ class SupervisorPolicy:
     """审计策略: 秘钥模式 + 路径白名单 + 禁止操作。"""
 
     secret_patterns: list[dict[str, str]] = field(default_factory=list)
-    path_allowlist: list[str] = field(default_factory=list)   # 允许改写的路径前缀
-    forbidden_ops: list[str] = field(default_factory=list)    # 禁止操作标记
+    path_allowlist: list[str] = field(default_factory=list)  # 允许改写的路径前缀
+    forbidden_ops: list[str] = field(default_factory=list)  # 禁止操作标记
     protected_paths: list[str] = field(default_factory=list)  # 保护文件 glob
 
     def effective_secrets(self) -> list[dict[str, str]]:
@@ -60,7 +69,7 @@ class DiffEntry:
     """结构化 diff 条目 (路径 + 状态 + 内容)。"""
 
     path: str
-    status: str                  # added | modified | deleted | renamed
+    status: str  # added | modified | deleted | renamed
     content: str = ""
 
 
@@ -81,8 +90,9 @@ def parse_diff(raw_diff: str, base: str = "") -> list[DiffEntry]:
             cur.status = "deleted"
         elif line.startswith("rename from") and cur is not None:
             cur.status = "renamed"
-        elif (line.startswith(("+", "-")) and cur is not None
-              and not line.startswith(("+++", "---"))):
+        elif (
+            line.startswith(("+", "-")) and cur is not None and not line.startswith(("+++", "---"))
+        ):
             cur.content += line + "\n"
     if cur is not None:
         entries.append(cur)
@@ -140,8 +150,7 @@ def mission_supervisor(
     for entry in entries:
         for rule in pol.effective_secrets():
             if re.search(rule["pattern"], entry.content):
-                violations.append(
-                    f"秘钥泄漏 [{rule['name']}]: {entry.path}")
+                violations.append(f"秘钥泄漏 [{rule['name']}]: {entry.path}")
 
     # 2) 路径越界 / 保护文件
     for entry in entries:
@@ -169,9 +178,8 @@ def mission_supervisor(
         except Exception:  # noqa: BLE001
             diff_review = ""
     else:
-        diff_review = (
-            f"{len(entries)} 文件变更: "
-            + ", ".join(f"{e.status} {e.path}" for e in entries[:10])
+        diff_review = f"{len(entries)} 文件变更: " + ", ".join(
+            f"{e.status} {e.path}" for e in entries[:10]
         )
 
     # 审计 (不可变日志)
@@ -196,5 +204,10 @@ def mission_supervisor(
     }
 
 
-__all__ = ["mission_supervisor", "parse_diff", "SupervisorPolicy",
-           "DEFAULT_SECRET_PATTERNS", "DiffEntry"]
+__all__ = [
+    "mission_supervisor",
+    "parse_diff",
+    "SupervisorPolicy",
+    "DEFAULT_SECRET_PATTERNS",
+    "DiffEntry",
+]

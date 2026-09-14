@@ -4,6 +4,7 @@ omodul.init_project — Scan a project and generate AGENTS.md via LLM analysis.
 Pillars: report, cost
 Correction 1: async def — scan_project_structure is async.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -15,7 +16,12 @@ from typing import Any, ClassVar
 from pydantic import BaseModel, ConfigDict
 
 from omodul._base import (
-    BaseConfig, CostTracker, Trail, build_result, extract_text, write_report,
+    BaseConfig,
+    CostTracker,
+    Trail,
+    build_result,
+    extract_text,
+    write_report,
 )
 
 _current_cost_m04: ContextVar[CostTracker] = ContextVar("_current_cost_m04")
@@ -65,14 +71,13 @@ async def init_project(
             scan_result = await _call(input_data.scan_fn, root=root)
         else:
             # Fallback: list files up to max_files
-            files = list(root.rglob("*"))[:config.max_files]
+            files = list(root.rglob("*"))[: config.max_files]
             scan_result = {
                 "files": [str(f.relative_to(root)) for f in files if f.is_file()],
                 "root": str(root),
             }
 
-        trail.record(event="llm_analyze", step_no=1,
-                     n_files=len(scan_result.get("files", [])))
+        trail.record(event="llm_analyze", step_no=1, n_files=len(scan_result.get("files", [])))
 
         if input_data.llm_caller is not None:
             files_list = "\n".join(scan_result.get("files", []))

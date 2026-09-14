@@ -1,4 +1,5 @@
 """Push notifications for scheduled job outcomes."""
+
 from __future__ import annotations
 
 from oprim._logging import log

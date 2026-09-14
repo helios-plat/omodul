@@ -12,11 +12,16 @@ try:
     from oprim.crypto import sha256_hash
     from oprim.serialization import canonical_json
 except ImportError:
-    def sha256_hash(x): return b""  # type: ignore
-    def canonical_json(x): return str(x)  # type: ignore
+
+    def sha256_hash(x):
+        return b""  # type: ignore
+
+    def canonical_json(x):
+        return str(x)  # type: ignore
+
 
 try:
-    from oprim.technical import sma, donchian_channel
+    from oprim.technical import donchian_channel, sma
 except ImportError:
     sma = donchian_channel = None  # type: ignore
 
@@ -60,17 +65,17 @@ def spot_trend(market_state: dict, config: dict) -> dict:
         cost_bps: from config
         audit_evidence: {stack_calls, config_fingerprint, n_bars, bear_filter_applied}
     """
-    ohlcv    = market_state["ohlcv"]
-    closes   = np.asarray(ohlcv["close"], dtype=float)
-    highs    = np.asarray(ohlcv.get("high", closes), dtype=float)
-    lows     = np.asarray(ohlcv.get("low",  closes), dtype=float)
-    n_bars   = len(closes)
+    ohlcv = market_state["ohlcv"]
+    closes = np.asarray(ohlcv["close"], dtype=float)
+    np.asarray(ohlcv.get("high", closes), dtype=float)
+    np.asarray(ohlcv.get("low", closes), dtype=float)
+    n_bars = len(closes)
     risk_cfg = config.get("risk", {})
     cost_bps = float(risk_cfg.get("cost_bps", 10.0))
-    bear_ma  = int(risk_cfg.get("bear_ma", 200))
+    bear_ma = int(risk_cfg.get("bear_ma", 200))
 
-    stack_calls  = []
-    cfg_fp       = _args_hash(config)
+    stack_calls = []
+    cfg_fp = _args_hash(config)
 
     # ── Choose signal source ──
     donchian_cfg = config.get("donchian", {})
@@ -81,13 +86,13 @@ def spot_trend(market_state: dict, config: dict) -> dict:
         import pandas as pd
 
         n_enter = int(donchian_cfg.get("n_enter", 20))
-        n_exit  = int(donchian_cfg.get("n_exit",  10))
+        n_exit = int(donchian_cfg.get("n_exit", 10))
 
-        c_series    = pd.Series(closes)
+        c_series = pd.Series(closes)
         upper_enter = c_series.rolling(n_enter).max().shift(1).to_numpy()
-        lower_exit  = c_series.rolling(n_exit).min().shift(1).to_numpy()
+        lower_exit = c_series.rolling(n_exit).min().shift(1).to_numpy()
 
-        signals  = np.zeros(n_bars, dtype=np.int8)
+        signals = np.zeros(n_bars, dtype=np.int8)
         position = 0
         for i in range(n_bars):
             if np.isnan(upper_enter[i]) or np.isnan(lower_exit[i]):
@@ -99,10 +104,13 @@ def spot_trend(market_state: dict, config: dict) -> dict:
                 signals[i] = -1  # exit → flatten
                 position = 0
 
-        stack_calls.append({
-            "function": "donchian_close_breakout (shift=1)",
-            "n_enter": n_enter, "n_exit": n_exit,
-        })
+        stack_calls.append(
+            {
+                "function": "donchian_close_breakout (shift=1)",
+                "n_enter": n_enter,
+                "n_exit": n_exit,
+            }
+        )
     else:
         # Compose mode: override direction to long-only
         if trend_signal_compose is None:
@@ -111,10 +119,12 @@ def spot_trend(market_state: dict, config: dict) -> dict:
         cfg_override["signal_logic"] = dict(config.get("signal_logic", {}))
         cfg_override["signal_logic"]["direction"] = "long"
         signals = trend_signal_compose(ohlcv, config=cfg_override)
-        stack_calls.append({
-            "function": "oskill.trend_compose.trend_signal_compose (long-only)",
-            "config_fingerprint": cfg_fp,
-        })
+        stack_calls.append(
+            {
+                "function": "oskill.trend_compose.trend_signal_compose (long-only)",
+                "config_fingerprint": cfg_fp,
+            }
+        )
 
     # ── Bear filter: suppress new entries (signal==1) when close < SMA(bear_ma) ──
     bear_applied = 0
@@ -124,10 +134,13 @@ def spot_trend(market_state: dict, config: dict) -> dict:
             if signals[i] == 1 and not np.isnan(ma_series[i]) and closes[i] < ma_series[i]:
                 signals[i] = 0
                 bear_applied += 1
-        stack_calls.append({
-            "function": "oprim.technical.sma (bear filter)",
-            "bear_ma": bear_ma, "entries_suppressed": bear_applied,
-        })
+        stack_calls.append(
+            {
+                "function": "oprim.technical.sma (bear filter)",
+                "bear_ma": bear_ma,
+                "entries_suppressed": bear_applied,
+            }
+        )
 
     return {
         "signals": signals,

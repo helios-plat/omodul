@@ -5,6 +5,7 @@ tailored to the student's current mastery.
 
 Pillars: fingerprint + decision_trail
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -59,9 +60,7 @@ async def adaptive_quiz_session(
                 question_id=q.get("question_id", f"q{i}"),
                 kc_id=q.get("kc_id", "unknown"),
                 difficulty=float(q.get("difficulty", 0.5)),
-                mastery=input_data.kc_mastery.get(
-                    q.get("kc_id", ""), float(q.get("mastery", 0.5))
-                ),
+                mastery=input_data.kc_mastery.get(q.get("kc_id", ""), float(q.get("mastery", 0.5))),
             )
             for i, q in enumerate(input_data.question_bank)
         ]
@@ -78,7 +77,9 @@ async def adaptive_quiz_session(
 
         trail.record(event="quiz_generated", count=len(result.questions))
 
-        fp = compute_fingerprint({"user_id": input_data.user_id, "session_id": input_data.session_id})
+        fp = compute_fingerprint(
+            {"user_id": input_data.user_id, "session_id": input_data.session_id}
+        )
 
         selected = [
             {"question_id": q.question_id, "kc_id": q.kc_id, "difficulty": q.difficulty}

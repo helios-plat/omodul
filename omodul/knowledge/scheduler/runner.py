@@ -1,4 +1,5 @@
 """ScheduledJobRunner — invokes an agent for a scheduled job and records the run."""
+
 from __future__ import annotations
 
 import asyncio
@@ -85,11 +86,13 @@ class ScheduledJobRunner:
             if job.get("notify_on_completion", True):
                 await self.notifier.notify_completion(job, result.output)
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             self.job_store.update_run(
                 run_id=run_id,
                 status="timeout",
-                error_message=f"exceeded max_runtime_seconds={job.get('max_runtime_seconds', 1800)}",
+                error_message=(
+                    f"exceeded max_runtime_seconds={job.get('max_runtime_seconds', 1800)}"
+                ),
                 completed_at=datetime.utcnow(),
             )
             log.error("scheduled_job_run_timeout", job=job["name"], run_id=run_id)

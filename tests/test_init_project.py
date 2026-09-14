@@ -1,4 +1,5 @@
 """Tests for omodul.init_project."""
+
 from __future__ import annotations
 
 import asyncio

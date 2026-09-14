@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 import os
 from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, ClassVar
 
 from pydantic import ConfigDict
@@ -184,7 +184,7 @@ def reuse_strategy(
             "enabled_pillars": sorted(_enabled_pillars),
             "status": status,
             "steps": trail,
-            "ts": datetime.now(timezone.utc).isoformat(),
+            "ts": datetime.now(UTC).isoformat(),
         }
         if output_dir:
             os.makedirs(output_dir, exist_ok=True)

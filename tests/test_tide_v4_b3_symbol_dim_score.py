@@ -5,7 +5,6 @@ from __future__ import annotations
 from datetime import date
 
 import numpy as np
-import pytest
 
 from omodul.symbol_dim_score import (
     SymbolDimScoreConfig,

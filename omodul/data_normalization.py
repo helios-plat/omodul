@@ -1,4 +1,5 @@
 """Normalize OKX WebSocket payloads to Nautilus event dicts."""
+
 from __future__ import annotations
 
 
@@ -100,6 +101,5 @@ def okx_to_nautilus(payload: dict) -> dict:
 
     else:
         raise ValueError(
-            f"Unrecognized OKX channel: {channel!r}. "
-            "Supported: tickers, books, trades, candle*"
+            f"Unrecognized OKX channel: {channel!r}. Supported: tickers, books, trades, candle*"
         )

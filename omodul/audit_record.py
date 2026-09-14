@@ -6,6 +6,7 @@ Composites: obase.canonical_json + obase.sha256_hash + oprim.ed25519_sign
 ⚠️  Fingerprint covers event body ONLY — tier and signature fields excluded.
 ⚠️  canonical_json path must be identical for write and verify.
 """
+
 from __future__ import annotations
 
 import base64
@@ -116,6 +117,7 @@ def audit_verify(
         from cryptography.hazmat.primitives.asymmetric.ed25519 import (  # noqa: PLC0415
             Ed25519PublicKey,
         )
+
         try:
             pub = Ed25519PublicKey.from_public_bytes(base64.b64decode(public_key_b64))
             sig = base64.b64decode(record["sig_b64"])

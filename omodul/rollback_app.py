@@ -79,9 +79,7 @@ def rollback_app(
         preflight_info = _stage_preflight(config, input_data, trail_steps, on_step)
 
         # 2. Create rollback container
-        rollback_info = _stage_create_rollback_container(
-            config, input_data, trail_steps, on_step
-        )
+        rollback_info = _stage_create_rollback_container(config, input_data, trail_steps, on_step)
 
         # 3. Restore data (optional)
         data_restored = False
@@ -90,9 +88,7 @@ def rollback_app(
             data_restored = True
 
         # 4. Swap
-        _stage_swap(
-            config, input_data, preflight_info, rollback_info, trail_steps, on_step
-        )
+        _stage_swap(config, input_data, preflight_info, rollback_info, trail_steps, on_step)
 
         # 5. Verify
         health_info = _stage_verify(config, input_data, trail_steps, on_step)

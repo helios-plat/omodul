@@ -8,8 +8,6 @@ from datetime import date
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
-
 # ---------------------------------------------------------------------------
 # Stub missing deps before any omodul / oprim / oskill imports
 # ---------------------------------------------------------------------------
@@ -29,20 +27,16 @@ for _mod in _STUB_MODULES:
         sys.modules[_mod] = MagicMock()
 
 # Import directly from submodule to avoid omodul.__init__ chain import issues
-from omodul.process_inbox_substrate import (  # noqa: E402
-    InboxConfig,
-    InboxFindings,
-    InboxInput,
-    compute_fingerprint_for,
-    process_inbox_substrate,
-)
 from omodul.daily_digest_workflow import (  # noqa: E402
     DailyDigestConfig,
-    DailyDigestFindings,
     DailyDigestInput,
     daily_digest_workflow,
 )
-
+from omodul.process_inbox_substrate import (  # noqa: E402
+    InboxConfig,
+    InboxInput,
+    process_inbox_substrate,
+)
 
 # ---------------------------------------------------------------------------
 # Helpers

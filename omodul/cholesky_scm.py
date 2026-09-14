@@ -47,8 +47,9 @@ class ContinuousCholeskySCM:
 
     # ── 构造 ────────────────────────────────────────────────────────
     @classmethod
-    def fit_from_data(cls, dag: Any, data: dict[str, np.ndarray], *,
-                      fit: str = "linear", **fit_kw: Any) -> ContinuousCholeskySCM:
+    def fit_from_data(
+        cls, dag: Any, data: dict[str, np.ndarray], *, fit: str = "linear", **fit_kw: Any
+    ) -> ContinuousCholeskySCM:
         """按 DAG 逐节点拟合条件机制。
 
         data[node] = (n, d_node) 观测矩阵; 父节点观测取同一行 (需对齐行序)。
@@ -59,12 +60,14 @@ class ContinuousCholeskySCM:
             parents = list(dag.predecessors(name))
             x = np.atleast_2d(np.asarray(data[name], dtype=float))
             if parents:
-                pa = np.hstack([np.atleast_2d(np.asarray(data[p], dtype=float))
-                                for p in parents])
+                pa = np.hstack([np.atleast_2d(np.asarray(data[p], dtype=float)) for p in parents])
             else:
                 pa = np.zeros((x.shape[0], 0))
-            mech = (CholeskyMechanism.fit_mlp(pa, x, **fit_kw) if fit == "mlp"
-                    else CholeskyMechanism.fit_linear(pa, x, **fit_kw))
+            mech = (
+                CholeskyMechanism.fit_mlp(pa, x, **fit_kw)
+                if fit == "mlp"
+                else CholeskyMechanism.fit_linear(pa, x, **fit_kw)
+            )
             nodes[name] = ContinuousNode(name=name, mechanism=mech, parents=parents)
         return cls(nodes)
 
@@ -75,8 +78,7 @@ class ContinuousCholeskySCM:
         u_map: dict[str, np.ndarray] = {}
         for name in self.order:
             nd = self.nodes[name]
-            pa_vals = (np.concatenate([values[p] for p in nd.parents])
-                       if nd.parents else np.zeros(0))
+            pa_vals = np.concatenate([values[p] for p in nd.parents]) if nd.parents else np.zeros(0)
             if name in evidence:
                 x = np.asarray(evidence[name], dtype=float)
                 values[name] = x
@@ -87,36 +89,41 @@ class ContinuousCholeskySCM:
         return u_map
 
     # ── 2+3. Action + Prediction ────────────────────────────────────
-    def predict(self, failure_node: str, *,
-                intervened: dict[str, Sequence[float]] | None = None,
-                u_map: dict[str, np.ndarray] | None = None) -> np.ndarray:
+    def predict(
+        self,
+        failure_node: str,
+        *,
+        intervened: dict[str, Sequence[float]] | None = None,
+        u_map: dict[str, np.ndarray] | None = None,
+    ) -> np.ndarray:
         """夹持溯因 U 拓扑传播: 干预节点取固定值, 其余 x = μ(PA) + L(PA)·u。"""
         intervened = intervened or {}
-        u_map = u_map or {n: np.zeros(self.nodes[n].mechanism.d)
-                          for n in self.order}
+        u_map = u_map or {n: np.zeros(self.nodes[n].mechanism.d) for n in self.order}
         values: dict[str, np.ndarray] = {}
         for name in self.order:
             nd = self.nodes[name]
             if name in intervened:
                 values[name] = np.asarray(intervened[name], dtype=float)
                 continue
-            pa_vals = (np.concatenate([values[p] for p in nd.parents])
-                       if nd.parents else np.zeros(0))
+            pa_vals = np.concatenate([values[p] for p in nd.parents]) if nd.parents else np.zeros(0)
             u = u_map.get(name, np.zeros(nd.mechanism.d))
-            values[name] = nd.mechanism.mean(pa_vals) \
-                + nd.mechanism.chol(pa_vals) @ u
+            values[name] = nd.mechanism.mean(pa_vals) + nd.mechanism.chol(pa_vals) @ u
         return np.asarray(values[failure_node], dtype=float)
 
-    def l3_counterfactual(self, evidence: dict[str, np.ndarray],
-                          intervened: dict[str, Sequence[float]],
-                          failure_node: str) -> np.ndarray:
+    def l3_counterfactual(
+        self,
+        evidence: dict[str, np.ndarray],
+        intervened: dict[str, Sequence[float]],
+        failure_node: str,
+    ) -> np.ndarray:
         """L3: 锚定本次观测噪声, 问"若当时 do(X=v), failure 会是什么"。"""
         u_map = self.abduct(evidence)
         return self.predict(failure_node, intervened=intervened, u_map=u_map)
 
     # ── L2 对照: 不锚定本次 U (U=0 期望传播) ─────────────────────────
-    def l2_expected(self, failure_node: str,
-                    intervened: dict[str, Sequence[float]] | None = None) -> np.ndarray:
+    def l2_expected(
+        self, failure_node: str, intervened: dict[str, Sequence[float]] | None = None
+    ) -> np.ndarray:
         """E[X_Y | do(intervened)] — 平均情形 (U 取均值 0)。"""
         return self.predict(failure_node, intervened=intervened or {}, u_map={})
 

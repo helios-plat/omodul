@@ -5,18 +5,21 @@ Pillars: decision_trail, cost
 Composes: oskill.english_speaking_practice
 Persistence: obase.persistence.insert_one → speaking_sessions table
 """
+
 from __future__ import annotations
 
 import asyncio
 import uuid
-from dataclasses import field
 from pathlib import Path
 from typing import Any, ClassVar
 
 from pydantic import BaseModel, ConfigDict
 
 from omodul._base import (
-    BaseConfig, CostTracker, Trail, build_result,
+    BaseConfig,
+    CostTracker,
+    Trail,
+    build_result,
 )
 
 
@@ -79,11 +82,10 @@ async def speaking_practice_workflow(
         # 持久化已上移服务层（3O：omodul 只算+返回，业务落库由服务层用真实主键做，
         # 故 omodul 不再需要真实 user_id，可收伪名）。此处仅算 pron_scores_dicts 供返回。
         from dataclasses import asdict
+
         pron_scores_dicts = [asdict(p) for p in practice_result.pronunciation_scores]
 
-        trail_path = asyncio.shield(
-            asyncio.get_event_loop().run_in_executor(None, trail.write, output_dir)
-        )
+        asyncio.shield(asyncio.get_event_loop().run_in_executor(None, trail.write, output_dir))
         try:
             tp = trail.write(output_dir)
         except Exception:

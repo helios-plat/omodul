@@ -5,6 +5,7 @@ Pillars: decision_trail, cost
 Correction 2: ONLY prepares the plan — does NOT execute it. Actual execution
 is delegated to E-5 via an injected runner.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -63,15 +64,17 @@ async def run_subagent_task(
     trail = Trail()
 
     try:
-        trail.record(event="prepare_plan", step_no=0,
-                     task=input_data.task_description,
-                     depth=input_data.depth)
+        trail.record(
+            event="prepare_plan",
+            step_no=0,
+            task=input_data.task_description,
+            depth=input_data.depth,
+        )
 
         if input_data.depth >= config.max_depth:
             return build_result(
                 status="failed",
-                error={"type": "RecursionLimit",
-                       "message": "max recursion depth exceeded"},
+                error={"type": "RecursionLimit", "message": "max recursion depth exceeded"},
                 trail=trail,
                 cost_usd=cost.total_usd,
             )
@@ -83,9 +86,9 @@ async def run_subagent_task(
         }
 
         if input_data.dispatcher is not None:
-            dispatched = await _call(input_data.dispatcher,
-                                     task=input_data.task_description,
-                                     depth=input_data.depth)
+            dispatched = await _call(
+                input_data.dispatcher, task=input_data.task_description, depth=input_data.depth
+            )
             if dispatched:
                 plan = dispatched
 

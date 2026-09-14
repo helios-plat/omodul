@@ -5,6 +5,7 @@ Composites: oskill.llm_factor_debate + omodul.backtest_gate
 
 ⚠️  Fingerprint covers market_context + factor_hypothesis ONLY (not LLM output).
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -52,16 +53,19 @@ def llm_alpha_mine(
     Returns:
         Result with ``fingerprint``, ``debate``, ``gate``, ``status``, ``consensus``.
     """
-    from omodul.backtest_gate import BacktestGateConfig, backtest_gate  # noqa: PLC0415
     from oskill.llm_factor_debate import llm_factor_debate  # noqa: PLC0415
+
+    from omodul.backtest_gate import BacktestGateConfig, backtest_gate  # noqa: PLC0415
 
     trail = Trail()
 
     # Fingerprint: deterministic fields only — computed before LLM call
-    fp = compute_fingerprint({
-        "market_context": config.market_context,
-        "factor_hypothesis": config.factor_hypothesis,
-    })
+    fp = compute_fingerprint(
+        {
+            "market_context": config.market_context,
+            "factor_hypothesis": config.factor_hypothesis,
+        }
+    )
     trail.record(event="fingerprint_computed", fingerprint=fp)
 
     # LLM debate (async run inside sync wrapper)
@@ -73,9 +77,9 @@ def llm_alpha_mine(
             factor_hypothesis=config.factor_hypothesis,
         )
     )
-    trail.record(event="debate_complete",
-                 consensus=debate["consensus"],
-                 confidence=debate["confidence"])
+    trail.record(
+        event="debate_complete", consensus=debate["consensus"], confidence=debate["confidence"]
+    )
 
     consensus = debate["consensus"]
     confidence = debate["confidence"]

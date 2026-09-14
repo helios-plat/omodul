@@ -7,16 +7,16 @@ Pillar: {decision_trail}
 
 from __future__ import annotations
 
-import os
 import json
+import os
 from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, ClassVar
 
+from oprim import coherence_compute, ku_gate_validate
 from pydantic import ConfigDict
 
 from omodul._base_config import BaseConfig
-from oprim import coherence_compute, ku_gate_validate
 
 _enabled_pillars: set[str] = {"decision_trail"}
 
@@ -160,7 +160,8 @@ def governance_adjudicate(
                     supporters = node_coherence.get("supports_from_confirmed", 0)
                     if contradictors > 0:
                         coherence_notes.append(
-                            f"subject KU has {contradictors} confirmed contradictors — risk elevated"
+                            f"subject KU has {contradictors} confirmed contradictors — "
+                            "risk elevated"
                         )
                     if supporters > 0:
                         coherence_notes.append(f"subject KU has {supporters} confirmed supporters")
@@ -213,7 +214,7 @@ def governance_adjudicate(
             "enabled_pillars": sorted(_enabled_pillars),
             "status": status,
             "steps": trail,
-            "ts": datetime.now(timezone.utc).isoformat(),
+            "ts": datetime.now(UTC).isoformat(),
         }
         if output_dir:
             os.makedirs(output_dir, exist_ok=True)

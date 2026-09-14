@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import date
-from typing import Callable, Literal, Optional
+from typing import Literal
 
 import numpy as np
-import pandas as pd
-
 import oprim
 import oskill
+import pandas as pd
 
 
 def strategy_backtest_report(
@@ -23,8 +23,8 @@ def strategy_backtest_report(
     n_bootstrap: int = 1000,
     annualization_factor: float = 252.0,
     report_format: Literal["dict", "markdown"] = "dict",
-    signal_detectors: Optional[list[Callable]] = None,
-    regime_grouping: Optional[Callable[[date], str]] = None,
+    signal_detectors: list[Callable] | None = None,
+    regime_grouping: Callable[[date], str] | None = None,
 ) -> dict | str:
     """Complete strategy backtest report.
 
@@ -60,7 +60,9 @@ def strategy_backtest_report(
         "total_periods": n,
         "annualized_return": ann_return,
         "annualized_volatility": ann_vol,
-        "annualized_sharpe": float(oprim.sharpe_ratio(ret, annualization_factor=int(annualization_factor))),
+        "annualized_sharpe": float(
+            oprim.sharpe_ratio(ret, annualization_factor=int(annualization_factor))
+        ),
         "max_drawdown": float(dd["max_drawdown"]),
         "var_95": float(var_result["var"]),
         "best_day": float(ret.max()),
@@ -91,7 +93,8 @@ def strategy_backtest_report(
         common = ret.index.intersection(regime_labels.index)
         if len(common) > 30:
             regime_breakdown = oskill.regime_aware_performance(
-                ret.loc[common], regime_labels.loc[common],
+                ret.loc[common],
+                regime_labels.loc[common],
                 annualization_factor=annualization_factor,
             )
 
@@ -105,7 +108,8 @@ def strategy_backtest_report(
             factor_attr = oskill.factor_attribution(
                 ret.values[:n_fac],
                 fac_aligned,
-                bootstrap_ci_enabled=True, n_bootstrap=min(500, n_bootstrap),
+                bootstrap_ci_enabled=True,
+                n_bootstrap=min(500, n_bootstrap),
             )
 
     warnings_list = []
@@ -138,8 +142,13 @@ def strategy_backtest_report(
             grp: {
                 "n": len(vals),
                 "mean_return": float(np.mean(vals)) if vals else 0.0,
-                "sharpe": float(oprim.sharpe_ratio(pd.Series(vals), annualization_factor=int(annualization_factor)))
-                if len(vals) >= 2 else 0.0,
+                "sharpe": float(
+                    oprim.sharpe_ratio(
+                        pd.Series(vals), annualization_factor=int(annualization_factor)
+                    )
+                )
+                if len(vals) >= 2
+                else 0.0,
             }
             for grp, vals in grouped.items()
         }
@@ -158,10 +167,14 @@ def strategy_backtest_report(
     }
 
     if report_format == "markdown":
-        lines = [f"# Strategy Backtest Report", f"",
-                 f"**Periods**: {n} | **Ann. Return**: {ann_return:.2%} | **Sharpe**: {summary['annualized_sharpe']:.2f}",
-                 f"**Max DD**: {dd['max_drawdown']:.2%} | **VaR 95%**: {var_result['var']:.4f}",
-                 f"**PSR**: {psr_dsr_result['psr']:.3f}"]
+        lines = [
+            "# Strategy Backtest Report",
+            "",
+            f"**Periods**: {n} | **Ann. Return**: {ann_return:.2%} | "
+            f"**Sharpe**: {summary['annualized_sharpe']:.2f}",
+            f"**Max DD**: {dd['max_drawdown']:.2%} | **VaR 95%**: {var_result['var']:.4f}",
+            f"**PSR**: {psr_dsr_result['psr']:.3f}",
+        ]
         return "\n".join(lines)
 
     return result
@@ -189,28 +202,32 @@ def strategy_decay_monitor(
     if not isinstance(baseline_returns, pd.Series):
         baseline_returns = pd.Series(baseline_returns)
     if len(live_returns) < rolling_window:
-        raise ValueError(f"live_returns ({len(live_returns)}) must be >= rolling_window ({rolling_window})")
+        raise ValueError(
+            f"live_returns ({len(live_returns)}) must be >= rolling_window ({rolling_window})"
+        )
 
     # Rolling Sharpe
     rolling_sharpe_vals = []
     for i in range(rolling_window, len(live_returns) + 1):
-        window = live_returns.iloc[i - rolling_window:i].values
+        window = live_returns.iloc[i - rolling_window : i].values
         sr = oprim.sharpe_ratio(pd.Series(window), annualization_factor=int(annualization_factor))
         rolling_sharpe_vals.append(sr)
 
-    rolling_sharpe = pd.Series(rolling_sharpe_vals, index=live_returns.index[rolling_window - 1:])
+    rolling_sharpe = pd.Series(rolling_sharpe_vals, index=live_returns.index[rolling_window - 1 :])
 
     # Mann-Kendall trend test on rolling Sharpe
     valid_sharpe = rolling_sharpe.dropna().values
-    trend_test = oprim.mann_kendall_trend(valid_sharpe) if len(valid_sharpe) > 10 else {
-        "trend": "no_trend", "p_value": 1.0, "tau": 0.0
-    }
+    trend_test = (
+        oprim.mann_kendall_trend(valid_sharpe)
+        if len(valid_sharpe) > 10
+        else {"trend": "no_trend", "p_value": 1.0, "tau": 0.0}
+    )
     trend_significant = trend_test["p_value"] < mk_alpha
     trend_direction = trend_test.get("trend", "no_trend")
 
     # Distribution shift test (live vs baseline)
-    live_vals = live_returns.values[-min(len(live_returns), 60):]
-    base_vals = baseline_returns.values[-min(len(baseline_returns), 60):]
+    live_vals = live_returns.values[-min(len(live_returns), 60) :]
+    base_vals = baseline_returns.values[-min(len(baseline_returns), 60) :]
     if len(live_vals) > 20 and len(base_vals) > 20:
         shift_result = oskill.distribution_shift_test(live_vals, base_vals, alpha=shift_alpha)
         shift_detected = shift_result["shift_detected"]
@@ -228,7 +245,9 @@ def strategy_decay_monitor(
             break
 
     # 4-state machine
-    below_now = bool(rolling_sharpe.iloc[-1] < sharpe_threshold_dead) if len(rolling_sharpe) > 0 else False
+    below_now = (
+        bool(rolling_sharpe.iloc[-1] < sharpe_threshold_dead) if len(rolling_sharpe) > 0 else False
+    )
     trend_decreasing = trend_significant and trend_direction in ("decreasing", "down")
 
     if consecutive >= consecutive_periods_dead:
@@ -293,8 +312,11 @@ def factor_attribution_report(
 
         # Factor attribution
         attr = oskill.factor_attribution(
-            ret, fac, bootstrap_ci_enabled=bootstrap_ci_enabled,
-            n_bootstrap=n_bootstrap, standard_errors=standard_errors,
+            ret,
+            fac,
+            bootstrap_ci_enabled=bootstrap_ci_enabled,
+            n_bootstrap=n_bootstrap,
+            standard_errors=standard_errors,
         )
 
         model_result = {"attribution": attr}
@@ -317,8 +339,8 @@ def factor_attribution_report(
         if include_rolling_alpha and n > rolling_window:
             rolling_alphas = []
             for i in range(rolling_window, n):
-                window_ret = ret[i - rolling_window:i]
-                window_fac = fac.iloc[i - rolling_window:i]
+                window_ret = ret[i - rolling_window : i]
+                window_fac = fac.iloc[i - rolling_window : i]
                 try:
                     r = oskill.factor_attribution(
                         window_ret, window_fac, bootstrap_ci_enabled=False
@@ -340,8 +362,9 @@ def factor_attribution_report(
     best_r2 = max(models.items(), key=lambda x: x[1]["attribution"]["r_squared"])
     comparison = {
         "best_r_squared": {"model": best_r2[0], "value": best_r2[1]["attribution"]["r_squared"]},
-        "most_parsimonious": min(models.items(),
-                                  key=lambda x: len(x[1]["attribution"]["factor_names"]))[0],
+        "most_parsimonious": min(
+            models.items(), key=lambda x: len(x[1]["attribution"]["factor_names"])
+        )[0],
     }
 
     return {

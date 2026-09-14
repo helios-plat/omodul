@@ -1,4 +1,5 @@
 """Deterministic KU health linting."""
+
 from __future__ import annotations
 
 import hashlib
@@ -45,7 +46,10 @@ def _canonical(value: Any) -> Any:
     if isinstance(value, (list, tuple)):
         return [_canonical(item) for item in value]
     if isinstance(value, (set, frozenset)):
-        return sorted((_canonical(item) for item in value), key=lambda item: json.dumps(item, sort_keys=True, default=str))
+        return sorted(
+            (_canonical(item) for item in value),
+            key=lambda item: json.dumps(item, sort_keys=True, default=str),
+        )
     return value
 
 
@@ -53,7 +57,9 @@ def _fingerprint(ku: dict) -> str:
     if ku.get("fingerprint"):
         return str(ku["fingerprint"])
     basis = {k: v for k, v in ku.items() if k not in {"ku_id", "id", "fingerprint"}}
-    canonical = json.dumps(_canonical(basis), sort_keys=True, ensure_ascii=False, separators=(",", ":"), default=str)
+    canonical = json.dumps(
+        _canonical(basis), sort_keys=True, ensure_ascii=False, separators=(",", ":"), default=str
+    )
     return hashlib.sha256(canonical.encode()).hexdigest()
 
 
@@ -63,7 +69,14 @@ def _ids(value: Any) -> list[str]:
     if isinstance(value, dict):
         return [str(value.get("ku_id", value.get("id", value.get("target", ""))))]
     if isinstance(value, (list, tuple, set)):
-        return [str(item.get("ku_id", item.get("id", item.get("target", ""))) if isinstance(item, dict) else item) for item in value]
+        return [
+            str(
+                item.get("ku_id", item.get("id", item.get("target", "")))
+                if isinstance(item, dict)
+                else item
+            )
+            for item in value
+        ]
     return []
 
 
@@ -85,7 +98,14 @@ def lint_knowledge_units(config: KuLintConfig, input_data: KuLintInput) -> list[
         for field in ("superseded_by", "same_as", "related_to"):
             for target in _ids(ku.get(field)):
                 if target not in nodes:
-                    issues.append(_issue("broken_relation", ku_id, "error", f"{field} references missing KU {target}"))
+                    issues.append(
+                        _issue(
+                            "broken_relation",
+                            ku_id,
+                            "error",
+                            f"{field} references missing KU {target}",
+                        )
+                    )
         if ku.get("status") != "deprecated":
             fingerprints.setdefault(_fingerprint(ku), []).append(ku_id)
         valid_until = ku.get("valid_until")
@@ -97,19 +117,32 @@ def lint_knowledge_units(config: KuLintConfig, input_data: KuLintInput) -> list[
                 if expiry < now:
                     issues.append(_issue("stale_grade", ku_id, "warn", "valid_until has expired"))
             except ValueError:
-                issues.append(_issue("stale_grade", ku_id, "warn", "valid_until is not a valid timestamp"))
+                issues.append(
+                    _issue("stale_grade", ku_id, "warn", "valid_until is not a valid timestamp")
+                )
     if nodes and unverified / len(nodes) > config.unverified_grade_ratio_warn:
         for ku_id, ku in nodes.items():
             if ku.get("grade", "unverified") == "unverified":
-                issues.append(_issue("stale_grade", ku_id, "warn", "unverified grade ratio exceeds threshold"))
+                issues.append(
+                    _issue("stale_grade", ku_id, "warn", "unverified grade ratio exceeds threshold")
+                )
     for fingerprint, ids in fingerprints.items():
         if len(ids) > 1:
             for ku_id in ids:
-                issues.append(_issue("duplicate_fingerprint", ku_id, "warn", f"duplicate fingerprint {fingerprint}"))
+                issues.append(
+                    _issue(
+                        "duplicate_fingerprint",
+                        ku_id,
+                        "warn",
+                        f"duplicate fingerprint {fingerprint}",
+                    )
+                )
     return issues
 
 
-def ku_lint(config: KuLintConfig, input_data: KuLintInput, output_dir: Path, *, on_step: Any = None) -> dict:
+def ku_lint(
+    config: KuLintConfig, input_data: KuLintInput, output_dir: Path, *, on_step: Any = None
+) -> dict:
     config = KuLintConfig.model_validate(config)
     input_data = KuLintInput.model_validate(input_data)
     trail = Trail()
@@ -124,6 +157,20 @@ def ku_lint(config: KuLintConfig, input_data: KuLintInput, output_dir: Path, *, 
     by_rule: dict[str, int] = {}
     for item in issues:
         by_rule[item["rule"]] = by_rule.get(item["rule"], 0) + 1
-    findings = {"issue_count": len(issues), "issues": issues, "by_rule": by_rule, "ku_total": len(_nodes(input_data))}
+    findings = {
+        "issue_count": len(issues),
+        "issues": issues,
+        "by_rule": by_rule,
+        "ku_total": len(_nodes(input_data)),
+    }
     trail_path = trail.write(output_dir)
-    return build_result(status="completed", error=None, fingerprint=_fingerprint({"knowledge_units": input_data.knowledge_units}), trail=trail, trail_path=trail_path, cost_usd=0.0, findings=findings, issues_path=str(issue_path))
+    return build_result(
+        status="completed",
+        error=None,
+        fingerprint=_fingerprint({"knowledge_units": input_data.knowledge_units}),
+        trail=trail,
+        trail_path=trail_path,
+        cost_usd=0.0,
+        findings=findings,
+        issues_path=str(issue_path),
+    )

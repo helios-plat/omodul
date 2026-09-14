@@ -7,16 +7,16 @@ def compute_fingerprint(
     config: Any,
     input_data: Any,
     *,
-    input_hash_strategy: Literal["pydantic_canonical", "dataframe_columns_sample", "dict"] = "pydantic_canonical",
+    input_hash_strategy: Literal[
+        "pydantic_canonical", "dataframe_columns_sample", "dict"
+    ] = "pydantic_canonical",
 ) -> str:
     """SHA-256 64 字符. 共用 helper, 各 omodul 调用并传 config + input_data."""
     # Ensure _fingerprint_fields is a set
     fingerprint_fields: set[str] = getattr(config, "_fingerprint_fields", set())
 
     config_subset = {
-        k: getattr(config, k)
-        for k in sorted(list(fingerprint_fields))
-        if hasattr(config, k)
+        k: getattr(config, k) for k in sorted(list(fingerprint_fields)) if hasattr(config, k)
     }
 
     input_hash = _hash_input_data(input_data, strategy=input_hash_strategy)

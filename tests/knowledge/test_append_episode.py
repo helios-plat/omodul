@@ -5,8 +5,6 @@ from __future__ import annotations
 import json
 import os
 
-import pytest
-
 from omodul.append_episode import AppendEpisodeConfig, append_episode
 
 # ---------------------------------------------------------------------------
@@ -144,7 +142,7 @@ def test_output_dir_creates_decision_trail_json(tmp_path):
     """When output_dir is provided, decision_trail.json is written to disk."""
     config = make_config()
     out_dir = str(tmp_path / "episode_trails")
-    result = append_episode(config, valid_episode(), output_dir=out_dir)
+    append_episode(config, valid_episode(), output_dir=out_dir)
     trail_file = os.path.join(out_dir, "decision_trail.json")
     assert os.path.exists(trail_file)
     with open(trail_file) as f:

@@ -11,7 +11,8 @@ Genesis 锻造完 3O 算子 / Coprocessor 跑完网格搜索后, 结果不能直
 红蓝双方都必须正面回应, LLM 可以犯错, 静态校验不放过任何一行污染代码.
 
 双模式:
-    - LLM 模式   config.llm_fn 注入 → 真实辩论 (caller 契约: async fn(messages=..., tools=..., max_tokens=...))
+    - LLM 模式   config.llm_fn 注入 → 真实辩论
+      (caller 契约: async fn(messages=..., tools=..., max_tokens=...))
     - 确定性模式 llm_fn=None       → 静态证据 + 规则化辩护/质疑/裁决 (离线安全, 测试可复现)
 
 输出: 《红蓝对抗审计报告》 markdown + 结构化 verdict (blocked/needs_review/approved)
@@ -20,13 +21,22 @@ Genesis 锻造完 3O 算子 / Coprocessor 跑完网格搜索后, 结果不能直
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, ClassVar, Callable
+from typing import Any, ClassVar
 
+from oprim._lookahead_scan import scan_lookahead
 from pydantic import BaseModel
 
-from omodul._base import BaseConfig, CostTracker, Trail, build_result, compute_fingerprint, extract_text, write_report
-from oprim._lookahead_scan import scan_lookahead
+from omodul._base import (
+    BaseConfig,
+    CostTracker,
+    Trail,
+    build_result,
+    compute_fingerprint,
+    extract_text,
+    write_report,
+)
 
 # 确定性模式下的通用红队探测 (静态证据之外的"开放性质疑")
 _GENERIC_RED_PROBES = [
@@ -45,14 +55,14 @@ class AdversarialChamberConfig(BaseConfig):
     _fingerprint_fields: ClassVar[set[str]] = {"strategy_code"}
     _enabled_pillars: ClassVar[set[str]] = {"report", "cost", "decision_trail", "fingerprint"}
 
-    llm_fn: Callable | None = None          # None → 确定性离线模式 (静态证据 + 规则辩论)
-    red_team_rounds: int = 1                # 红队进攻轮数 (≥1)
-    safety_threshold: float = 70.0          # 低于此分 → needs_review
+    llm_fn: Callable | None = None  # None → 确定性离线模式 (静态证据 + 规则辩论)
+    red_team_rounds: int = 1  # 红队进攻轮数 (≥1)
+    safety_threshold: float = 70.0  # 低于此分 → needs_review
     safety_floor: float = 0.0
     # 确定性评分权重
-    violation_penalty: float = 30.0         # 每个硬违规扣分
-    warning_penalty: float = 10.0           # 每个泄漏/风险扣分
-    hardening_bonus: float = 15.0           # 蓝队加固加分 (无硬违规时)
+    violation_penalty: float = 30.0  # 每个硬违规扣分
+    warning_penalty: float = 10.0  # 每个泄漏/风险扣分
+    hardening_bonus: float = 15.0  # 蓝队加固加分 (无硬违规时)
 
 
 class AdversarialChamberInput(BaseModel):
@@ -60,21 +70,22 @@ class AdversarialChamberInput(BaseModel):
 
     strategy_code: str
     strategy_name: str = "unnamed_strategy"
-    caller: Any = None                      # 兼容 omodul 调用约定 (可空)
-    context: str = ""                       # 策略背景 (市场/标的/周期)
+    caller: Any = None  # 兼容 omodul 调用约定 (可空)
+    context: str = ""  # 策略背景 (市场/标的/周期)
 
 
 # ---------------------------------------------------------------------------
 # Prompt 构造 (机制, 与业务解耦)
 # ---------------------------------------------------------------------------
 
+
 def _build_blue_prompt(code: str, context: str, static: dict) -> str:
     return f"""你是蓝队: 量化策略的作者辩护人. 你的唯一职责是解释下面这段策略为什么能赚钱,
 并针对红队可能发起的质疑提前加固.
 
-策略名称: {context or '<unnamed>'}
-静态不变量扫描结论 (数学级法律, 不可辩驳): verdict={static['verdict']},
-violations={len(static['violations'])}, warnings={len(static['warnings'])}.
+策略名称: {context or "<unnamed>"}
+静态不变量扫描结论 (数学级法律, 不可辩驳): verdict={static["verdict"]},
+violations={len(static["violations"])}, warnings={len(static["warnings"])}.
 
 策略代码:
 ```python
@@ -89,10 +100,13 @@ violations={len(static['violations'])}, warnings={len(static['warnings'])}.
 
 def _build_red_prompt(code: str, context: str, static: dict, blue_defense: str) -> str:
     probes = "\n".join(f"- {name}: {desc}" for name, desc in _GENERIC_RED_PROBES)
-    static_evidence = "\n".join(
-        f"- [静态证据 L{f['line']} {f['rule_id']}] {f['message']}"
-        for f in (static["violations"] + static["warnings"])
-    ) or "- 静态扫描未发现硬性违规 (仍需人工挑刺)"
+    static_evidence = (
+        "\n".join(
+            f"- [静态证据 L{f['line']} {f['rule_id']}] {f['message']}"
+            for f in (static["violations"] + static["warnings"])
+        )
+        or "- 静态扫描未发现硬性违规 (仍需人工挑刺)"
+    )
     return f"""你是红队: 冷酷的量化策略质疑者. 你被注入了极其严格的负面 Prompt —
 你的唯一使命就是挑刺、找漏洞、攻击下面这段代码. 不许夸奖, 不许留情.
 
@@ -105,20 +119,22 @@ def _build_red_prompt(code: str, context: str, static: dict, blue_defense: str) 
 {static_evidence}
 
 蓝队辩护词:
-{blue_defense or '(无)'}
+{blue_defense or "(无)"}
 
 开放性质疑清单 (逐条给出 存在/不存在 + 一句话理由):
 {probes}
 
 请输出 JSON:
-{{"points": [{{"id": "R1", "severity": "high|medium|low", "title": "...", "detail": "...", "line": <int|None>}}],
+{{"points": [{{"id": "R1", "severity": "high|medium|low", "title": "...",
+"detail": "...", "line": <int|
+None>}}],
  "summary": "整体攻击结论 (≤80字)"}}"""
 
 
 def _build_judge_prompt(code: str, context: str, blue: str, red: str) -> str:
     return f"""你是主脑法官: 听取红蓝双方辩论后, 对策略代码做最后一轮逻辑修正并给出安全系数.
 
-策略背景: {context or '<unnamed>'}
+策略背景: {context or "<unnamed>"}
 
 蓝队辩护:
 {blue}
@@ -137,14 +153,24 @@ def _build_judge_prompt(code: str, context: str, blue: str, red: str) -> str:
 # 确定性辩论 (离线模式)
 # ---------------------------------------------------------------------------
 
+
 def _deterministic_blue(code: str, static: dict) -> str:
     lines: list[str] = []
     if not static["violations"] and not static["warnings"]:
-        lines.append("静态不变量扫描全绿 (pass): 未发现未来函数/数据泄漏/除零风险 — 这是本策略合规性的客观基石.")
+        lines.append(
+            "静态不变量扫描全绿 (pass): 未发现未来函数/数据泄漏/除零风险 — "
+            "这是本策略合规性的客观基石."
+        )
     elif not static["violations"]:
-        lines.append(f"静态扫描 verdict=review: 存在 {len(static['warnings'])} 处泄漏/风险告警, 蓝队承诺逐条加固.")
+        lines.append(
+            f"静态扫描 verdict=review: 存在 {len(static['warnings'])} 处泄漏/风险告警, "
+            "蓝队承诺逐条加固."
+        )
     else:
-        lines.append(f"静态扫描 verdict=block: 存在 {len(static['violations'])} 处硬违规, 蓝队承认并给出修正方案.")
+        lines.append(
+            f"静态扫描 verdict=block: 存在 {len(static['violations'])} 处硬违规, "
+            "蓝队承认并给出修正方案."
+        )
     low = code.lower()
     if any(k in low for k in ("stop_loss", "止损", "max_drawdown", "atr", "volatility")):
         lines.append("策略包含风险控制逻辑 (止损/波动率约束), 尾部风险有显式管理.")
@@ -158,9 +184,7 @@ def _deterministic_blue(code: str, static: dict) -> str:
 def _deterministic_red(code: str, static: dict) -> str:
     points: list[str] = []
     for f in static["violations"] + static["warnings"]:
-        points.append(
-            f"- [静态证据 L{f['line']} {f['rule_id']} {f['severity']}] {f['message']}"
-        )
+        points.append(f"- [静态证据 L{f['line']} {f['rule_id']} {f['severity']}] {f['message']}")
     # 静态未覆盖的开放性探测 → "未发现, 但建议人工复核"
     for name, desc in _GENERIC_RED_PROBES:
         points.append(f"- [开放性质疑 {name}] {desc} → 静态无法判定, 建议样本外验证")
@@ -183,17 +207,27 @@ def _deterministic_judge(code: str, static: dict, cfg: AdversarialChamberConfig)
 
     fixes: list[dict] = []
     for f in static["violations"]:
-        fixes.append({"target": f"L{f['line']} ({f['rule_id']})", "action": f"必须修复: {f['message']}"})
+        fixes.append(
+            {"target": f"L{f['line']} ({f['rule_id']})", "action": f"必须修复: {f['message']}"}
+        )
     for f in static["warnings"]:
-        fixes.append({"target": f"L{f['line']} ({f['rule_id']})", "action": f"建议加固: {f['message']}"})
+        fixes.append(
+            {"target": f"L{f['line']} ({f['rule_id']})", "action": f"建议加固: {f['message']}"}
+        )
 
     # 确定性修正: 在代码头部注入合规头 (硬违规仍需要人类/LLM 实际改写)
     header = (
-        "# ===== 红蓝对抗审判庭修正头 =====\n"
-        "# 以下位置存在静态不变量违规, 必须修复后才能进入回测/实盘:\n"
-        + "\n".join(f"#   L{f['line']} {f['rule_id']}: {f['message']}" for f in static["violations"])
-        + "\n# =================================\n"
-    ) if static["violations"] else ""
+        (
+            "# ===== 红蓝对抗审判庭修正头 =====\n"
+            "# 以下位置存在静态不变量违规, 必须修复后才能进入回测/实盘:\n"
+            + "\n".join(
+                f"#   L{f['line']} {f['rule_id']}: {f['message']}" for f in static["violations"]
+            )
+            + "\n# =================================\n"
+        )
+        if static["violations"]
+        else ""
+    )
     final_code = header + code
 
     return {
@@ -212,6 +246,7 @@ def _deterministic_judge(code: str, static: dict, cfg: AdversarialChamberConfig)
 # ---------------------------------------------------------------------------
 # 主入口
 # ---------------------------------------------------------------------------
+
 
 async def adversarial_chamber(
     config: AdversarialChamberConfig,
@@ -282,7 +317,9 @@ async def adversarial_chamber(
             judge = {
                 "verdict": str(parsed.get("verdict", "needs_review")),
                 "safety_score_before": det_judge["safety_score_before"],
-                "safety_score_after": float(parsed.get("safety_score", det_judge["safety_score_after"])),
+                "safety_score_after": float(
+                    parsed.get("safety_score", det_judge["safety_score_after"])
+                ),
                 "fixes": parsed.get("fixes", det_judge["fixes"]),
                 "final_code": parsed.get("final_code") or code,
                 "rationale": f"{det_judge['rationale']} | LLM 主脑裁决: {parsed.get('verdict')}",
@@ -362,7 +399,8 @@ def _render_report(
         "",
         f"- 指纹: `{fingerprint}`",
         f"- 背景: {context or '(未提供)'}",
-        f"- 静态不变量 verdict: **{static['verdict']}** (硬违规 {len(static['violations'])} / 告警 {len(static['warnings'])})",
+        f"- 静态不变量 verdict: **{static['verdict']}** "
+        f"(硬违规 {len(static['violations'])} / 告警 {len(static['warnings'])})",
         "",
         "## 一、静态不变量证据 (数学级法律)",
         "",
@@ -372,7 +410,19 @@ def _render_report(
             lines.append(f"- `L{f['line']}` [{f['rule_id']} {f['severity']}] {f['message']}")
     else:
         lines.append("- 未发现违规.")
-    lines += ["", "## 二、蓝队辩护", "", blue, "", "## 三、红队质疑", "", red, "", "## 四、主脑裁决", ""]
+    lines += [
+        "",
+        "## 二、蓝队辩护",
+        "",
+        blue,
+        "",
+        "## 三、红队质疑",
+        "",
+        red,
+        "",
+        "## 四、主脑裁决",
+        "",
+    ]
     lines += [
         f"- 裁决: **{judge.get('verdict')}**",
         f"- 安全系数: **{judge.get('safety_score_before')} → {judge.get('safety_score_after')}**",

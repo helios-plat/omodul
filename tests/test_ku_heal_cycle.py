@@ -3,8 +3,8 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime, timedelta
 
-from omodul.ku_health import list_open_issues, persist_issues
 from omodul.ku_heal_cycle import KuHealCycleConfig, KuHealCycleInput, ku_heal_cycle
+from omodul.ku_health import list_open_issues, persist_issues
 from omodul.ku_lint import KuLintConfig, KuLintInput, lint_knowledge_units
 
 
@@ -37,10 +37,15 @@ def test_heal_cycle_repairs_and_resolves(tmp_path):
         ku("duplicate", fingerprint="same"),
         ku("broken", related_to=["missing"]),
         ku("orphan", substrate=[]),
-        ku("stale", grade="unverified",
-           valid_until=(datetime.now(UTC) - timedelta(days=1)).isoformat()),
+        ku(
+            "stale",
+            grade="unverified",
+            valid_until=(datetime.now(UTC) - timedelta(days=1)).isoformat(),
+        ),
     ]
-    issues = lint_knowledge_units(KuLintConfig(unverified_grade_ratio_warn=0.99), KuLintInput(knowledge_units=units))
+    issues = lint_knowledge_units(
+        KuLintConfig(unverified_grade_ratio_warn=0.99), KuLintInput(knowledge_units=units)
+    )
     persist_issues(tmp_path, issues)
     backend = FakeBackend(units)
     result = ku_heal_cycle(
@@ -64,7 +69,13 @@ def test_heal_cycle_repairs_and_resolves(tmp_path):
 
 def test_heal_callback(tmp_path):
     units = [ku("orphan", substrate=[])]
-    persist_issues(tmp_path, lint_knowledge_units(KuLintConfig(), KuLintInput(knowledge_units=units)))
+    persist_issues(
+        tmp_path, lint_knowledge_units(KuLintConfig(), KuLintInput(knowledge_units=units))
+    )
     steps = []
-    ku_heal_cycle(KuHealCycleConfig(issue_dir=tmp_path), KuHealCycleInput(knowledge_units=units), on_step=lambda *args: steps.append(args))
+    ku_heal_cycle(
+        KuHealCycleConfig(issue_dir=tmp_path),
+        KuHealCycleInput(knowledge_units=units),
+        on_step=lambda *args: steps.append(args),
+    )
     assert steps

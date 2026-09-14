@@ -1,4 +1,5 @@
 """State-Dependent Market Making Strategy — Hawkes-adjusted Avellaneda-Stoikov."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -121,9 +122,7 @@ def state_dependent_market_making_strategy(
 
     # Ensure event_types are in valid range
     if np.any(event_types < 0) or np.any(event_types >= n_event_types):
-        raise ValueError(
-            f"event_types must be in [0, {n_event_types - 1}]"
-        )
+        raise ValueError(f"event_types must be in [0, {n_event_types - 1}]")
 
     # 1. Fit state-dependent Hawkes process
     if order_book_state_hawkes is not None:

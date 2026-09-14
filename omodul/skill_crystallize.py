@@ -26,13 +26,16 @@ SKILLS_DIR = Path.home() / ".veya" / "skills"
 
 def _lesson_signature(trigger_type: str, subject_ref: str, evidence: dict) -> str:
     """失败模式签名: trigger + subject + 证据关键字段归一。"""
-    ev_pairs = "".join(
-        f"{k}={str(v)[:80]}" for k, v in sorted(evidence.items()))
-    canon = json.dumps({
-        "trigger_type": trigger_type,
-        "subject_ref": subject_ref or "",
-        "evidence": ev_pairs[:500],
-    }, sort_keys=True, ensure_ascii=False)
+    ev_pairs = "".join(f"{k}={str(v)[:80]}" for k, v in sorted(evidence.items()))
+    canon = json.dumps(
+        {
+            "trigger_type": trigger_type,
+            "subject_ref": subject_ref or "",
+            "evidence": ev_pairs[:500],
+        },
+        sort_keys=True,
+        ensure_ascii=False,
+    )
     return hashlib.sha256(canon.encode()).hexdigest()[:16]
 
 
@@ -47,8 +50,7 @@ def _load_counts() -> dict[str, dict[str, Any]]:
 
 def _save_counts(counts: dict[str, dict[str, Any]]) -> None:
     LESSONS_FILE.parent.mkdir(parents=True, exist_ok=True)
-    LESSONS_FILE.write_text(json.dumps(counts, ensure_ascii=False, indent=2),
-                            encoding="utf-8")
+    LESSONS_FILE.write_text(json.dumps(counts, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def _genesis_duplicate(skill_name: str) -> bool:
@@ -67,8 +69,7 @@ def _genesis_duplicate(skill_name: str) -> bool:
     return (SKILLS_DIR / skill_name).exists()
 
 
-def _generate_skill_package(skill_name: str, lesson: dict[str, Any],
-                            count: int) -> Path:
+def _generate_skill_package(skill_name: str, lesson: dict[str, Any], count: int) -> Path:
     """生成技能包: manifest.json + run.py (教训固化为修复步骤)。"""
     pkg = SKILLS_DIR / skill_name
     pkg.mkdir(parents=True, exist_ok=True)
@@ -91,8 +92,9 @@ def _generate_skill_package(skill_name: str, lesson: dict[str, Any],
             "required": ["trigger"],
         },
     }
-    (pkg / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2),
-                                       encoding="utf-8")
+    (pkg / "manifest.json").write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
 
     run_py = f'''"""结晶技能 {skill_name} — 由失败教训自动生成 (skill_crystallize)。
 
@@ -152,11 +154,17 @@ def skill_crystallize(
     sig = _lesson_signature(trigger_type, subject_ref, dict(evidence))
 
     counts = _load_counts()
-    entry = counts.setdefault(sig, {
-        "count": 0, "first_ts": time.time(), "last_ts": time.time(),
-        "trigger_type": trigger_type, "subject_ref": subject_ref,
-        "lesson": str(lesson.get("lesson", ""))[:300],
-    })
+    entry = counts.setdefault(
+        sig,
+        {
+            "count": 0,
+            "first_ts": time.time(),
+            "last_ts": time.time(),
+            "trigger_type": trigger_type,
+            "subject_ref": subject_ref,
+            "lesson": str(lesson.get("lesson", ""))[:300],
+        },
+    )
     entry["count"] += 1
     entry["last_ts"] = time.time()
     _save_counts(counts)
@@ -179,13 +187,19 @@ def skill_crystallize(
 
     # 审计
     sink = JsonlSink(str(Path.home() / ".veya" / "audit" / "crystallize.jsonl"))
-    sink.write(AuditEvent(
-        event_type="learn",
-        trace_id=trace_id or f"cry_{uuid.uuid4().hex[:8]}",
-        inputs={"signature": sig, "count": entry["count"], "threshold": recurrence_threshold},
-        learning={"crystallized": crystallized, "dedup": dedup,
-                  "skill_name": name, "module": module_path},
-    ))
+    sink.write(
+        AuditEvent(
+            event_type="learn",
+            trace_id=trace_id or f"cry_{uuid.uuid4().hex[:8]}",
+            inputs={"signature": sig, "count": entry["count"], "threshold": recurrence_threshold},
+            learning={
+                "crystallized": crystallized,
+                "dedup": dedup,
+                "skill_name": name,
+                "module": module_path,
+            },
+        )
+    )
 
     return {
         "crystallized": crystallized,

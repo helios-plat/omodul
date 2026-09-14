@@ -1,4 +1,5 @@
 """Tests for epstein_zin_asset_pricing_workflow."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -11,7 +12,10 @@ class TestEpsteinZinWorkflow:
     def test_basic_output_keys(self):
         result = epstein_zin_asset_pricing_workflow()
         assert set(result.keys()) == {
-            "value_function", "equity_premium", "risk_free_rate", "aggregator_check"
+            "value_function",
+            "equity_premium",
+            "risk_free_rate",
+            "aggregator_check",
         }
 
     def test_value_function_is_array(self):

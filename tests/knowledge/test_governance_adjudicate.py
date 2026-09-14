@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import pytest
 from omodul.governance_adjudicate import GovernanceAdjudicateConfig, governance_adjudicate
-
 
 # ---------------------------------------------------------------------------
 # Mock backend

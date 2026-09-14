@@ -2,22 +2,19 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from fastapi.testclient import TestClient
 
 from omodul.knowledge.browser_extension.auth import init_token
 from omodul.knowledge.browser_extension.page_capture import extract_main_content
+from omodul.knowledge.browser_extension.server import _create_note, _run_ingest, app
 from omodul.knowledge.browser_extension.url_dedup import (
-    normalize_url,
     check_url_existing,
     mark_url_ingested,
 )
-from omodul.knowledge.browser_extension.server import _run_ingest, _create_note, app
-from fastapi.testclient import TestClient
-
 
 # ── Page capture fallback paths ───────────────────────────────────────────────
 
@@ -259,8 +256,6 @@ class TestSidebarWithSelectedText:
         )
         token = init_token()
         client = TestClient(app, raise_server_exceptions=False)
-
-        from oskill.hybrid_search import SearchResult
 
         captured_queries: list[str] = []
 

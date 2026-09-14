@@ -3,6 +3,7 @@ omodul.process_prompt — LLM prompt processing with tool-call parsing.
 
 Pillars: decision_trail, cost
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -13,8 +14,10 @@ from typing import Any, ClassVar
 from pydantic import BaseModel, ConfigDict
 
 from omodul._base import (
-    BaseConfig, CostTracker, Trail, build_result, compute_fingerprint,
-    extract_text, write_report,
+    BaseConfig,
+    CostTracker,
+    Trail,
+    build_result,
 )
 
 _current_cost_m01: ContextVar[CostTracker] = ContextVar("_current_cost_m01")
@@ -22,6 +25,7 @@ _current_cost_m01: ContextVar[CostTracker] = ContextVar("_current_cost_m01")
 
 async def _call(fn: Any, **kwargs: Any) -> Any:
     import inspect
+
     result = fn(**kwargs)
     if inspect.isawaitable(result):
         return await result
@@ -67,9 +71,12 @@ async def process_prompt(
                 cost_usd=cost.total_usd,
             )
 
-        trail.record(event="assemble_context", step_no=0,
-                     n_messages=len(input_data.messages),
-                     n_tools=len(input_data.tools))
+        trail.record(
+            event="assemble_context",
+            step_no=0,
+            n_messages=len(input_data.messages),
+            n_tools=len(input_data.tools),
+        )
 
         if on_step:
             await _call(on_step, step="assemble_context")
@@ -82,18 +89,18 @@ async def process_prompt(
         )
 
         cost.add_from_response(response, model=config.llm_model)
-        trail.record(event="llm_response", step_no=1,
-                     in_tokens=response.get("usage", {}).get("input_tokens", 0),
-                     out_tokens=response.get("usage", {}).get("output_tokens", 0))
+        trail.record(
+            event="llm_response",
+            step_no=1,
+            in_tokens=response.get("usage", {}).get("input_tokens", 0),
+            out_tokens=response.get("usage", {}).get("output_tokens", 0),
+        )
 
         # Parse tool calls from response content
         content = response.get("content", [])
         if isinstance(content, str):
             content = []
-        tool_calls = [
-            b for b in content
-            if isinstance(b, dict) and b.get("type") == "tool_use"
-        ]
+        tool_calls = [b for b in content if isinstance(b, dict) and b.get("type") == "tool_use"]
         assistant_message = {"role": "assistant", "content": content}
 
         loop = asyncio.get_event_loop()

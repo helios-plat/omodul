@@ -15,11 +15,11 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Sequence
+from collections.abc import Sequence
+from dataclasses import dataclass
 
-from oprim._actions import ActionPlan, Applier, gate
-from oprim._lookahead import Divergence, Rollout, Verdict, lookahead, render_verdict
+from oprim._actions import ActionPlan, Applier
+from oprim._lookahead import Divergence, Verdict, lookahead
 from oprim._reward import Probe
 from oprim._sandbox import SandboxPool
 from oprim._snapshot import SnapshotStore
@@ -33,22 +33,28 @@ class ObserverConfig:
     seed: int = 0
 
 
-def run_observer_lookahead(plans: Sequence[ActionPlan],
-                           base_dir: str,
-                           store: SnapshotStore,
-                           pool: SandboxPool,
-                           probes: Sequence[Probe],
-                           *,
-                           applier: Optional[Applier] = None,
-                           config: Optional[ObserverConfig] = None,
-                           divergences: Sequence[Divergence] = ()) -> Verdict:
+def run_observer_lookahead(
+    plans: Sequence[ActionPlan],
+    base_dir: str,
+    store: SnapshotStore,
+    pool: SandboxPool,
+    probes: Sequence[Probe],
+    *,
+    applier: Applier | None = None,
+    config: ObserverConfig | None = None,
+    divergences: Sequence[Divergence] = (),
+) -> Verdict:
     """跑一轮单步 lookahead(编排层门面)。
 
     返回值直接给上层: verdict.chosen 可执行 / verdict.escalations 走人审。
     """
     cfg = config or ObserverConfig()
     return lookahead(
-        plans, base_dir, store, pool, probes,
+        plans,
+        base_dir,
+        store,
+        pool,
+        probes,
         applier=applier,
         min_reward=cfg.min_reward,
         stability_check=cfg.stability_check,

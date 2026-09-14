@@ -5,8 +5,6 @@ from __future__ import annotations
 import json
 import os
 
-import pytest
-
 from omodul.register_entity import (
     RegisterEntityConfig,
     compute_fingerprint_for,

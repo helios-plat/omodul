@@ -1,4 +1,5 @@
 """Tests for omodul.risk_models.drawdown_circuit_breaker."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -42,9 +43,14 @@ class TestDrawdownGreen:
         equity = _healthy_equity()
         result = drawdown_circuit_breaker(equity_curve=equity, **_params())
         required = {
-            "status", "daily_loss", "weekly_loss", "max_drawdown",
-            "vol_ratio", "max_position_notional_usd",
-            "max_total_notional_usd", "halt_recovery_hours",
+            "status",
+            "daily_loss",
+            "weekly_loss",
+            "max_drawdown",
+            "vol_ratio",
+            "max_position_notional_usd",
+            "max_total_notional_usd",
+            "halt_recovery_hours",
         }
         assert required.issubset(set(result.keys()))
 

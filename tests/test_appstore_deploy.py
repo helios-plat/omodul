@@ -1,6 +1,4 @@
-import json
-from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 import yaml
@@ -16,8 +14,10 @@ def mock_catalog(tmp_path):
                 "id": "app1",
                 "compose_template": "services:\n  web:\n    image: nginx:{{version}}\n",
                 "caddy": {
-                    "route_config": {"handle": [{"handler": "reverse_proxy", "upstreams": [{"dial": "web:80"}]}]}
-                }
+                    "route_config": {
+                        "handle": [{"handler": "reverse_proxy", "upstreams": [{"dial": "web:80"}]}]
+                    }
+                },
             }
         ]
     }
@@ -47,11 +47,11 @@ def test_appstore_deploy_happy(mock_caddy, mock_up, mock_pull, mock_catalog, tmp
     assert res["status"] == "completed"
     assert res["fingerprint"] is not None
     assert (tmp_path / "install" / "docker-compose.yml").exists()
-    
+
     # Check rendered content
     compose_content = (tmp_path / "install" / "docker-compose.yml").read_text()
     assert "image: nginx:1.2.3" in compose_content
-    
+
     assert len(res["decision_trail"]["steps"]) >= 6
     assert mock_pull.call_count == 1
     assert mock_up.called
@@ -96,29 +96,44 @@ def test_appstore_deploy_compose_fail(mock_up, mock_catalog, tmp_path):
 
 def test_appstore_deploy_fingerprint_stability(mock_catalog, tmp_path):
     c1 = AppstoreDeployConfig(
-        template_id="app1", catalog_path=mock_catalog, user_params={"v": "1"}, target_install_dir="d"
+        template_id="app1",
+        catalog_path=mock_catalog,
+        user_params={"v": "1"},
+        target_install_dir="d",
     )
     c2 = AppstoreDeployConfig(
-        template_id="app1", catalog_path=mock_catalog, user_params={"v": "1"}, target_install_dir="d"
+        template_id="app1",
+        catalog_path=mock_catalog,
+        user_params={"v": "1"},
+        target_install_dir="d",
     )
     c3 = AppstoreDeployConfig(
-        template_id="app1", catalog_path=mock_catalog, user_params={"v": "2"}, target_install_dir="d"
+        template_id="app1",
+        catalog_path=mock_catalog,
+        user_params={"v": "2"},
+        target_install_dir="d",
     )
-    
+
     f1 = compute_fingerprint_for(c1, None)
     f2 = compute_fingerprint_for(c2, None)
     f3 = compute_fingerprint_for(c3, None)
-    
+
     assert f1 == f2
     assert f1 != f3
 
 
 def test_appstore_deploy_fingerprint_ignored_fields(mock_catalog):
     c1 = AppstoreDeployConfig(
-        template_id="app1", catalog_path=mock_catalog, target_install_dir="d", wait_health_seconds=10
+        template_id="app1",
+        catalog_path=mock_catalog,
+        target_install_dir="d",
+        wait_health_seconds=10,
     )
     c2 = AppstoreDeployConfig(
-        template_id="app1", catalog_path=mock_catalog, target_install_dir="d", wait_health_seconds=60
+        template_id="app1",
+        catalog_path=mock_catalog,
+        target_install_dir="d",
+        wait_health_seconds=60,
     )
     assert compute_fingerprint_for(c1, None) == compute_fingerprint_for(c2, None)
 
@@ -130,7 +145,7 @@ def test_appstore_deploy_no_pull(mock_up, mock_catalog, tmp_path):
         template_id="app1",
         catalog_path=mock_catalog,
         target_install_dir=str(tmp_path / "install"),
-        pull_images=False
+        pull_images=False,
     )
     res = appstore_deploy(config, None, tmp_path / "out")
     # Step 3 (pull) should be skipped
@@ -145,7 +160,7 @@ def test_appstore_deploy_no_caddy(mock_up, tmp_path):
     catalog = {"templates": [{"id": "simple", "compose_template": "..."}]}
     cat_path = tmp_path / "cat.yaml"
     cat_path.write_text(yaml.dump(catalog))
-    
+
     config = AppstoreDeployConfig(
         template_id="simple",
         catalog_path=str(cat_path),
@@ -161,7 +176,9 @@ def test_appstore_deploy_on_step(mock_catalog, tmp_path):
         template_id="app1", catalog_path=mock_catalog, target_install_dir="d"
     )
     steps = []
-    def callback(s): steps.append(s)
+
+    def callback(s):
+        steps.append(s)
 
     with patch("omodul.appstore_deploy.compose_up", return_value={}):
         with patch("omodul.appstore_deploy.docker_image_pull", return_value={}):
@@ -176,7 +193,7 @@ def test_appstore_deploy_decision_trail_fields(mock_catalog, tmp_path):
     )
     with patch("omodul.appstore_deploy.compose_up", return_value={}):
         res = appstore_deploy(config, None, tmp_path / "out")
-    
+
     trail = res["decision_trail"]
     assert "fingerprint" in trail
     assert "omodul_name" in trail

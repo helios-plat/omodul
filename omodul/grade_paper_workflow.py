@@ -5,6 +5,7 @@ Deterministic kernel grading takes priority over LLM (enforced in oprim layer).
 
 Pillars: fingerprint + decision_trail + cost + report
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -56,7 +57,9 @@ async def grade_paper_workflow(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     try:
-        trail.record(event="start", paper_id=input_data.paper_id, n_questions=len(input_data.questions))
+        trail.record(
+            event="start", paper_id=input_data.paper_id, n_questions=len(input_data.questions)
+        )
 
         grades: list[dict] = []
         correct_count = 0
@@ -70,18 +73,22 @@ async def grade_paper_workflow(
                 grade_level=config.grade_level,
             )
             result = await grade_question(inp, caller=caller, model=config.model)
-            grades.append({
-                "question_id": q.question_id or f"q{i+1}",
-                "is_correct": result.is_correct,
-                "method": result.method,
-                "score": 1.0 if result.is_correct else 0.0,
-            })
+            grades.append(
+                {
+                    "question_id": q.question_id or f"q{i + 1}",
+                    "is_correct": result.is_correct,
+                    "method": result.method,
+                    "score": 1.0 if result.is_correct else 0.0,
+                }
+            )
             if result.is_correct:
                 correct_count += 1
-            trail.record(event=f"graded_{i+1}", is_correct=result.is_correct, method=result.method)
+            trail.record(
+                event=f"graded_{i + 1}", is_correct=result.is_correct, method=result.method
+            )
 
             if on_step:
-                on_step("grade_paper_workflow", f"q{i+1}")
+                on_step("grade_paper_workflow", f"q{i + 1}")
 
         total = len(input_data.questions)
         score_pct = correct_count / max(total, 1) * 100

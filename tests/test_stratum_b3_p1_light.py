@@ -1,12 +1,9 @@
-"""Tests for omodul-006/027/028: notification_dispatch_workflow, export_user_data_csv, sync_user_preferences."""
+"""Tests for notification dispatch, user-data export, and preference sync."""
 
 from __future__ import annotations
 
 import sys
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
-
-import pytest
 
 # Stub missing deps not installed in omodul venv.
 # jinja2/sqlalchemy/frontmatter must come first so oskill (which is a real
@@ -36,17 +33,16 @@ if "oprim.csv_writer" not in sys.modules:
     _csv_writer_mod = MagicMock()
     sys.modules["oprim.csv_writer"] = _csv_writer_mod
 
-from omodul.notification_dispatch_workflow import (  # noqa: E402
-    NotifDispatchConfig,
-    NotifDispatchInput,
-    compute_fingerprint_for as notif_fingerprint_for,
-    notification_dispatch_workflow,
-)
 from omodul.export_user_data_csv import (  # noqa: E402
     ExportUserDataConfig,
     ExportUserDataInput,
-    compute_fingerprint_for as export_fingerprint_for,
     export_user_data_csv,
+)
+from omodul.notification_dispatch_workflow import (  # noqa: E402
+    NotifDispatchConfig,
+    NotifDispatchInput,
+    compute_fingerprint_for,
+    notification_dispatch_workflow,
 )
 from omodul.sync_user_preferences import (  # noqa: E402
     SyncPrefsConfig,
@@ -54,6 +50,7 @@ from omodul.sync_user_preferences import (  # noqa: E402
     sync_user_preferences,
 )
 
+notif_fingerprint_for = compute_fingerprint_for
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -206,7 +203,11 @@ class TestExportUserDataCsv:
         rows = self._fake_rows(3)
         csv_out = tmp_path / "user_export.csv"
         with (
-            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
+            patch(
+                "obase.persistence.pool.PgPool.get_or_create",
+                new_callable=AsyncMock,
+                return_value=MagicMock(),
+            ),
             patch("omodul.export_user_data_csv.query", new_callable=AsyncMock, return_value=rows),
             patch("oprim.csv_writer.csv_writer", return_value=csv_out),
         ):
@@ -218,7 +219,11 @@ class TestExportUserDataCsv:
         rows = self._fake_rows(7)
         csv_out = tmp_path / "user_export.csv"
         with (
-            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
+            patch(
+                "obase.persistence.pool.PgPool.get_or_create",
+                new_callable=AsyncMock,
+                return_value=MagicMock(),
+            ),
             patch("omodul.export_user_data_csv.query", new_callable=AsyncMock, return_value=rows),
             patch("oprim.csv_writer.csv_writer", return_value=csv_out),
         ):
@@ -227,8 +232,16 @@ class TestExportUserDataCsv:
 
     async def test_failure_no_raise(self, tmp_path):
         with (
-            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
-            patch("omodul.export_user_data_csv.query", new_callable=AsyncMock, side_effect=Exception("DB error")),
+            patch(
+                "obase.persistence.pool.PgPool.get_or_create",
+                new_callable=AsyncMock,
+                return_value=MagicMock(),
+            ),
+            patch(
+                "omodul.export_user_data_csv.query",
+                new_callable=AsyncMock,
+                side_effect=Exception("DB error"),
+            ),
         ):
             result = await export_user_data_csv(_export_config(), ExportUserDataInput(), tmp_path)
         assert result["status"] == "failed"
@@ -239,7 +252,11 @@ class TestExportUserDataCsv:
         rows = self._fake_rows(2)
         csv_out = tmp_path / "user_export.csv"
         with (
-            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
+            patch(
+                "obase.persistence.pool.PgPool.get_or_create",
+                new_callable=AsyncMock,
+                return_value=MagicMock(),
+            ),
             patch("omodul.export_user_data_csv.query", new_callable=AsyncMock, return_value=rows),
             patch("oprim.csv_writer.csv_writer", return_value=csv_out),
         ):
@@ -252,8 +269,14 @@ class TestExportUserDataCsv:
         csv_out = tmp_path / "user_export.csv"
         custom_q = "SELECT id FROM substrates WHERE user_id = $1 LIMIT 1"
         with (
-            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
-            patch("omodul.export_user_data_csv.query", new_callable=AsyncMock, return_value=rows) as mock_q,
+            patch(
+                "obase.persistence.pool.PgPool.get_or_create",
+                new_callable=AsyncMock,
+                return_value=MagicMock(),
+            ),
+            patch(
+                "omodul.export_user_data_csv.query", new_callable=AsyncMock, return_value=rows
+            ) as mock_q,
             patch("oprim.csv_writer.csv_writer", return_value=csv_out),
         ):
             await export_user_data_csv(
@@ -262,17 +285,20 @@ class TestExportUserDataCsv:
                 tmp_path,
             )
         call_kwargs = mock_q.call_args
-        assert (
-            call_kwargs.kwargs.get("sql") == custom_q
-            or custom_q in str(call_kwargs)
-        )
+        assert call_kwargs.kwargs.get("sql") == custom_q or custom_q in str(call_kwargs)
 
     async def test_export_scope_substrates(self, tmp_path):
         rows = self._fake_rows(4)
         csv_out = tmp_path / "user_export.csv"
         with (
-            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
-            patch("omodul.export_user_data_csv.query", new_callable=AsyncMock, return_value=rows) as mock_q,
+            patch(
+                "obase.persistence.pool.PgPool.get_or_create",
+                new_callable=AsyncMock,
+                return_value=MagicMock(),
+            ),
+            patch(
+                "omodul.export_user_data_csv.query", new_callable=AsyncMock, return_value=rows
+            ) as mock_q,
             patch("oprim.csv_writer.csv_writer", return_value=csv_out),
         ):
             result = await export_user_data_csv(
@@ -288,7 +314,11 @@ class TestExportUserDataCsv:
         rows = self._fake_rows(1)
         csv_out = tmp_path / "user_export.csv"
         with (
-            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
+            patch(
+                "obase.persistence.pool.PgPool.get_or_create",
+                new_callable=AsyncMock,
+                return_value=MagicMock(),
+            ),
             patch("omodul.export_user_data_csv.query", new_callable=AsyncMock, return_value=rows),
             patch("oprim.csv_writer.csv_writer", return_value=csv_out),
         ):
@@ -312,8 +342,16 @@ class TestSyncUserPreferences:
                 strategy="auto",
             )
         return [
-            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
-            patch("omodul.sync_user_preferences.read_one", new_callable=AsyncMock, return_value=local_prefs),
+            patch(
+                "obase.persistence.pool.PgPool.get_or_create",
+                new_callable=AsyncMock,
+                return_value=MagicMock(),
+            ),
+            patch(
+                "omodul.sync_user_preferences.read_one",
+                new_callable=AsyncMock,
+                return_value=local_prefs,
+            ),
             patch("oskill.resolve_conflict.resolve_conflict", return_value=resolved_mock),
             patch("omodul.sync_user_preferences.write_one", new_callable=AsyncMock, return_value=1),
         ]
@@ -321,8 +359,16 @@ class TestSyncUserPreferences:
     async def test_merge_status_completed(self, tmp_path):
         resolved = _resolved_mock({"theme": "light"}, [], "auto")
         with (
-            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
-            patch("omodul.sync_user_preferences.read_one", new_callable=AsyncMock, return_value={"theme": "dark"}),
+            patch(
+                "obase.persistence.pool.PgPool.get_or_create",
+                new_callable=AsyncMock,
+                return_value=MagicMock(),
+            ),
+            patch(
+                "omodul.sync_user_preferences.read_one",
+                new_callable=AsyncMock,
+                return_value={"theme": "dark"},
+            ),
             patch("oskill.resolve_conflict.resolve_conflict", return_value=resolved),
             patch("omodul.sync_user_preferences.write_one", new_callable=AsyncMock, return_value=1),
         ):
@@ -337,8 +383,16 @@ class TestSyncUserPreferences:
     async def test_conflict_count_correct(self, tmp_path):
         resolved = _resolved_mock({"a": 1, "b": 2}, ["a", "b"], "auto")
         with (
-            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
-            patch("omodul.sync_user_preferences.read_one", new_callable=AsyncMock, return_value={"a": 0, "b": 0}),
+            patch(
+                "obase.persistence.pool.PgPool.get_or_create",
+                new_callable=AsyncMock,
+                return_value=MagicMock(),
+            ),
+            patch(
+                "omodul.sync_user_preferences.read_one",
+                new_callable=AsyncMock,
+                return_value={"a": 0, "b": 0},
+            ),
             patch("oskill.resolve_conflict.resolve_conflict", return_value=resolved),
             patch("omodul.sync_user_preferences.write_one", new_callable=AsyncMock, return_value=1),
         ):
@@ -352,8 +406,16 @@ class TestSyncUserPreferences:
     async def test_remote_wins_strategy(self, tmp_path):
         resolved = _resolved_mock({"theme": "light"}, ["theme"], "remote_wins")
         with (
-            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
-            patch("omodul.sync_user_preferences.read_one", new_callable=AsyncMock, return_value={"theme": "dark"}),
+            patch(
+                "obase.persistence.pool.PgPool.get_or_create",
+                new_callable=AsyncMock,
+                return_value=MagicMock(),
+            ),
+            patch(
+                "omodul.sync_user_preferences.read_one",
+                new_callable=AsyncMock,
+                return_value={"theme": "dark"},
+            ),
             patch("oskill.resolve_conflict.resolve_conflict", return_value=resolved) as mock_rc,
             patch("omodul.sync_user_preferences.write_one", new_callable=AsyncMock, return_value=1),
         ):
@@ -369,8 +431,14 @@ class TestSyncUserPreferences:
     async def test_no_local_prefs_uses_empty_dict(self, tmp_path):
         resolved = _resolved_mock({"theme": "light"}, [], "auto")
         with (
-            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
-            patch("omodul.sync_user_preferences.read_one", new_callable=AsyncMock, return_value=None),
+            patch(
+                "obase.persistence.pool.PgPool.get_or_create",
+                new_callable=AsyncMock,
+                return_value=MagicMock(),
+            ),
+            patch(
+                "omodul.sync_user_preferences.read_one", new_callable=AsyncMock, return_value=None
+            ),
             patch("oskill.resolve_conflict.resolve_conflict", return_value=resolved) as mock_rc,
             patch("omodul.sync_user_preferences.write_one", new_callable=AsyncMock, return_value=1),
         ):
@@ -384,8 +452,16 @@ class TestSyncUserPreferences:
 
     async def test_failure_no_raise(self, tmp_path):
         with (
-            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
-            patch("omodul.sync_user_preferences.read_one", new_callable=AsyncMock, side_effect=Exception("DB down")),
+            patch(
+                "obase.persistence.pool.PgPool.get_or_create",
+                new_callable=AsyncMock,
+                return_value=MagicMock(),
+            ),
+            patch(
+                "omodul.sync_user_preferences.read_one",
+                new_callable=AsyncMock,
+                side_effect=Exception("DB down"),
+            ),
         ):
             result = await sync_user_preferences(
                 _sync_config(),
@@ -399,8 +475,16 @@ class TestSyncUserPreferences:
     async def test_fingerprint_non_null(self, tmp_path):
         resolved = _resolved_mock({"theme": "dark"}, [], "auto")
         with (
-            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
-            patch("omodul.sync_user_preferences.read_one", new_callable=AsyncMock, return_value={"theme": "dark"}),
+            patch(
+                "obase.persistence.pool.PgPool.get_or_create",
+                new_callable=AsyncMock,
+                return_value=MagicMock(),
+            ),
+            patch(
+                "omodul.sync_user_preferences.read_one",
+                new_callable=AsyncMock,
+                return_value={"theme": "dark"},
+            ),
             patch("oskill.resolve_conflict.resolve_conflict", return_value=resolved),
             patch("omodul.sync_user_preferences.write_one", new_callable=AsyncMock, return_value=1),
         ):
@@ -415,7 +499,11 @@ class TestSyncUserPreferences:
     async def test_cost_is_zero(self, tmp_path):
         resolved = _resolved_mock({}, [], "auto")
         with (
-            patch("obase.persistence.pool.PgPool.get_or_create", new_callable=AsyncMock, return_value=MagicMock()),
+            patch(
+                "obase.persistence.pool.PgPool.get_or_create",
+                new_callable=AsyncMock,
+                return_value=MagicMock(),
+            ),
             patch("omodul.sync_user_preferences.read_one", new_callable=AsyncMock, return_value={}),
             patch("oskill.resolve_conflict.resolve_conflict", return_value=resolved),
             patch("omodul.sync_user_preferences.write_one", new_callable=AsyncMock, return_value=1),

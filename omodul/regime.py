@@ -5,10 +5,9 @@ from __future__ import annotations
 from typing import Literal
 
 import numpy as np
-import pandas as pd
-
 import oprim
 import oskill
+import pandas as pd
 
 
 def regime_replay_search(
@@ -38,8 +37,10 @@ def regime_replay_search(
     query = current_panel.select_dtypes(include=[np.number]).iloc[:, 0].values
 
     # Build historical database
-    db = [np.asarray(h["panel"].select_dtypes(include=[np.number]).iloc[:, 0].values)
-          for h in historical_panels]
+    db = [
+        np.asarray(h["panel"].select_dtypes(include=[np.number]).iloc[:, 0].values)
+        for h in historical_panels
+    ]
 
     # Use oskill.historical_analogy_search
     matches = oskill.historical_analogy_search(
@@ -64,7 +65,7 @@ def regime_replay_search(
         # Pad shorter series with NaN
         padded = np.full((len(forward_returns_list), max_len), np.nan)
         for i, f in enumerate(forward_returns_list):
-            padded[i, :len(f)] = f
+            padded[i, : len(f)] = f
 
         # Compute quantiles per day
         days = []
@@ -72,21 +73,25 @@ def regime_replay_search(
             col = padded[:, d]
             valid = col[~np.isnan(col)]
             if len(valid) > 0:
-                days.append({
-                    "day": d + 1,
-                    "q_05": float(np.percentile(valid, 5)),
-                    "q_25": float(np.percentile(valid, 25)),
-                    "q_50": float(np.percentile(valid, 50)),
-                    "q_75": float(np.percentile(valid, 75)),
-                    "q_95": float(np.percentile(valid, 95)),
-                    "mean": float(np.mean(valid)),
-                    "std": float(np.std(valid)),
-                })
+                days.append(
+                    {
+                        "day": d + 1,
+                        "q_05": float(np.percentile(valid, 5)),
+                        "q_25": float(np.percentile(valid, 25)),
+                        "q_50": float(np.percentile(valid, 50)),
+                        "q_75": float(np.percentile(valid, 75)),
+                        "q_95": float(np.percentile(valid, 95)),
+                        "mean": float(np.mean(valid)),
+                        "std": float(np.std(valid)),
+                    }
+                )
         forward_dist = pd.DataFrame(days)
 
         # Cumulative forward at horizon
-        cum_returns = [float(np.prod(1 + padded[i, ~np.isnan(padded[i])]) - 1)
-                       for i in range(len(forward_returns_list))]
+        cum_returns = [
+            float(np.prod(1 + padded[i, ~np.isnan(padded[i])]) - 1)
+            for i in range(len(forward_returns_list))
+        ]
         cum_arr = np.array(cum_returns)
         cumulative_forward = {
             "expected_return_at_horizon": float(np.mean(cum_arr)),
@@ -99,7 +104,9 @@ def regime_replay_search(
 
     # Regime transition summary
     regime_summary = None
-    panels_with_regimes = [h for h in historical_panels if "regime_labels" in h and h["regime_labels"] is not None]
+    panels_with_regimes = [
+        h for h in historical_panels if "regime_labels" in h and h["regime_labels"] is not None
+    ]
     if panels_with_regimes:
         first_labels = panels_with_regimes[0]["regime_labels"]
         if isinstance(first_labels, pd.Series) and len(first_labels) > 5:
@@ -158,13 +165,11 @@ def regime_change_detector(
         from_regime = regime_labels.iloc[pos - 1]
         to_regime = regime_labels.iloc[pos]
 
-        before = values.iloc[pos - window_before:pos].values
-        after = values.iloc[pos:pos + window_after].values
+        before = values.iloc[pos - window_before : pos].values
+        after = values.iloc[pos : pos + window_after].values
 
         # Distribution shift test
-        shift_result = oskill.distribution_shift_test(
-            before, after, methods=shift_test_methods
-        )
+        shift_result = oskill.distribution_shift_test(before, after, methods=shift_test_methods)
 
         # Compute metrics before/after
         metrics_before = {}
@@ -182,16 +187,19 @@ def regime_change_detector(
                 metrics_before[m] = sk_b["skewness"]
                 metrics_after[m] = sk_a["skewness"]
 
-        transitions.append({
-            "timestamp": idx,
-            "from_regime": from_regime,
-            "to_regime": to_regime,
-            "shift_detected": shift_result["shift_detected"],
-            "metrics_before": metrics_before,
-            "metrics_after": metrics_after,
-            "metric_changes": {k: metrics_after.get(k, 0) - metrics_before.get(k, 0)
-                               for k in metrics},
-        })
+        transitions.append(
+            {
+                "timestamp": idx,
+                "from_regime": from_regime,
+                "to_regime": to_regime,
+                "shift_detected": shift_result["shift_detected"],
+                "metrics_before": metrics_before,
+                "metrics_after": metrics_after,
+                "metric_changes": {
+                    k: metrics_after.get(k, 0) - metrics_before.get(k, 0) for k in metrics
+                },
+            }
+        )
 
     # Transition history
     transition_history = None
@@ -233,7 +241,9 @@ def regime_conditional_dashboard_data(
 
     # Per-regime metrics using oskill
     per_regime = oskill.regime_aware_performance(
-        returns, regime_labels, metrics=metrics,
+        returns,
+        regime_labels,
+        metrics=metrics,
         annualization_factor=annualization_factor,
     )
 
@@ -256,7 +266,9 @@ def regime_conditional_dashboard_data(
                     if r1 == r2:
                         row[r2] = False
                     else:
-                        data_r2 = oprim.regime_filter_data(returns_df, regime_labels, r2)["returns"].values
+                        data_r2 = oprim.regime_filter_data(returns_df, regime_labels, r2)[
+                            "returns"
+                        ].values
                         if len(data_r1) > 10 and len(data_r2) > 10:
                             shift = oskill.distribution_shift_test(data_r1, data_r2)
                             row[r2] = shift["shift_detected"]

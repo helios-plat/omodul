@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import uuid
-from typing import Any, Callable, Literal, Optional
+from collections.abc import Callable
+from typing import Any, Literal
 
 import numpy as np
-import pandas as pd
-
 import oprim
 import oskill
+import pandas as pd
 
 
 def alert_calibration_engine(
@@ -57,15 +57,19 @@ def alert_calibration_engine(
             g_outcomes = group_df["actual_outcome"].values.astype(float)
             if len(g_preds) < 5:
                 continue
-            g_cal = oskill.calibration_analysis(g_preds, g_outcomes, n_bins=min(n_bins, len(g_preds) // 2))
+            g_cal = oskill.calibration_analysis(
+                g_preds, g_outcomes, n_bins=min(n_bins, len(g_preds) // 2)
+            )
 
             bandit_state = None
             if include_bandit_state:
                 successes = int(g_outcomes.sum())
                 failures = len(g_outcomes) - successes
                 bandit_state = oprim.bayes_beta_update(
-                    bandit_prior_alpha, bandit_prior_beta,
-                    successes=successes, failures=failures,
+                    bandit_prior_alpha,
+                    bandit_prior_beta,
+                    successes=successes,
+                    failures=failures,
                 )
                 bandit_state["n_observed"] = len(g_outcomes)
 
@@ -126,8 +130,8 @@ def thesis_invalidation_monitor(
         # Rolling Brier
         rolling_briers = []
         for i in range(rolling_window, len(preds) + 1):
-            w_preds = preds[i - rolling_window:i]
-            w_out = outcomes[i - rolling_window:i]
+            w_preds = preds[i - rolling_window : i]
+            w_out = outcomes[i - rolling_window : i]
             rb = oprim.brier_score_decomposed(w_preds, w_out)
             rolling_briers.append(rb["brier_score"])
 
@@ -136,8 +140,9 @@ def thesis_invalidation_monitor(
         trend_increasing = False
         if include_trend_analysis and len(rolling_briers) > 10:
             trend_test = oprim.mann_kendall_trend(np.array(rolling_briers))
-            trend_increasing = (trend_test["p_value"] < mk_alpha and
-                                trend_test.get("trend", "") == "increasing")
+            trend_increasing = (
+                trend_test["p_value"] < mk_alpha and trend_test.get("trend", "") == "increasing"
+            )
 
         # 4-state judgment
         above_threshold = latest_brier > brier_threshold
@@ -152,7 +157,11 @@ def thesis_invalidation_monitor(
 
         # Calibration
         n_bins = min(10, len(preds) // 3)
-        cal = oskill.calibration_analysis(preds, outcomes, n_bins=max(2, n_bins)) if len(preds) >= 10 else None
+        cal = (
+            oskill.calibration_analysis(preds, outcomes, n_bins=max(2, n_bins))
+            if len(preds) >= 10
+            else None
+        )
 
         per_thesis[str(thesis_id)] = {
             "status": status,
@@ -173,7 +182,9 @@ def thesis_invalidation_monitor(
             "n_warning": statuses.count("WARNING"),
             "n_at_risk": statuses.count("AT_RISK"),
             "n_invalidated": statuses.count("INVALIDATED"),
-            "invalidated_thesis_ids": [k for k, v in per_thesis.items() if v["status"] == "INVALIDATED"],
+            "invalidated_thesis_ids": [
+                k for k, v in per_thesis.items() if v["status"] == "INVALIDATED"
+            ],
         },
         "warnings": [],
     }
@@ -187,11 +198,11 @@ async def buy_sell_analysis(
     fundamentals: dict,
     technicals: dict,
     llm_client_provider: Callable[[str], Any],
-    byok_key: Optional[str],
+    byok_key: str | None,
     prompt_builder: Callable,
-    cache: Optional[Any] = None,
+    cache: Any | None = None,
     cache_ttl_hours: int = 24,
-    cost_tracker: Optional[Any] = None,
+    cost_tracker: Any | None = None,
     tier: Literal["fast", "deep"] = "fast",
 ) -> dict:
     """Generate LLM analysis of buy/sell timing.
@@ -240,7 +251,7 @@ async def buy_sell_analysis(
 
     trail_id = str(uuid.uuid4())
     symbol = signal_data.get("symbol", "")
-    fingerprint = f"{symbol}:{tier}:{sorted(signal_data.items())}"
+    f"{symbol}:{tier}:{sorted(signal_data.items())}"
     cache_key = f"buy_sell:{symbol}:{tier}"
     cache_status = "miss"
     cost = 0.001 if tier == "fast" else 0.01
@@ -264,13 +275,15 @@ async def buy_sell_analysis(
         except Exception:
             llm_client = None
 
-        prompt = prompt_builder({
-            "symbol": symbol,
-            "signal_data": signal_data,
-            "fundamentals": fundamentals,
-            "technicals": technicals,
-            "tier": tier,
-        })
+        prompt = prompt_builder(
+            {
+                "symbol": symbol,
+                "signal_data": signal_data,
+                "fundamentals": fundamentals,
+                "technicals": technicals,
+                "tier": tier,
+            }
+        )
 
         llm_str = ""
         if llm_client is not None:
@@ -312,12 +325,14 @@ async def buy_sell_analysis(
 
     if cost_tracker is not None:
         try:
-            cost_tracker({
-                "trail_id": trail_id,
-                "symbol": symbol,
-                "cost": cost,
-                "tier": tier,
-            })
+            cost_tracker(
+                {
+                    "trail_id": trail_id,
+                    "symbol": symbol,
+                    "cost": cost,
+                    "tier": tier,
+                }
+            )
         except Exception:
             pass
 

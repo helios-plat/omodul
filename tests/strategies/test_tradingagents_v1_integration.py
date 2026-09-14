@@ -1,7 +1,9 @@
 """Integration test: mock only multi_agent_consensus, real BOCPD + position_sizing."""
-import pytest
+
+from unittest.mock import AsyncMock, patch
+
 import numpy as np
-from unittest.mock import patch, AsyncMock
+import pytest
 
 from omodul.strategies.tradingagents_v1 import tradingagents_v1
 

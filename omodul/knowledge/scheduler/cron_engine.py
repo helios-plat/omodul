@@ -1,13 +1,12 @@
 """APScheduler-based cron engine for Stratum scheduled jobs."""
+
 from __future__ import annotations
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
-
 from oprim._logging import log
 
 from .job_store import JobStore
-from .notifier import Notifier
 from .run_lock import RunLock
 from .runner import ScheduledJobRunner
 

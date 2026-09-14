@@ -24,17 +24,23 @@ def _market_rules():
 
 def _ohlcv_for(symbol, n=10, start=date(2025, 1, 2)):
     from datetime import timedelta
+
     bars = []
     price = 100.0
     d = start
     for i in range(n):
         while d.weekday() >= 5:
             d += timedelta(days=1)
-        bars.append({
-            "date": d, "open": price, "high": price * 1.01,
-            "low": price * 0.99, "close": price * 1.005,
-            "volume": 1_000_000.0,
-        })
+        bars.append(
+            {
+                "date": d,
+                "open": price,
+                "high": price * 1.01,
+                "low": price * 0.99,
+                "close": price * 1.005,
+                "volume": 1_000_000.0,
+            }
+        )
         price *= 1.002
         d += timedelta(days=1)
     return bars
@@ -152,8 +158,10 @@ class TestUserSystemBacktest:
 
     def test_regime_breakdown_structure(self):
         ohlcv = self._history(20)
-        regime = [{"date": b["date"], "regime": "BULL" if i < 10 else "BEAR"}
-                  for i, b in enumerate(ohlcv["AAPL"])]
+        regime = [
+            {"date": b["date"], "regime": "BULL" if i < 10 else "BEAR"}
+            for i, b in enumerate(ohlcv["AAPL"])
+        ]
         result = user_system_backtest(
             system_config=self._config(),
             ohlcv_history=ohlcv,

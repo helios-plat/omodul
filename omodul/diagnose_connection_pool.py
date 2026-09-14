@@ -6,11 +6,10 @@ from pathlib import Path
 from typing import Any, ClassVar, Literal
 
 from obase.cost_tracker import CostTracker
-from pydantic import BaseModel
-
 from oprim import postgres_locks_status
 from oprim import postgres_slow_queries as postgres_long_running_queries  # v3 alias removed
-from oskill import diagnose_pattern_match, compute_severity_score, classify_signal
+from oskill import classify_signal, compute_severity_score, diagnose_pattern_match
+from pydantic import BaseModel
 
 from omodul._base_config import BaseConfig
 from omodul._decision_trail import build_decision_trail, record_step
@@ -85,7 +84,9 @@ def diagnose_connection_pool(
         conn_pct = input_data.active_connections / max(input_data.max_connections, 1) * 100
         slow_count = len(slow_queries)
         signal = {
-            "message": f"{slow_count} slow queries, {lock_count} locks, {conn_pct:.0f}% connections",
+            "message": (
+                f"{slow_count} slow queries, {lock_count} locks, {conn_pct:.0f}% connections"
+            ),
             "resource_used_percent": conn_pct,
             "error_rate": slow_count / max(input_data.active_connections, 1),
             "latency_p99_ms": max((q.duration_ms for q in slow_queries), default=0.0),

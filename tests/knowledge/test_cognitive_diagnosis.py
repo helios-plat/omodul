@@ -6,7 +6,6 @@ import json
 import os
 
 import numpy as np
-import pytest
 
 from omodul.cognitive_diagnosis import (
     CognitiveDiagnosisConfig,
@@ -14,7 +13,6 @@ from omodul.cognitive_diagnosis import (
     diagnose,
     run_diagnosis,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -225,7 +223,7 @@ def test_run_diagnosis_output_dir_creates_trail_json(tmp_path):
     R, Q = make_2x2()
     config = make_config()
     out_dir = str(tmp_path / "diag_trail")
-    result = run_diagnosis(config, {"R": R, "Q": Q}, output_dir=out_dir)
+    run_diagnosis(config, {"R": R, "Q": Q}, output_dir=out_dir)
     trail_file = os.path.join(out_dir, "decision_trail.json")
     assert os.path.exists(trail_file)
     with open(trail_file) as f:

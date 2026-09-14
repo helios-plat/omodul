@@ -9,14 +9,16 @@ from __future__ import annotations
 
 import hashlib
 import traceback
-from datetime import UTC, datetime, date
+from collections.abc import Callable
+from datetime import UTC, date, datetime
 from pathlib import Path
-from typing import Any, ClassVar, Set
+from typing import Any, ClassVar
 
 from obase.cost_tracker import CostTracker
+from pydantic import BaseModel, field_validator
+
 from omodul._base_config import BaseConfig
 from omodul._decision_trail import build_decision_trail, record_step
-from pydantic import BaseModel, field_validator
 
 _VERSION = "1.0.0"
 
@@ -60,7 +62,7 @@ _DEFAULT_SMOOTHING_CFG = {
 }
 
 
-def compute_fingerprint_for(config: "RegimeInferenceConfig", input_data: Any) -> str:
+def compute_fingerprint_for(config: RegimeInferenceConfig, input_data: Any) -> str:
     """公开 fingerprint API. 依赖 {trade_date, smoothing_window}."""
     raw = f"{config.trade_date.isoformat()}|{config.smoothing_window}|{_VERSION}"
     return hashlib.sha256(raw.encode()).hexdigest()
@@ -69,8 +71,8 @@ def compute_fingerprint_for(config: "RegimeInferenceConfig", input_data: Any) ->
 class RegimeInferenceConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "regime_inference"
     _omodul_version: ClassVar[str] = _VERSION
-    _enabled_pillars: ClassVar[Set[str]] = {"fingerprint", "decision_trail"}
-    _fingerprint_fields: ClassVar[Set[str]] = {"trade_date", "smoothing_window"}
+    _enabled_pillars: ClassVar[set[str]] = {"fingerprint", "decision_trail"}
+    _fingerprint_fields: ClassVar[set[str]] = {"trade_date", "smoothing_window"}
 
     trade_date: date
     smoothing_window: int = 5
@@ -95,7 +97,7 @@ def regime_inference(
     input_data: RegimeInferenceInput,
     output_dir: Path | None = None,
     *,
-    on_step: "Callable[[dict[str, Any]], None] | None" = None,
+    on_step: Callable[[dict[str, Any]], None] | None = None,
 ) -> dict[str, Any]:
     """Market regime 推断. 纯同步, IO-free.
 
@@ -103,7 +105,6 @@ def regime_inference(
         dict: regime, raw_regime, confidence, state_changed, persistence_days,
               transitional_state, fingerprint, decision_trail, status, error.
     """
-    from collections.abc import Callable
     from oskill.regime.multi_state_classify import multi_state_classify
     from oskill.regime_smoothing import regime_smoothing
     from oskill.types import RawRegimeState, SmoothingConfig
@@ -115,8 +116,12 @@ def regime_inference(
     status = "completed"
     error_info = None
     result_data: dict[str, Any] = {
-        "regime": "unknown", "raw_regime": "unknown", "confidence": 0.0,
-        "state_changed": False, "persistence_days": 0, "transitional_state": None,
+        "regime": "unknown",
+        "raw_regime": "unknown",
+        "confidence": 0.0,
+        "state_changed": False,
+        "persistence_days": 0,
+        "transitional_state": None,
     }
 
     try:

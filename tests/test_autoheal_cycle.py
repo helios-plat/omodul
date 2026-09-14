@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import sys
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -111,7 +110,7 @@ async def test_autoheal_cycle_skips_non_container_alerts(
     mock_pool.return_value = MagicMock()
     mock_query.return_value = [
         {"id": 1, "source": "node:10.0.0.1"},  # node-level, should be skipped
-        {"id": 2, "source": "container:app"},   # container, should restart
+        {"id": 2, "source": "container:app"},  # container, should restart
     ]
     mock_restart.return_value = None
     mock_verify.return_value = _make_verify_result(healthy=True)

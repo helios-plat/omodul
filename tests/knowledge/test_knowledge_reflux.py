@@ -5,21 +5,16 @@ from __future__ import annotations
 import json
 import os
 
-import pytest
-
 from omodul.knowledge_reflux import (
     KnowledgeRefluxConfig,
     RefluxReport,
-    check_dangling,
     check_contradictions,
-    check_missing_inverse,
-    check_supersede_stale,
+    check_dangling,
     check_missing_fields,
-    compute_coherence,
+    check_supersede_stale,
     reflux,
     run_reflux,
 )
-
 
 # ---------------------------------------------------------------------------
 # Mock backend
@@ -78,7 +73,7 @@ def test_empty_graph_returns_no_findings():
 
 def test_dangling_reference_detected():
     """An edge pointing to a non-existent node is flagged as dangling."""
-    b = make_backend_with(
+    make_backend_with(
         nodes={"A": {"title": "A"}},
         edges=[("A", "depends_on", "GHOST")],
     )
@@ -106,7 +101,7 @@ def test_contradiction_detection_supersede_cycle():
 
 
 def test_missing_inverse_relation_detected_and_auto_applied():
-    """A→supports→B missing the B→supported_by→A inverse is auto-applied when auto_apply_low=True."""
+    """A→supports→B missing its inverse is auto-applied when enabled."""
     b = make_backend_with(
         nodes={"A": {"title": "A"}, "B": {"title": "B"}},
         edges=[("A", "supports", "B")],

@@ -1,7 +1,6 @@
 """Tests for omodul.knowledge.views.applier (pure function)."""
-from __future__ import annotations
 
-import pytest
+from __future__ import annotations
 
 from omodul.knowledge.views.applier import apply_view
 

@@ -1,36 +1,51 @@
 """URL deduplication for browser extension ingestion."""
+
 from __future__ import annotations
 
+from pathlib import Path
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
+import oprim.meta_db as _oprim_meta_db_mod
 from oprim.meta_db import open_meta_db
 from oprim.meta_db.duckdb import MetaDB
-
 from oskill.knowledge._context import meta_db_path
-
-import oprim.meta_db as _oprim_meta_db_mod
-from pathlib import Path
 
 _MIGRATIONS_DIR = Path(_oprim_meta_db_mod.__file__).parent / "migrations"
 
-_TRACKING_PARAMS = frozenset({
-    "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
-    "fbclid", "gclid", "msclkid", "twclid", "ref", "_hsenc",
-})
+_TRACKING_PARAMS = frozenset(
+    {
+        "utm_source",
+        "utm_medium",
+        "utm_campaign",
+        "utm_term",
+        "utm_content",
+        "fbclid",
+        "gclid",
+        "msclkid",
+        "twclid",
+        "ref",
+        "_hsenc",
+    }
+)
 
 
 def normalize_url(url: str) -> str:
     """Strip tracking params and fragment; lowercase scheme+host."""
     try:
         p = urlparse(url)
-        clean_query = urlencode([
-            (k, v) for k, v in parse_qsl(p.query)
-            if k not in _TRACKING_PARAMS
-        ])
-        return urlunparse((
-            p.scheme.lower(), p.netloc.lower(), p.path,
-            p.params, clean_query, "",  # drop fragment
-        ))
+        clean_query = urlencode(
+            [(k, v) for k, v in parse_qsl(p.query) if k not in _TRACKING_PARAMS]
+        )
+        return urlunparse(
+            (
+                p.scheme.lower(),
+                p.netloc.lower(),
+                p.path,
+                p.params,
+                clean_query,
+                "",  # drop fragment
+            )
+        )
     except Exception:
         return url
 
@@ -59,6 +74,7 @@ def check_url_existing(url: str) -> str | None:
 def mark_url_ingested(url: str, substrate_id: str) -> None:
     """Record URL → substrate_id mapping."""
     import uuid
+
     normalized = normalize_url(url)
     db = _get_db()
     db.execute(

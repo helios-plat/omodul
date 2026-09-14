@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import pytest
 from omodul.learning_distill import LearningDistillConfig, learning_distill
-
 
 # ---------------------------------------------------------------------------
 # Mock backend
@@ -115,8 +113,8 @@ def test_ku_id_in_findings():
 
 def test_invalid_episode_quarantined():
     # Force ku_gate_validate to reject by patching it in the module where it's used
-    import sys
     import importlib
+    import sys
 
     # Ensure the module is loaded
     importlib.import_module("omodul.learning_distill")

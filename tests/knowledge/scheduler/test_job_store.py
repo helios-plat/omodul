@@ -1,4 +1,5 @@
 """Tests for JobStore."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -12,11 +13,15 @@ from omodul.knowledge.scheduler.job_store import JobStore
 
 def _make_store(tmp_path: Path) -> JobStore:
     from oprim.meta_db import MetaDB
+
     db_path = tmp_path / "test.duckdb"
     db = MetaDB(db_path)
     migrations_dir = (
         Path(__file__).parent.parent.parent.parent.parent.parent
-        / "oprim" / "oprim" / "meta_db" / "migrations"
+        / "oprim"
+        / "oprim"
+        / "meta_db"
+        / "migrations"
     )
     if migrations_dir.exists():
         db.migrate(migrations_dir)

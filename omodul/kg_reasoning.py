@@ -24,6 +24,7 @@ _VAR_RE = re.compile(r"^[A-Z][A-Za-z0-9_]*$")
 
 # ── 原子与规则 ───────────────────────────────────────────────────────
 
+
 class Atom:
     """predicate(term1, term2) — term 是常量或变量。"""
 
@@ -34,7 +35,7 @@ class Atom:
         self.terms = terms
 
     @classmethod
-    def parse(cls, text: str) -> "Atom":
+    def parse(cls, text: str) -> Atom:
         m = re.match(r"^(\w+)\s*\((.*)\)\s*$", text.strip())
         if not m:
             raise ValueError(f"原子格式非法: {text!r} (应为 predicate(a, b))")
@@ -83,6 +84,7 @@ def parse_rule(text: str) -> tuple[Atom, list[Atom]]:
 
 # ── 前向链接推理 ─────────────────────────────────────────────────────
 
+
 def forward_chain(
     facts: list[tuple[str, str, str]],
     rules: list[tuple[Atom, list[Atom]]],
@@ -128,7 +130,8 @@ def forward_chain(
                 if new_fact not in known:
                     known.add(new_fact)
                     evidence[new_fact] = [
-                        f"rule: {head!r} :- " + ", ".join(repr(b) for b in bodies)
+                        f"rule: {head!r} :- "
+                        + ", ".join(repr(b) for b in bodies)
                         + f"  via {binding}"
                     ]
                     new_count += 1
@@ -139,7 +142,9 @@ def forward_chain(
     return known, evidence
 
 
-def _enumerate_bindings(bodies: list[Atom], known: set[tuple[str, str, str]]) -> list[dict[str, str]]:
+def _enumerate_bindings(
+    bodies: list[Atom], known: set[tuple[str, str, str]]
+) -> list[dict[str, str]]:
     """对规则体做联合绑定枚举 (小规模; 每个 body 依次找匹配事实)。"""
     bindings: list[dict[str, str]] = [{}]
     for atom in bodies:
@@ -173,6 +178,7 @@ def _match_with_binding(atom: Atom, fact: tuple[str, str, str], binding: dict[st
 
 # ── Config / Input ────────────────────────────────────────────────────
 
+
 class KgReasoningConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "kg_reasoning"
     _omodul_version: ClassVar[str] = "1.0.0"
@@ -182,14 +188,15 @@ class KgReasoningConfig(BaseConfig):
 
 class KgReasoningInput(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    facts: list[list[str]] = []          # [[predicate, subject, object], ...]
-    rules: list[str] = []                # "head :- body1, body2" 或 "pred(a, b)"
-    query: str = ""                      # 可选: 目标原子 (返回是否可推导 + 证据)
+    facts: list[list[str]] = []  # [[predicate, subject, object], ...]
+    rules: list[str] = []  # "head :- body1, body2" 或 "pred(a, b)"
+    query: str = ""  # 可选: 目标原子 (返回是否可推导 + 证据)
     max_facts: int = 10_000
-    backend: Any | None = None           # 可选: 概念图数据源 (list_triples())
+    backend: Any | None = None  # 可选: 概念图数据源 (list_triples())
 
 
 # ── operator 入口 ─────────────────────────────────────────────────────
+
 
 def kg_reasoning(
     config: KgReasoningConfig,
@@ -217,7 +224,8 @@ def kg_reasoning(
     rules = [parse_rule(r) for r in input_data.rules]
 
     known, evidence = forward_chain(
-        facts, rules,
+        facts,
+        rules,
         max_iterations=config.max_iterations,
         max_facts=input_data.max_facts,
     )
@@ -232,7 +240,11 @@ def kg_reasoning(
         qatom = Atom.parse(input_data.query)
         if not qatom.is_ground():
             raise ValueError("query 必须是地面原子 (无变量)")
-        target = (qatom.predicate, qatom.terms[0], qatom.terms[1] if len(qatom.terms) > 1 else qatom.terms[0])
+        target = (
+            qatom.predicate,
+            qatom.terms[0],
+            qatom.terms[1] if len(qatom.terms) > 1 else qatom.terms[0],
+        )
         derivable = target in known
         findings["query"] = input_data.query.strip()
         findings["derivable"] = derivable
@@ -240,8 +252,11 @@ def kg_reasoning(
 
     trail_path = trail.write(Path(output_dir) if output_dir else Path.cwd())
     return build_result(
-        status="completed", error=None,
+        status="completed",
+        error=None,
         fingerprint=compute_fingerprint({"facts": len(facts), "rules": len(rules)}),
-        trail=trail, trail_path=trail_path,
-        cost_usd=0.0, findings=findings,
+        trail=trail,
+        trail_path=trail_path,
+        cost_usd=0.0,
+        findings=findings,
     )

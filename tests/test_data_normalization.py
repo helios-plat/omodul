@@ -1,4 +1,5 @@
 """Tests for omodul.data_normalization.okx_to_nautilus."""
+
 from __future__ import annotations
 
 import json

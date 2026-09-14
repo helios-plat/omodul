@@ -7,9 +7,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from oprim._logging import log
-
-from oskill.knowledge.classify_inbox_file import ClassifyResult, classify_inbox_file
 from oskill.ingest_substrate import IngestResult, ingest_substrate
+from oskill.knowledge.classify_inbox_file import ClassifyResult, classify_inbox_file
 
 
 @dataclass
@@ -83,6 +82,7 @@ def _move_to_archive(file_path: Path, archive_dir: Path) -> None:
 
 if __name__ == "__main__":  # pragma: no cover
     import asyncio
+
     from oprim._config import cfg
     from oprim.bootstrap import bootstrap
 

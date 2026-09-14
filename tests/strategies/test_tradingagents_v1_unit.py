@@ -1,9 +1,11 @@
 """Unit tests for tradingagents_v1 — mock all LLM + classic calls."""
-import pytest
-import numpy as np
-from unittest.mock import patch, AsyncMock, MagicMock
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import numpy as np
+import pytest
 from oskill.llm_client import LLMTimeout
+
 from omodul.strategies.tradingagents_v1 import tradingagents_v1
 
 
@@ -69,15 +71,23 @@ def _consensus_long(symbol):
 @pytest.mark.asyncio
 async def test_happy_path_long_signals():
     """All LLM + classic succeed → 2 long signals."""
-    with patch(
-        "omodul.strategies.tradingagents_v1.multi_agent_consensus",
-        new=AsyncMock(side_effect=lambda **kw: _consensus_long(kw["symbol"])),
-    ), patch(
-        "omodul.strategies.tradingagents_v1.bocpd",
-        return_value={"current_regime_probability": 0.7, "current_run_length": 100, "regime_changes": []},
-    ), patch(
-        "omodul.strategies.tradingagents_v1.position_sizing_vol_target",
-        return_value={"target_notional_usd": 2000.0},
+    with (
+        patch(
+            "omodul.strategies.tradingagents_v1.multi_agent_consensus",
+            new=AsyncMock(side_effect=lambda **kw: _consensus_long(kw["symbol"])),
+        ),
+        patch(
+            "omodul.strategies.tradingagents_v1.bocpd",
+            return_value={
+                "current_regime_probability": 0.7,
+                "current_run_length": 100,
+                "regime_changes": [],
+            },
+        ),
+        patch(
+            "omodul.strategies.tradingagents_v1.position_sizing_vol_target",
+            return_value={"target_notional_usd": 2000.0},
+        ),
     ):
         result = await tradingagents_v1(_market_state(), _config())
 
@@ -96,12 +106,19 @@ async def test_happy_path_long_signals():
 @pytest.mark.asyncio
 async def test_llm_unavailable_drops_strategy():
     """LLM 失败 → dropped=True, signals 空, 不 fallback."""
-    with patch(
-        "omodul.strategies.tradingagents_v1.multi_agent_consensus",
-        new=AsyncMock(side_effect=LLMTimeout("test")),
-    ), patch(
-        "omodul.strategies.tradingagents_v1.bocpd",
-        return_value={"current_regime_probability": 0.7, "current_run_length": 100, "regime_changes": []},
+    with (
+        patch(
+            "omodul.strategies.tradingagents_v1.multi_agent_consensus",
+            new=AsyncMock(side_effect=LLMTimeout("test")),
+        ),
+        patch(
+            "omodul.strategies.tradingagents_v1.bocpd",
+            return_value={
+                "current_regime_probability": 0.7,
+                "current_run_length": 100,
+                "regime_changes": [],
+            },
+        ),
     ):
         result = await tradingagents_v1(_market_state(), _config())
 
@@ -118,6 +135,7 @@ async def test_llm_unavailable_drops_strategy():
 @pytest.mark.asyncio
 async def test_neutral_signal_no_position():
     """Final factor below threshold → neutral, no position sizing called."""
+
     def _consensus_neutral(symbol):
         c = _consensus_long(symbol)
         c["llm_factor"] = 0.0
@@ -126,15 +144,23 @@ async def test_neutral_signal_no_position():
 
     sizing_mock = MagicMock(return_value={"target_notional_usd": 1000.0})
 
-    with patch(
-        "omodul.strategies.tradingagents_v1.multi_agent_consensus",
-        new=AsyncMock(side_effect=lambda **kw: _consensus_neutral(kw["symbol"])),
-    ), patch(
-        "omodul.strategies.tradingagents_v1.bocpd",
-        return_value={"current_regime_probability": 0.5, "current_run_length": 100, "regime_changes": []},
-    ), patch(
-        "omodul.strategies.tradingagents_v1.position_sizing_vol_target",
-        sizing_mock,
+    with (
+        patch(
+            "omodul.strategies.tradingagents_v1.multi_agent_consensus",
+            new=AsyncMock(side_effect=lambda **kw: _consensus_neutral(kw["symbol"])),
+        ),
+        patch(
+            "omodul.strategies.tradingagents_v1.bocpd",
+            return_value={
+                "current_regime_probability": 0.5,
+                "current_run_length": 100,
+                "regime_changes": [],
+            },
+        ),
+        patch(
+            "omodul.strategies.tradingagents_v1.position_sizing_vol_target",
+            sizing_mock,
+        ),
     ):
         result = await tradingagents_v1(_market_state(), _config())
 
@@ -148,6 +174,7 @@ async def test_neutral_signal_no_position():
 @pytest.mark.asyncio
 async def test_short_signal():
     """LLM strongly bear + bearish classic → short signal."""
+
     def _consensus_short(symbol):
         return {
             "symbol": symbol,
@@ -176,15 +203,23 @@ async def test_short_signal():
             },
         }
 
-    with patch(
-        "omodul.strategies.tradingagents_v1.multi_agent_consensus",
-        new=AsyncMock(side_effect=lambda **kw: _consensus_short(kw["symbol"])),
-    ), patch(
-        "omodul.strategies.tradingagents_v1.bocpd",
-        return_value={"current_regime_probability": 0.3, "current_run_length": 50, "regime_changes": []},
-    ), patch(
-        "omodul.strategies.tradingagents_v1.position_sizing_vol_target",
-        return_value={"target_notional_usd": 1500.0},
+    with (
+        patch(
+            "omodul.strategies.tradingagents_v1.multi_agent_consensus",
+            new=AsyncMock(side_effect=lambda **kw: _consensus_short(kw["symbol"])),
+        ),
+        patch(
+            "omodul.strategies.tradingagents_v1.bocpd",
+            return_value={
+                "current_regime_probability": 0.3,
+                "current_run_length": 50,
+                "regime_changes": [],
+            },
+        ),
+        patch(
+            "omodul.strategies.tradingagents_v1.position_sizing_vol_target",
+            return_value={"target_notional_usd": 1500.0},
+        ),
     ):
         result = await tradingagents_v1(_market_state(), _config())
 
@@ -224,15 +259,23 @@ async def test_factor_ensemble_arithmetic():
             },
         }
 
-    with patch(
-        "omodul.strategies.tradingagents_v1.multi_agent_consensus",
-        new=AsyncMock(side_effect=lambda **kw: _consensus(kw["symbol"])),
-    ), patch(
-        "omodul.strategies.tradingagents_v1.bocpd",
-        return_value={"current_regime_probability": 1.0, "current_run_length": 200, "regime_changes": []},
-    ), patch(
-        "omodul.strategies.tradingagents_v1.position_sizing_vol_target",
-        return_value={"target_notional_usd": 1000.0},
+    with (
+        patch(
+            "omodul.strategies.tradingagents_v1.multi_agent_consensus",
+            new=AsyncMock(side_effect=lambda **kw: _consensus(kw["symbol"])),
+        ),
+        patch(
+            "omodul.strategies.tradingagents_v1.bocpd",
+            return_value={
+                "current_regime_probability": 1.0,
+                "current_run_length": 200,
+                "regime_changes": [],
+            },
+        ),
+        patch(
+            "omodul.strategies.tradingagents_v1.position_sizing_vol_target",
+            return_value={"target_notional_usd": 1000.0},
+        ),
     ):
         result = await tradingagents_v1(_market_state(), cfg)
 
@@ -244,15 +287,23 @@ async def test_factor_ensemble_arithmetic():
 @pytest.mark.asyncio
 async def test_audit_evidence_structure_full():
     """audit_evidence contains all required fields (GOLD-ready)."""
-    with patch(
-        "omodul.strategies.tradingagents_v1.multi_agent_consensus",
-        new=AsyncMock(side_effect=lambda **kw: _consensus_long(kw["symbol"])),
-    ), patch(
-        "omodul.strategies.tradingagents_v1.bocpd",
-        return_value={"current_regime_probability": 0.7, "current_run_length": 100, "regime_changes": []},
-    ), patch(
-        "omodul.strategies.tradingagents_v1.position_sizing_vol_target",
-        return_value={"target_notional_usd": 2000.0},
+    with (
+        patch(
+            "omodul.strategies.tradingagents_v1.multi_agent_consensus",
+            new=AsyncMock(side_effect=lambda **kw: _consensus_long(kw["symbol"])),
+        ),
+        patch(
+            "omodul.strategies.tradingagents_v1.bocpd",
+            return_value={
+                "current_regime_probability": 0.7,
+                "current_run_length": 100,
+                "regime_changes": [],
+            },
+        ),
+        patch(
+            "omodul.strategies.tradingagents_v1.position_sizing_vol_target",
+            return_value={"target_notional_usd": 2000.0},
+        ),
     ):
         result = await tradingagents_v1(_market_state(), _config())
 
@@ -281,15 +332,23 @@ async def test_empty_returns_skipped():
     ms = _market_state()
     ms["features"]["returns_BTC-USDT"] = np.array([])
 
-    with patch(
-        "omodul.strategies.tradingagents_v1.multi_agent_consensus",
-        new=AsyncMock(side_effect=lambda **kw: _consensus_long(kw["symbol"])),
-    ), patch(
-        "omodul.strategies.tradingagents_v1.bocpd",
-        return_value={"current_regime_probability": 0.7, "current_run_length": 100, "regime_changes": []},
-    ), patch(
-        "omodul.strategies.tradingagents_v1.position_sizing_vol_target",
-        return_value={"target_notional_usd": 2000.0},
+    with (
+        patch(
+            "omodul.strategies.tradingagents_v1.multi_agent_consensus",
+            new=AsyncMock(side_effect=lambda **kw: _consensus_long(kw["symbol"])),
+        ),
+        patch(
+            "omodul.strategies.tradingagents_v1.bocpd",
+            return_value={
+                "current_regime_probability": 0.7,
+                "current_run_length": 100,
+                "regime_changes": [],
+            },
+        ),
+        patch(
+            "omodul.strategies.tradingagents_v1.position_sizing_vol_target",
+            return_value={"target_notional_usd": 2000.0},
+        ),
     ):
         result = await tradingagents_v1(ms, _config())
 
@@ -332,15 +391,23 @@ async def test_threshold_boundary():
             },
         }
 
-    with patch(
-        "omodul.strategies.tradingagents_v1.multi_agent_consensus",
-        new=AsyncMock(side_effect=lambda **kw: _consensus(kw["symbol"])),
-    ), patch(
-        "omodul.strategies.tradingagents_v1.bocpd",
-        return_value={"current_regime_probability": 0.55, "current_run_length": 100, "regime_changes": []},
-    ), patch(
-        "omodul.strategies.tradingagents_v1.position_sizing_vol_target",
-        return_value={"target_notional_usd": 1000.0},
+    with (
+        patch(
+            "omodul.strategies.tradingagents_v1.multi_agent_consensus",
+            new=AsyncMock(side_effect=lambda **kw: _consensus(kw["symbol"])),
+        ),
+        patch(
+            "omodul.strategies.tradingagents_v1.bocpd",
+            return_value={
+                "current_regime_probability": 0.55,
+                "current_run_length": 100,
+                "regime_changes": [],
+            },
+        ),
+        patch(
+            "omodul.strategies.tradingagents_v1.position_sizing_vol_target",
+            return_value={"target_notional_usd": 1000.0},
+        ),
     ):
         result = await tradingagents_v1(_market_state(), cfg)
 

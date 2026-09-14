@@ -1,4 +1,5 @@
 """Persistent deterministic KU health issues."""
+
 from __future__ import annotations
 
 import hashlib
@@ -45,7 +46,13 @@ def persist_issues(issue_dir: Path, issues: list[dict]) -> Path:
             current_ids.add(issue_id)
             if issue_id in existing and existing[issue_id].get("status") == "open":
                 continue
-            record = {**issue, "issue_id": issue_id, "status": "open", "opened_at": now, "resolved_at": None}
+            record = {
+                **issue,
+                "issue_id": issue_id,
+                "status": "open",
+                "opened_at": now,
+                "resolved_at": None,
+            }
             handle.write(json.dumps(record, ensure_ascii=False) + "\n")
             existing[issue_id] = record
         for issue_id, record in existing.items():
@@ -71,5 +78,7 @@ def mark_resolved(issue_dir: Path, issue_id: str) -> bool:
             item["resolved_at"] = datetime.now(UTC).isoformat()
             found = True
         records.append(item)
-    path.write_text("".join(json.dumps(item, ensure_ascii=False) + "\n" for item in records), encoding="utf-8")
+    path.write_text(
+        "".join(json.dumps(item, ensure_ascii=False) + "\n" for item in records), encoding="utf-8"
+    )
     return found

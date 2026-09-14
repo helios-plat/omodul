@@ -34,9 +34,8 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any, ClassVar
 
-from pydantic import ConfigDict
-
 from oprim import coherence_compute
+from pydantic import ConfigDict
 
 from omodul._base_config import BaseConfig
 

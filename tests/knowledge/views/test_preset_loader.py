@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from omodul.knowledge.views.crud import list_views
 from omodul.knowledge.views.preset_loader import install_builtin_views
 

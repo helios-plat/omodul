@@ -12,9 +12,9 @@ import traceback
 from pathlib import Path
 from typing import Any, ClassVar
 
+from obase.persistence import PgPool, query
 from pydantic import BaseModel
 
-from obase.persistence import PgPool, query
 from omodul._base_config import BaseConfig
 from omodul._fingerprint import compute_fingerprint
 

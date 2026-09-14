@@ -1,11 +1,14 @@
 """VCP audit event construction."""
+
 from __future__ import annotations
+
 import os
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from oprim.crypto import sha256_hash
 from oprim.serialization import canonical_json
+
 
 def _native(obj):
     """Recursively coerce numpy scalars to native Python for canonical hashing."""
@@ -19,23 +22,28 @@ def _native(obj):
 
 
 VALID_EVENT_TYPES = {
-    "signal_proposed", "signal_dropped",
-    "order_approved", "risk_blocked",
-    "order_submitted", "fill_received",
-    "order_cancelled", "order_rejected",
-    "mode_transition", "circuit_breaker_state_change",
+    "signal_proposed",
+    "signal_dropped",
+    "order_approved",
+    "risk_blocked",
+    "order_submitted",
+    "fill_received",
+    "order_cancelled",
+    "order_rejected",
+    "mode_transition",
+    "circuit_breaker_state_change",
 }
 
 
 def _uuid7() -> str:
     """UUIDv7 using stdlib only (time-ordered)."""
     ts_ms = int(time.time() * 1000) & 0xFFFFFFFFFFFF
-    rand = int.from_bytes(os.urandom(10), 'big')
+    rand = int.from_bytes(os.urandom(10), "big")
     rand_a = (rand >> 68) & 0x0FFF
     rand_b = rand & 0x3FFFFFFFFFFFFFFF
     value = (ts_ms << 80) | (0x7 << 76) | (rand_a << 64) | (0b10 << 62) | rand_b
-    h = f'{value:032x}'
-    return f'{h[:8]}-{h[8:12]}-{h[12:16]}-{h[16:20]}-{h[20:32]}'
+    h = f"{value:032x}"
+    return f"{h[:8]}-{h[8:12]}-{h[12:16]}-{h[16:20]}-{h[20:32]}"
 
 
 def vcp_silver_record(
@@ -100,7 +108,7 @@ def vcp_silver_record(
 
     event = {
         "event_id": _uuid7(),
-        "event_timestamp": datetime.now(timezone.utc).isoformat(),
+        "event_timestamp": datetime.now(UTC).isoformat(),
         "policy_id": policy_id,
         "policy_version": policy_version,
         "conformance_tier": "SILVER",

@@ -2,15 +2,16 @@
 
 Used by omodul.strategies.tradingagents_v1 (P16).
 """
+
 from __future__ import annotations
 
 import asyncio
 
 import structlog
-
-from omodul.llm_workflows._audit_evidence import build_audit_evidence
 from oskill.llm_agent import bear_analyst, bull_analyst, referee
 from oskill.llm_client import LLMUnavailable
+
+from omodul.llm_workflows._audit_evidence import build_audit_evidence
 
 log = structlog.get_logger(__name__)
 

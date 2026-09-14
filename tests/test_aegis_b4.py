@@ -7,17 +7,17 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from omodul.diagnose_queue_health import (
-    DiagnoseQueueHealthConfig,
-    DiagnoseQueueHealthFindings,
-    DiagnoseQueueHealthInput,
-    diagnose_queue_health,
-)
 from omodul.diagnose_connection_pool import (
     DiagnoseConnectionPoolConfig,
     DiagnoseConnectionPoolFindings,
     DiagnoseConnectionPoolInput,
     diagnose_connection_pool,
+)
+from omodul.diagnose_queue_health import (
+    DiagnoseQueueHealthConfig,
+    DiagnoseQueueHealthFindings,
+    DiagnoseQueueHealthInput,
+    diagnose_queue_health,
 )
 from omodul.diagnose_service_health import (
     DiagnoseServiceHealthConfig,
@@ -25,7 +25,6 @@ from omodul.diagnose_service_health import (
     DiagnoseServiceHealthInput,
     diagnose_service_health,
 )
-
 
 # ─── helpers ────────────────────────────────────────────────────────────────
 

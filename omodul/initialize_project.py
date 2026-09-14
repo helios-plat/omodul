@@ -1,52 +1,69 @@
 """Auto-split from hicode whl."""
 
 from __future__ import annotations
-from oprim import file_read, file_write, glob_match
-import sys
-import os
+
 from pathlib import Path
 from typing import Any, ClassVar
+
+from oprim import file_read, file_write, glob_match
 from pydantic import BaseModel
-from ._base import BaseConfig, CostTracker, Trail, build_result, compute_fingerprint, extract_text, llm_call, write_report
+
+from ._base import (
+    BaseConfig,
+    CostTracker,
+    Trail,
+    build_result,
+    compute_fingerprint,
+    extract_text,
+    llm_call,
+    write_report,
+)
+
 
 class InitProjectConfig(BaseConfig):
     max_files_to_scan: int = 100
     head_lines_per_file: int = 10
-    agents_md_path: str = 'AGENTS.md'
-    _omodul_name: ClassVar[str] = 'initialize_project'
-    _omodul_version: ClassVar[str] = '1.0.0'
-    _fingerprint_fields: ClassVar[set[str]] = {'root_path'}
-    _enabled_pillars: ClassVar[set[str]] = {'report', 'cost', 'decision_trail'}
+    agents_md_path: str = "AGENTS.md"
+    _omodul_name: ClassVar[str] = "initialize_project"
+    _omodul_version: ClassVar[str] = "1.0.0"
+    _fingerprint_fields: ClassVar[set[str]] = {"root_path"}
+    _enabled_pillars: ClassVar[set[str]] = {"report", "cost", "decision_trail"}
+
 
 class InitProjectInput(BaseModel):
     root_path: str
     caller: Any
 
+
 class GenerateCommitConfig(BaseConfig):
     max_diff_tokens: int = 3000
-    commit_style: str = 'conventional'
-    _omodul_name: ClassVar[str] = 'generate_commit_message'
-    _omodul_version: ClassVar[str] = '1.0.0'
-    _fingerprint_fields: ClassVar[set[str]] = {'diff_hash'}
-    _enabled_pillars: ClassVar[set[str]] = {'cost'}
+    commit_style: str = "conventional"
+    _omodul_name: ClassVar[str] = "generate_commit_message"
+    _omodul_version: ClassVar[str] = "1.0.0"
+    _fingerprint_fields: ClassVar[set[str]] = {"diff_hash"}
+    _enabled_pillars: ClassVar[set[str]] = {"cost"}
+
 
 class GenerateCommitInput(BaseModel):
     repo_path: str
     caller: Any
-    diff_text: str = ''
+    diff_text: str = ""
+
 
 class SummarizeSessionConfig(BaseConfig):
     max_messages: int = 200
-    summary_length: str = 'brief'
-    _omodul_name: ClassVar[str] = 'summarize_session'
-    _omodul_version: ClassVar[str] = '1.0.0'
+    summary_length: str = "brief"
+    _omodul_name: ClassVar[str] = "summarize_session"
+    _omodul_version: ClassVar[str] = "1.0.0"
     _fingerprint_fields: ClassVar[set[str]] = set()
-    _enabled_pillars: ClassVar[set[str]] = {'cost'}
+    _enabled_pillars: ClassVar[set[str]] = {"cost"}
+
 
 class SummarizeSessionInput(BaseModel):
     messages: list[dict]
     caller: Any
-    session_id: str = ''
+    session_id: str = ""
+
 
 async def initialize_project(
     config: InitProjectConfig,
@@ -77,7 +94,7 @@ async def initialize_project(
 
         # 扫描文件结构
         try:
-            py_files = glob_match("**/*.py", root=str(root))[:config.max_files_to_scan]
+            py_files = glob_match("**/*.py", root=str(root))[: config.max_files_to_scan]
             ts_files = glob_match("**/*.ts", root=str(root))[:20]
             all_files = py_files + ts_files
         except Exception:  # pragma: no cover
@@ -87,8 +104,12 @@ async def initialize_project(
         for p in all_files[:30]:
             try:  # pragma: no cover
                 content = file_read(str(p))  # pragma: no cover
-                head = "\n".join(content.splitlines()[:config.head_lines_per_file])  # pragma: no cover
-                rel = str(Path(p).relative_to(root)) if hasattr(p, 'relative_to') else str(p)  # pragma: no cover
+                head = "\n".join(
+                    content.splitlines()[: config.head_lines_per_file]
+                )  # pragma: no cover
+                rel = (
+                    str(Path(p).relative_to(root)) if hasattr(p, "relative_to") else str(p)
+                )  # pragma: no cover
                 file_summaries.append(f"### {rel}\n```\n{head}\n```")  # pragma: no cover
             except Exception:  # pragma: no cover
                 pass  # pragma: no cover
@@ -111,7 +132,9 @@ async def initialize_project(
         response = await llm_call(
             [{"role": "user", "content": prompt}],
             caller=input_data.caller,
-            cost=cost, trail=trail, model=config.llm_model,
+            cost=cost,
+            trail=trail,
+            model=config.llm_model,
             event="generate_agents_md",
         )
         agents_md_content = extract_text(response)
@@ -126,8 +149,7 @@ async def initialize_project(
 
         # report
         report_content = f"# initialize_project Report\n\n{agents_md_content}"
-        report_path = write_report(report_content, output_dir=output_dir,
-                                   name="initialize_project")
+        report_path = write_report(report_content, output_dir=output_dir, name="initialize_project")
         trail.record(event="completed")
         if on_step:
             on_step({"event": "completed"})
@@ -141,8 +163,12 @@ async def initialize_project(
         trail_path = trail.write(output_dir)
 
     return build_result(
-        status=status, error=error, fingerprint=fingerprint,
-        trail=trail, trail_path=trail_path, report_path=report_path,
+        status=status,
+        error=error,
+        fingerprint=fingerprint,
+        trail=trail,
+        trail_path=trail_path,
+        report_path=report_path,
         cost_usd=cost.total_usd,
         agents_md_path=str(root / config.agents_md_path) if status == "completed" else None,
     )

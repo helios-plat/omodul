@@ -3,29 +3,27 @@
 ≥10 tests per element, LLM fully mocked.
 Mandatory: test_deleted_user_not_queryable
 """
+
 from __future__ import annotations
 
 import asyncio
-import tempfile
 from pathlib import Path
-from unittest.mock import AsyncMock
 
-import pytest
-
-from omodul.knowledge_profiling_workflow import (
-    KnowledgeProfilingConfig,
-    KnowledgeProfilingInput,
-    knowledge_profiling_workflow,
-)
 from omodul.adaptive_quiz_session import (
     AdaptiveQuizConfig,
     AdaptiveQuizInput,
     adaptive_quiz_session,
 )
-from omodul.socratic_tutor_session import (
-    SocraticTutorConfig,
-    SocraticTutorInput,
-    socratic_tutor_session,
+from omodul.breakpoint_remediation_workflow import (
+    BreakpointRemediationConfig,
+    BreakpointRemediationInput,
+    WrongQuestionEntry,
+    breakpoint_remediation_workflow,
+)
+from omodul.daily_mission_workflow import (
+    DailyMissionConfig,
+    DailyMissionInput,
+    daily_mission_workflow,
 )
 from omodul.grade_paper_workflow import (
     GradePaperConfig,
@@ -33,27 +31,20 @@ from omodul.grade_paper_workflow import (
     PaperQuestion,
     grade_paper_workflow,
 )
-from omodul.daily_mission_workflow import (
-    DailyMissionConfig,
-    DailyMissionInput,
-    daily_mission_workflow,
-)
-from omodul.variant_generation_workflow import (
-    VariantGenerationConfig,
-    VariantGenerationInput,
-    VariantSource,
-    variant_generation_workflow,
+from omodul.knowledge_profiling_workflow import (
+    KnowledgeProfilingConfig,
+    KnowledgeProfilingInput,
+    knowledge_profiling_workflow,
 )
 from omodul.learning_progress_report import (
     LearningProgressConfig,
     ProgressInput,
     learning_progress_report,
 )
-from omodul.breakpoint_remediation_workflow import (
-    BreakpointRemediationConfig,
-    BreakpointRemediationInput,
-    WrongQuestionEntry,
-    breakpoint_remediation_workflow,
+from omodul.socratic_tutor_session import (
+    SocraticTutorConfig,
+    SocraticTutorInput,
+    socratic_tutor_session,
 )
 from omodul.user_data_workflow import (
     UserDataConfig,
@@ -62,11 +53,17 @@ from omodul.user_data_workflow import (
     reset_store,
     user_data_workflow,
 )
-
+from omodul.variant_generation_workflow import (
+    VariantGenerationConfig,
+    VariantGenerationInput,
+    VariantSource,
+    variant_generation_workflow,
+)
 
 # ---------------------------------------------------------------------------
 # Mock helpers
 # ---------------------------------------------------------------------------
+
 
 def make_caller(text="ok"):
     async def caller(**kwargs):
@@ -75,17 +72,20 @@ def make_caller(text="ok"):
             "stop_reason": "end_turn",
             "usage": {"input_tokens": 10, "output_tokens": 20},
         }
+
     return caller
 
 
 def make_json_caller(data: dict):
     import json
+
     return make_caller(json.dumps(data))
 
 
 # ---------------------------------------------------------------------------
 # ME-1: knowledge_profiling_workflow
 # ---------------------------------------------------------------------------
+
 
 class TestKnowledgeProfilingWorkflow:
     def _attempts(self, kc_id, correct_seq):
@@ -120,9 +120,7 @@ class TestKnowledgeProfilingWorkflow:
 
     def test_report_written(self, tmp_path):
         cfg = KnowledgeProfilingConfig(min_attempts_for_mastery=1)
-        inp = KnowledgeProfilingInput(
-            user_id="u1", attempt_history=self._attempts("x", [True])
-        )
+        inp = KnowledgeProfilingInput(user_id="u1", attempt_history=self._attempts("x", [True]))
         r = asyncio.run(knowledge_profiling_workflow(cfg, inp, tmp_path))
         if r.get("report_path"):
             assert Path(r["report_path"]).exists()
@@ -157,7 +155,9 @@ class TestKnowledgeProfilingWorkflow:
         steps = []
         cfg = KnowledgeProfilingConfig()
         inp = KnowledgeProfilingInput(user_id="u1", attempt_history=[])
-        asyncio.run(knowledge_profiling_workflow(cfg, inp, tmp_path, on_step=lambda *a: steps.append(a)))
+        asyncio.run(
+            knowledge_profiling_workflow(cfg, inp, tmp_path, on_step=lambda *a: steps.append(a))
+        )
         assert len(steps) > 0
 
     def test_trail_written(self, tmp_path):
@@ -171,6 +171,7 @@ class TestKnowledgeProfilingWorkflow:
 # ---------------------------------------------------------------------------
 # ME-2: adaptive_quiz_session
 # ---------------------------------------------------------------------------
+
 
 class TestAdaptiveQuizSession:
     def _bank(self, n=8):
@@ -253,6 +254,7 @@ class TestAdaptiveQuizSession:
 # ME-3: socratic_tutor_session
 # ---------------------------------------------------------------------------
 
+
 class TestSocraticTutorSession:
     def test_status_ok(self, tmp_path):
         caller = make_caller("继续思考")
@@ -333,13 +335,18 @@ class TestSocraticTutorSession:
 # ME-4: grade_paper_workflow
 # ---------------------------------------------------------------------------
 
+
 class TestGradePaperWorkflow:
     def _make_inp(self, student_answer, expected_answer):
         return GradePaperInput(
             user_id="u1",
             paper_id="p1",
             questions=[
-                PaperQuestion(question="x+1=3, x=?", student_answer=student_answer, expected_answer=expected_answer)
+                PaperQuestion(
+                    question="x+1=3, x=?",
+                    student_answer=student_answer,
+                    expected_answer=expected_answer,
+                )
             ],
         )
 
@@ -417,13 +424,18 @@ class TestGradePaperWorkflow:
         caller = make_json_caller({"is_correct": True, "score": 1.0, "feedback": "ok"})
         cfg = GradePaperConfig()
         inp = self._make_inp("2", "2")
-        asyncio.run(grade_paper_workflow(cfg, inp, tmp_path, caller=caller, on_step=lambda *a: steps.append(a)))
+        asyncio.run(
+            grade_paper_workflow(
+                cfg, inp, tmp_path, caller=caller, on_step=lambda *a: steps.append(a)
+            )
+        )
         assert len(steps) > 0
 
 
 # ---------------------------------------------------------------------------
 # ME-5: daily_mission_workflow (sync!)
 # ---------------------------------------------------------------------------
+
 
 class TestDailyMissionWorkflow:
     def _questions(self, n=10):
@@ -435,6 +447,7 @@ class TestDailyMissionWorkflow:
 
     def test_is_sync(self, tmp_path):
         import inspect
+
         assert not inspect.iscoroutinefunction(daily_mission_workflow)
 
     def test_status_ok(self, tmp_path):
@@ -512,11 +525,14 @@ class TestDailyMissionWorkflow:
 # ME-6: variant_generation_workflow
 # ---------------------------------------------------------------------------
 
+
 class TestVariantGenerationWorkflow:
     def test_status_ok(self, tmp_path):
         caller = make_json_caller({"question": "x+2=5, x=?", "kc_ids": ["algebra"]})
         cfg = VariantGenerationConfig(variants_per_question=1)
-        inp = VariantGenerationInput(sources=[VariantSource(source_id="s1", question="x+1=3", kc_ids=["algebra"])])
+        inp = VariantGenerationInput(
+            sources=[VariantSource(source_id="s1", question="x+1=3", kc_ids=["algebra"])]
+        )
         r = asyncio.run(variant_generation_workflow(cfg, inp, tmp_path, caller=caller))
         assert r["status"] == "ok"
 
@@ -528,7 +544,9 @@ class TestVariantGenerationWorkflow:
         assert len(r["variants"]) == 2
 
     def test_answer_always_empty(self, tmp_path):
-        caller = make_json_caller({"question": "new q", "answer": "SHOULD_NOT_APPEAR", "kc_ids": []})
+        caller = make_json_caller(
+            {"question": "new q", "answer": "SHOULD_NOT_APPEAR", "kc_ids": []}
+        )
         cfg = VariantGenerationConfig(variants_per_question=1)
         inp = VariantGenerationInput(sources=[VariantSource(question="q", answer="a")])
         r = asyncio.run(variant_generation_workflow(cfg, inp, tmp_path, caller=caller))
@@ -582,10 +600,12 @@ class TestVariantGenerationWorkflow:
     def test_multiple_sources(self, tmp_path):
         caller = make_json_caller({"question": "q", "kc_ids": []})
         cfg = VariantGenerationConfig(variants_per_question=1)
-        inp = VariantGenerationInput(sources=[
-            VariantSource(source_id="s1", question="q1"),
-            VariantSource(source_id="s2", question="q2"),
-        ])
+        inp = VariantGenerationInput(
+            sources=[
+                VariantSource(source_id="s1", question="q1"),
+                VariantSource(source_id="s2", question="q2"),
+            ]
+        )
         r = asyncio.run(variant_generation_workflow(cfg, inp, tmp_path, caller=caller))
         assert r["total_count"] == 2
 
@@ -594,10 +614,16 @@ class TestVariantGenerationWorkflow:
 # ME-7: learning_progress_report
 # ---------------------------------------------------------------------------
 
+
 class TestLearningProgressReport:
     def _attempts(self, kc_id, correct_seq, base_ts=0.0):
         return [
-            {"question_id": f"{kc_id}_{i}", "kc_id": kc_id, "correct": c, "timestamp": base_ts + i * 3600}
+            {
+                "question_id": f"{kc_id}_{i}",
+                "kc_id": kc_id,
+                "correct": c,
+                "timestamp": base_ts + i * 3600,
+            }
             for i, c in enumerate(correct_seq)
         ]
 
@@ -609,7 +635,9 @@ class TestLearningProgressReport:
 
     def test_trajectories_returned(self, tmp_path):
         cfg = LearningProgressConfig(min_attempts_per_kc=3)
-        inp = ProgressInput(user_id="u1", attempt_records=self._attempts("algebra", [False, True, True]))
+        inp = ProgressInput(
+            user_id="u1", attempt_records=self._attempts("algebra", [False, True, True])
+        )
         r = asyncio.run(learning_progress_report(cfg, inp, tmp_path))
         assert "trajectories" in r
 
@@ -635,9 +663,8 @@ class TestLearningProgressReport:
 
     def test_sessions_analyzed(self, tmp_path):
         cfg = LearningProgressConfig()
-        records = (
-            self._attempts("A", [True, True, True], base_ts=0.0) +
-            self._attempts("B", [False, True, True], base_ts=86400.0)
+        records = self._attempts("A", [True, True, True], base_ts=0.0) + self._attempts(
+            "B", [False, True, True], base_ts=86400.0
         )
         inp = ProgressInput(user_id="u1", attempt_records=records)
         r = asyncio.run(learning_progress_report(cfg, inp, tmp_path))
@@ -665,13 +692,16 @@ class TestLearningProgressReport:
         steps = []
         cfg = LearningProgressConfig()
         inp = ProgressInput(user_id="u1")
-        asyncio.run(learning_progress_report(cfg, inp, tmp_path, on_step=lambda *a: steps.append(a)))
+        asyncio.run(
+            learning_progress_report(cfg, inp, tmp_path, on_step=lambda *a: steps.append(a))
+        )
         assert len(steps) > 0
 
 
 # ---------------------------------------------------------------------------
 # ME-8: breakpoint_remediation_workflow
 # ---------------------------------------------------------------------------
+
 
 class TestBreakpointRemediationWorkflow:
     def _wrong_q(self, qid="q1"):
@@ -685,12 +715,14 @@ class TestBreakpointRemediationWorkflow:
         )
 
     def test_status_ok(self, tmp_path):
-        caller = make_json_caller({
-            "breakpoints": ["符号错误"],
-            "dominant_error_type": "sign_error",
-            "affected_question_ids": ["q1"],
-            "summary": "学生在移项时符号出错",
-        })
+        caller = make_json_caller(
+            {
+                "breakpoints": ["符号错误"],
+                "dominant_error_type": "sign_error",
+                "affected_question_ids": ["q1"],
+                "summary": "学生在移项时符号出错",
+            }
+        )
         cfg = BreakpointRemediationConfig()
         inp = BreakpointRemediationInput(user_id="u1", wrong_questions=[self._wrong_q()])
         r = asyncio.run(breakpoint_remediation_workflow(cfg, inp, tmp_path, caller=caller))
@@ -705,24 +737,28 @@ class TestBreakpointRemediationWorkflow:
         assert r["breakpoints"] == []
 
     def test_breakpoints_returned(self, tmp_path):
-        caller = make_json_caller({
-            "breakpoints": ["bp1", "bp2"],
-            "dominant_error_type": "calc",
-            "affected_question_ids": ["q1"],
-            "summary": "summary",
-        })
+        caller = make_json_caller(
+            {
+                "breakpoints": ["bp1", "bp2"],
+                "dominant_error_type": "calc",
+                "affected_question_ids": ["q1"],
+                "summary": "summary",
+            }
+        )
         cfg = BreakpointRemediationConfig()
         inp = BreakpointRemediationInput(wrong_questions=[self._wrong_q()])
         r = asyncio.run(breakpoint_remediation_workflow(cfg, inp, tmp_path, caller=caller))
         assert isinstance(r["breakpoints"], list)
 
     def test_remediation_plan_text(self, tmp_path):
-        caller = make_json_caller({
-            "breakpoints": ["x"],
-            "dominant_error_type": "calc",
-            "affected_question_ids": [],
-            "summary": "s",
-        })
+        caller = make_json_caller(
+            {
+                "breakpoints": ["x"],
+                "dominant_error_type": "calc",
+                "affected_question_ids": [],
+                "summary": "s",
+            }
+        )
         cfg = BreakpointRemediationConfig()
         inp = BreakpointRemediationInput(wrong_questions=[self._wrong_q()])
         r = asyncio.run(breakpoint_remediation_workflow(cfg, inp, tmp_path, caller=caller))
@@ -730,12 +766,14 @@ class TestBreakpointRemediationWorkflow:
         assert len(r["remediation_plan"]) > 0
 
     def test_report_written(self, tmp_path):
-        caller = make_json_caller({
-            "breakpoints": [],
-            "dominant_error_type": "",
-            "affected_question_ids": [],
-            "summary": "none",
-        })
+        caller = make_json_caller(
+            {
+                "breakpoints": [],
+                "dominant_error_type": "",
+                "affected_question_ids": [],
+                "summary": "none",
+            }
+        )
         cfg = BreakpointRemediationConfig()
         inp = BreakpointRemediationInput(wrong_questions=[self._wrong_q()])
         r = asyncio.run(breakpoint_remediation_workflow(cfg, inp, tmp_path, caller=caller))
@@ -743,24 +781,28 @@ class TestBreakpointRemediationWorkflow:
             assert Path(r["report_path"]).exists()
 
     def test_fingerprint_present(self, tmp_path):
-        caller = make_json_caller({
-            "breakpoints": [],
-            "dominant_error_type": "",
-            "affected_question_ids": [],
-            "summary": "",
-        })
+        caller = make_json_caller(
+            {
+                "breakpoints": [],
+                "dominant_error_type": "",
+                "affected_question_ids": [],
+                "summary": "",
+            }
+        )
         cfg = BreakpointRemediationConfig()
         inp = BreakpointRemediationInput(wrong_questions=[self._wrong_q()])
         r = asyncio.run(breakpoint_remediation_workflow(cfg, inp, tmp_path, caller=caller))
         assert "fingerprint" in r
 
     def test_trail_written(self, tmp_path):
-        caller = make_json_caller({
-            "breakpoints": [],
-            "dominant_error_type": "",
-            "affected_question_ids": [],
-            "summary": "",
-        })
+        caller = make_json_caller(
+            {
+                "breakpoints": [],
+                "dominant_error_type": "",
+                "affected_question_ids": [],
+                "summary": "",
+            }
+        )
         cfg = BreakpointRemediationConfig()
         inp = BreakpointRemediationInput(wrong_questions=[self._wrong_q()])
         asyncio.run(breakpoint_remediation_workflow(cfg, inp, tmp_path, caller=caller))
@@ -768,37 +810,45 @@ class TestBreakpointRemediationWorkflow:
 
     def test_empty_returns_no_llm_call(self, tmp_path):
         spy_called = []
+
         async def spy(**kwargs):
             spy_called.append(True)
-            return {"content": [{"type": "text", "text": "{}"}], "stop_reason": "end_turn", "usage": {}}
+            return {
+                "content": [{"type": "text", "text": "{}"}],
+                "stop_reason": "end_turn",
+                "usage": {},
+            }
+
         cfg = BreakpointRemediationConfig()
         inp = BreakpointRemediationInput(wrong_questions=[])
         asyncio.run(breakpoint_remediation_workflow(cfg, inp, tmp_path, caller=spy))
         assert len(spy_called) == 0
 
     def test_dominant_error_type(self, tmp_path):
-        caller = make_json_caller({
-            "breakpoints": [],
-            "dominant_error_type": "arithmetic",
-            "affected_question_ids": [],
-            "summary": "arithmetic errors",
-        })
+        caller = make_json_caller(
+            {
+                "breakpoints": [],
+                "dominant_error_type": "arithmetic",
+                "affected_question_ids": [],
+                "summary": "arithmetic errors",
+            }
+        )
         cfg = BreakpointRemediationConfig()
         inp = BreakpointRemediationInput(wrong_questions=[self._wrong_q()])
         r = asyncio.run(breakpoint_remediation_workflow(cfg, inp, tmp_path, caller=caller))
         assert r["dominant_error_type"] == "arithmetic"
 
     def test_multiple_wrong_questions(self, tmp_path):
-        caller = make_json_caller({
-            "breakpoints": ["b1", "b2"],
-            "dominant_error_type": "calc",
-            "affected_question_ids": ["q1", "q2"],
-            "summary": "two errors",
-        })
-        cfg = BreakpointRemediationConfig()
-        inp = BreakpointRemediationInput(
-            wrong_questions=[self._wrong_q("q1"), self._wrong_q("q2")]
+        caller = make_json_caller(
+            {
+                "breakpoints": ["b1", "b2"],
+                "dominant_error_type": "calc",
+                "affected_question_ids": ["q1", "q2"],
+                "summary": "two errors",
+            }
         )
+        cfg = BreakpointRemediationConfig()
+        inp = BreakpointRemediationInput(wrong_questions=[self._wrong_q("q1"), self._wrong_q("q2")])
         r = asyncio.run(breakpoint_remediation_workflow(cfg, inp, tmp_path, caller=caller))
         assert r["status"] == "ok"
 
@@ -807,6 +857,7 @@ class TestBreakpointRemediationWorkflow:
 # ME-9: user_data_workflow
 # Mandatory: test_deleted_user_not_queryable
 # ---------------------------------------------------------------------------
+
 
 class TestUserDataWorkflow:
     def setup_method(self):
@@ -880,9 +931,7 @@ class TestUserDataWorkflow:
     def test_fingerprint_present(self, tmp_path):
         store = self._store()
         cfg = UserDataConfig()
-        inp = UserDataInput(
-            user_id="u1", operation="create", record=UserRecord(user_id="u1")
-        )
+        inp = UserDataInput(user_id="u1", operation="create", record=UserRecord(user_id="u1"))
         r = asyncio.run(user_data_workflow(cfg, inp, tmp_path, store=store))
         assert "fingerprint" in r
 
@@ -903,9 +952,7 @@ class TestUserDataWorkflow:
     def test_create_sets_created_at(self, tmp_path):
         store = self._store()
         cfg = UserDataConfig()
-        inp = UserDataInput(
-            user_id="u1", operation="create", record=UserRecord(user_id="u1")
-        )
+        inp = UserDataInput(user_id="u1", operation="create", record=UserRecord(user_id="u1"))
         r = asyncio.run(user_data_workflow(cfg, inp, tmp_path, store=store))
         assert r["record"]["created_at"] > 0
 
@@ -913,8 +960,8 @@ class TestUserDataWorkflow:
         steps = []
         store = self._store()
         cfg = UserDataConfig()
-        inp = UserDataInput(
-            user_id="u1", operation="create", record=UserRecord(user_id="u1")
+        inp = UserDataInput(user_id="u1", operation="create", record=UserRecord(user_id="u1"))
+        asyncio.run(
+            user_data_workflow(cfg, inp, tmp_path, store=store, on_step=lambda *a: steps.append(a))
         )
-        asyncio.run(user_data_workflow(cfg, inp, tmp_path, store=store, on_step=lambda *a: steps.append(a)))
         assert len(steps) > 0

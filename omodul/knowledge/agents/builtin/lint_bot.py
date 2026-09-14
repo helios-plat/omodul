@@ -1,4 +1,5 @@
 """LintBotAgent — weekly health check: orphan substrates, broken refs, etc."""
+
 from __future__ import annotations
 
 import time
@@ -65,9 +66,7 @@ class LintBotAgent(Agent):
 
         # 2. Push if there are issues
         if issues:
-            summary = "\n".join(
-                f"- {i['type']}: {i['description']}" for i in issues_data[:5]
-            )
+            summary = "\n".join(f"- {i['type']}: {i['description']}" for i in issues_data[:5])
             t1 = time.monotonic()
             push_sent = False
             try:

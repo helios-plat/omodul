@@ -28,8 +28,7 @@ _INTENT_SYSTEM = (
 )
 
 _INTENT_USER = (
-    "请产出 Intent Brief。能确信做什么、改哪些文件、如何验收就 plan；"
-    "否则 ask。不要开始派工。"
+    "请产出 Intent Brief。能确信做什么、改哪些文件、如何验收就 plan；否则 ask。不要开始派工。"
 )
 
 

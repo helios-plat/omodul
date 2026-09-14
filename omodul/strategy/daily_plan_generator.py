@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import Callable
 from datetime import date
-from typing import Any, Callable, Optional
+from typing import Any
 
 STABILITY = "experimental"
 
@@ -19,7 +20,7 @@ async def daily_plan_generate(
     universe_filter: Callable,
     llm_client: Callable,
     prompt_builder: Callable,
-    cost_tracker: Optional[Any] = None,
+    cost_tracker: Any | None = None,
 ) -> dict:
     """Generate a daily plan with candidate stocks and entry conditions.
 
@@ -100,8 +101,8 @@ async def daily_plan_generate(
     prompt = prompt_builder(context)
 
     try:
-        import asyncio
         import inspect
+
         if inspect.iscoroutinefunction(llm_client):
             llm_response = await llm_client(prompt)
         else:
@@ -133,11 +134,13 @@ async def daily_plan_generate(
             action = "consider_partial_exit"
         else:
             action = "hold"
-        holdings_review.append({
-            "symbol": symbol,
-            "action": action,
-            "reasoning": f"PnL={pnl_pct:.1%}, regime={current_state}",
-        })
+        holdings_review.append(
+            {
+                "symbol": symbol,
+                "action": action,
+                "reasoning": f"PnL={pnl_pct:.1%}, regime={current_state}",
+            }
+        )
 
     if cost_tracker is not None:
         try:

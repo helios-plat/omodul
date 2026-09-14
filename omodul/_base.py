@@ -9,6 +9,7 @@ BaseConfig / 支柱工具 / 共享类型
 - cost 累计
 - report 生成
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -21,13 +22,14 @@ from typing import Any, ClassVar, Literal
 
 from pydantic import BaseModel
 
-
 # ---------------------------------------------------------------------------
 # BaseConfig (§5.3 SPEC v2.1)
 # ---------------------------------------------------------------------------
 
+
 class BaseConfig(BaseModel):
     """所有 omodul 的基础配置."""
+
     llm_provider: str = "anthropic"
     llm_model: str = "claude-sonnet-4-6"
     output_format: Literal["markdown", "pdf", "both"] = "markdown"
@@ -44,9 +46,11 @@ class BaseConfig(BaseModel):
 # CostTracker
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class CostTracker:
     """并发安全的成本追踪器（对象内累加，不替换引用）."""
+
     total_usd: float = 0.0
     in_tokens: int = 0
     out_tokens: int = 0
@@ -55,8 +59,8 @@ class CostTracker:
     # 默认价格表
     _PRICING: ClassVar[dict[str, dict]] = {
         "claude-sonnet-4-6": {"in": 3e-6, "out": 15e-6},
-        "claude-opus-4-6":   {"in": 15e-6, "out": 75e-6},
-        "claude-haiku-4-5":  {"in": 0.8e-6, "out": 4e-6},
+        "claude-opus-4-6": {"in": 15e-6, "out": 75e-6},
+        "claude-haiku-4-5": {"in": 0.8e-6, "out": 4e-6},
     }
     _FALLBACK: ClassVar[dict] = {"in": 3e-6, "out": 15e-6}
 
@@ -83,9 +87,11 @@ class CostTracker:
 # Trail (decision_trail)
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class Trail:
     """decision_trail 记录器."""
+
     steps: list[dict] = field(default_factory=list)
     run_id: str = field(default_factory=lambda: uuid.uuid4().hex[:8])
 
@@ -103,6 +109,7 @@ class Trail:
 # fingerprint
 # ---------------------------------------------------------------------------
 
+
 def compute_fingerprint(fields: dict[str, Any]) -> str:
     """sha256(canonical JSON of fields)[:24]."""
     canonical = json.dumps(fields, sort_keys=True, ensure_ascii=False, default=str)
@@ -112,6 +119,7 @@ def compute_fingerprint(fields: dict[str, Any]) -> str:
 # ---------------------------------------------------------------------------
 # 标准返回结构构建
 # ---------------------------------------------------------------------------
+
 
 def build_result(
     *,
@@ -148,6 +156,7 @@ def build_result(
 # LLM 调用工具
 # ---------------------------------------------------------------------------
 
+
 async def llm_call(
     messages: list[dict],
     *,
@@ -172,14 +181,36 @@ def extract_text(response: dict) -> str:
     if isinstance(content, str):
         return content  # pragma: no cover
     return "".join(
-        b.get("text", "") for b in content
-        if isinstance(b, dict) and b.get("type") == "text"
+        b.get("text", "") for b in content if isinstance(b, dict) and b.get("type") == "text"
     )
+
+
+def _read_file_safe(path: str, max_tokens: int) -> str:
+    """Read a text file for an LLM prompt without letting IO errors escape."""
+    try:
+        return Path(path).read_text(encoding="utf-8", errors="replace")[: max_tokens * 4]
+    except (OSError, UnicodeError):
+        return ""
+
+
+def _msg_text(message: dict) -> str:
+    """Extract displayable text from a plain or block-based message."""
+    content = message.get("content", "")
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return "".join(
+            block.get("text", "")
+            for block in content
+            if isinstance(block, dict) and isinstance(block.get("text"), str)
+        )
+    return str(content)
 
 
 # ---------------------------------------------------------------------------
 # report 写盘工具
 # ---------------------------------------------------------------------------
+
 
 def write_report(
     content: str,

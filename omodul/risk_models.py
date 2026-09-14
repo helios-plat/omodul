@@ -1,9 +1,9 @@
 """Risk models including drawdown circuit breaker."""
+
 from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-
 from oprim.finance import drawdown_curve
 
 
@@ -56,17 +56,11 @@ def drawdown_circuit_breaker(
     arr = np.asarray(equity_curve, dtype=float)
 
     if len(arr) < 2:
-        raise ValueError(
-            f"equity_curve must have >= 2 elements, got {len(arr)}"
-        )
+        raise ValueError(f"equity_curve must have >= 2 elements, got {len(arr)}")
     if not (0 < daily_loss_halt_pct < 1):
-        raise ValueError(
-            f"daily_loss_halt_pct must be in (0, 1), got {daily_loss_halt_pct}"
-        )
+        raise ValueError(f"daily_loss_halt_pct must be in (0, 1), got {daily_loss_halt_pct}")
     if not (0 < weekly_loss_halt_pct < 1):
-        raise ValueError(
-            f"weekly_loss_halt_pct must be in (0, 1), got {weekly_loss_halt_pct}"
-        )
+        raise ValueError(f"weekly_loss_halt_pct must be in (0, 1), got {weekly_loss_halt_pct}")
 
     n = len(arr)
     daily_loss = float((arr[-1] - arr[-2]) / arr[-2])
@@ -76,7 +70,9 @@ def drawdown_circuit_breaker(
     dd_result = drawdown_curve(pd.Series(arr), input_type="equity")
     max_drawdown = float(dd_result["max_drawdown"])
 
-    vol_ratio = float(recent_realized_vol / baseline_realized_vol) if baseline_realized_vol > 0 else 1.0
+    vol_ratio = (
+        float(recent_realized_vol / baseline_realized_vol) if baseline_realized_vol > 0 else 1.0
+    )
 
     # Determine status (worst condition wins)
     status = "GREEN"

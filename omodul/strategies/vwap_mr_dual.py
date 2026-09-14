@@ -11,8 +11,13 @@ try:
     from oprim.crypto import sha256_hash
     from oprim.serialization import canonical_json
 except ImportError:
-    def sha256_hash(x): return b""  # type: ignore
-    def canonical_json(x): return str(x)  # type: ignore
+
+    def sha256_hash(x):
+        return b""  # type: ignore
+
+    def canonical_json(x):
+        return str(x)  # type: ignore
+
 
 try:
     from oskill.mean_reversion_compose import mean_reversion_compose
@@ -51,20 +56,22 @@ def vwap_mr_dual(market_state: dict, config: dict) -> dict:
     if mean_reversion_compose is None:
         raise ImportError("oskill.mean_reversion_compose is required")
 
-    ohlcv    = market_state["ohlcv"]
-    closes   = np.asarray(ohlcv["close"], dtype=float)
-    n_bars   = len(closes)
+    ohlcv = market_state["ohlcv"]
+    closes = np.asarray(ohlcv["close"], dtype=float)
+    n_bars = len(closes)
     risk_cfg = config.get("risk", {})
     cost_bps = float(risk_cfg.get("cost_bps", 10.0))
 
     stack_calls = []
-    cfg_fp      = _args_hash(config)
+    cfg_fp = _args_hash(config)
 
     signals = mean_reversion_compose(ohlcv, config=config)
-    stack_calls.append({
-        "function": "oskill.mean_reversion_compose.mean_reversion_compose",
-        "config_fingerprint": cfg_fp,
-    })
+    stack_calls.append(
+        {
+            "function": "oskill.mean_reversion_compose.mean_reversion_compose",
+            "config_fingerprint": cfg_fp,
+        }
+    )
 
     return {
         "signals": signals,

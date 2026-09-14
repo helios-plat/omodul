@@ -1,30 +1,25 @@
 import json
 import traceback
-from datetime import datetime, timezone
+from collections.abc import Callable
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Callable, Literal, ClassVar, Any, Set
+from typing import Any, ClassVar, Literal
 
 from obase.cost_tracker import CostTracker
+from oprim import caddy_admin_reload, caddy_certificates_status, dns_resolve
+from pydantic import BaseModel, Field
+
 from omodul._base_config import BaseConfig
 from omodul._decision_trail import build_decision_trail, record_step
 from omodul._fingerprint import compute_fingerprint
 from omodul._report import write_markdown_report
 from omodul._runtime import _current_cost_tracker
-from oprim import (
-    dns_resolve,
-    caddy_admin_reload,
-    caddy_certificates_status,
-    http_health_probe
-)
-from pydantic import BaseModel, Field
 
 
 class ConfigureDomainConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "configure_domain_for_app"
     _omodul_version: ClassVar[str] = "1.0.0"
-    _fingerprint_fields: ClassVar[Set[str]] = {
-        "domain", "target_instance", "enable_https"
-    }
+    _fingerprint_fields: ClassVar[set[str]] = {"domain", "target_instance", "enable_https"}
     domain: str
     target_instance: str
     enable_https: bool = True
@@ -55,7 +50,7 @@ def configure_domain_for_app(
     on_step: Callable[[dict[str, Any]], None] | None = None,
 ) -> dict[str, Any]:
     """配置域名: DNS 检查 + Caddy 配置 + HTTPS 验证."""
-    started_at = datetime.now(timezone.utc)
+    started_at = datetime.now(UTC)
     fingerprint = compute_fingerprint(config, input_data)
     cost_tracker = CostTracker(budget_usd=config.budget_usd)
     trail_steps: list[dict[str, Any]] = []
@@ -68,27 +63,27 @@ def configure_domain_for_app(
         # 1. DNS Check
         dns_info = _stage_dns_check(config, input_data, trail_steps, on_step)
         if not dns_info["resolved"]:
-             status = "failed"
-             error_info = {"error_message": f"DNS not resolved for {config.domain}"}
+            status = "failed"
+            error_info = {"error_message": f"DNS not resolved for {config.domain}"}
         else:
             # 2. Caddy Configure
             _stage_caddy_configure(config, input_data, trail_steps, on_step)
-            
+
             # 3. Verify HTTPS
             https_info = _stage_verify_https(config, input_data, trail_steps, on_step)
-            
+
             findings = ConfigureDomainFindings(
                 domain=config.domain,
                 dns_resolved=True,
                 dns_records=dns_info["records"],
                 caddy_route_added=True,
                 https_certificate_obtained=https_info["obtained"],
-                certificate_not_after=https_info.get("not_after")
+                certificate_not_after=https_info.get("not_after"),
             )
-            
+
             if not https_info["obtained"]:
-                status = "completed" # completed but with warning in findings
-        
+                status = "completed"  # completed but with warning in findings
+
     except Exception as e:
         error_info = {
             "error_class": type(e).__name__,
@@ -100,10 +95,14 @@ def configure_domain_for_app(
         _current_cost_tracker.reset(token)
 
     decision_trail = build_decision_trail(
-        fingerprint=fingerprint, config=config,
-        input_data=input_data, trail_steps=trail_steps,
-        cost_tracker=cost_tracker, started_at=started_at,
-        status=status, error=error_info,
+        fingerprint=fingerprint,
+        config=config,
+        input_data=input_data,
+        trail_steps=trail_steps,
+        cost_tracker=cost_tracker,
+        started_at=started_at,
+        status=status,
+        error=error_info,
     )
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -119,7 +118,7 @@ def configure_domain_for_app(
         findings=findings,
         decision_trail=decision_trail,
         cost_tracker=cost_tracker,
-        status=status
+        status=status,
     )
 
     return {
@@ -134,64 +133,80 @@ def configure_domain_for_app(
 
 
 def _stage_dns_check(
-    config: ConfigureDomainConfig, 
-    input_data: ConfigureDomainInput, 
-    trail_steps: list[dict[str, Any]], 
-    on_step: Callable[[dict[str, Any]], None] | None
+    config: ConfigureDomainConfig,
+    input_data: ConfigureDomainInput,
+    trail_steps: list[dict[str, Any]],
+    on_step: Callable[[dict[str, Any]], None] | None,
 ) -> dict[str, Any]:
-    step_start = datetime.now(timezone.utc)
+    step_start = datetime.now(UTC)
     try:
         records = dns_resolve(domain=config.domain)
         resolved = len(records) > 0
     except Exception:
         records = []
         resolved = False
-        
+
     record_step(
-        trail_steps=trail_steps, on_step=on_step, layer="oprim",
-        callable_name="dns_resolve", inputs_summary={"domain": config.domain},
-        outputs_summary={"resolved": resolved}, started_at=step_start
+        trail_steps=trail_steps,
+        on_step=on_step,
+        layer="oprim",
+        callable_name="dns_resolve",
+        inputs_summary={"domain": config.domain},
+        outputs_summary={"resolved": resolved},
+        started_at=step_start,
     )
     return {"resolved": resolved, "records": records}
 
 
 def _stage_caddy_configure(
-    config: ConfigureDomainConfig, 
-    input_data: ConfigureDomainInput, 
-    trail_steps: list[dict[str, Any]], 
-    on_step: Callable[[dict[str, Any]], None] | None
+    config: ConfigureDomainConfig,
+    input_data: ConfigureDomainInput,
+    trail_steps: list[dict[str, Any]],
+    on_step: Callable[[dict[str, Any]], None] | None,
 ) -> None:
-    step_start = datetime.now(timezone.utc)
+    step_start = datetime.now(UTC)
     caddy_admin_reload(config={}, admin_url=input_data.caddy_admin_url)
     record_step(
-        trail_steps=trail_steps, on_step=on_step, layer="oprim",
-        callable_name="caddy_admin_reload", inputs_summary={"domain": config.domain},
-        outputs_summary={"status": "reloaded"}, started_at=step_start
+        trail_steps=trail_steps,
+        on_step=on_step,
+        layer="oprim",
+        callable_name="caddy_admin_reload",
+        inputs_summary={"domain": config.domain},
+        outputs_summary={"status": "reloaded"},
+        started_at=step_start,
     )
 
 
 def _stage_verify_https(
-    config: ConfigureDomainConfig, 
-    input_data: ConfigureDomainInput, 
-    trail_steps: list[dict[str, Any]], 
-    on_step: Callable[[dict[str, Any]], None] | None
+    config: ConfigureDomainConfig,
+    input_data: ConfigureDomainInput,
+    trail_steps: list[dict[str, Any]],
+    on_step: Callable[[dict[str, Any]], None] | None,
 ) -> dict[str, Any]:
     if not config.enable_https:
         return {"obtained": False}
-    step_start = datetime.now(timezone.utc)
+    step_start = datetime.now(UTC)
     try:
         status = caddy_certificates_status(admin_url=input_data.caddy_admin_url)
-        obtained = any(s.get("domain") == config.domain and s.get("status") == "active" for s in status)
+        obtained = any(
+            s.get("domain") == config.domain and s.get("status") == "active" for s in status
+        )
     except Exception:
         obtained = False
-        
+
     record_step(
-        trail_steps=trail_steps, on_step=on_step, layer="oprim",
-        callable_name="caddy_certificates_status", inputs_summary={"domain": config.domain},
-        outputs_summary={"obtained": obtained}, started_at=step_start
+        trail_steps=trail_steps,
+        on_step=on_step,
+        layer="oprim",
+        callable_name="caddy_certificates_status",
+        inputs_summary={"domain": config.domain},
+        outputs_summary={"obtained": obtained},
+        started_at=step_start,
     )
     return {"obtained": obtained}
 
 
-def compute_fingerprint_for_configure_domain_for_app(config: ConfigureDomainConfig, input_data: ConfigureDomainInput) -> str:
+def compute_fingerprint_for_configure_domain_for_app(
+    config: ConfigureDomainConfig, input_data: ConfigureDomainInput
+) -> str:
     return compute_fingerprint(config, input_data)

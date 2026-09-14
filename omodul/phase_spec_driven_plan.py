@@ -5,12 +5,12 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, ClassVar
 
-from pydantic import BaseModel, ConfigDict
-
 from obase.veya_workspace import SpecKitPaths
-from omodul._base import BaseConfig, Trail, build_result, compute_fingerprint
 from oprim._speckit_io import load_speckit_artifacts, save_taskgraph
 from oskill.dag_compiler import compile_spec_to_dag, validate_taskgraph_dag
+from pydantic import BaseModel, ConfigDict
+
+from omodul._base import BaseConfig, Trail, build_result, compute_fingerprint
 
 
 class SpecPlanConfig(BaseConfig):

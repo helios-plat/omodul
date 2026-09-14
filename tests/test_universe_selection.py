@@ -1,9 +1,10 @@
 """Tests for omodul.universe_selection.fixed_list."""
+
 from __future__ import annotations
 
 import pytest
 
-from omodul.universe_selection import fixed_list, VALID_INSTRUMENT_TYPES
+from omodul.universe_selection import VALID_INSTRUMENT_TYPES, fixed_list
 
 
 class TestFixedListBasic:

@@ -80,9 +80,7 @@ async def watch_cycle(
         node_res = _stage_node_sweep(config, input_data, trail_steps, on_step)
 
         # 2. Container sweep
-        container_stats = _stage_container_sweep(
-            config, input_data, node_res, trail_steps, on_step
-        )
+        container_stats = _stage_container_sweep(config, input_data, node_res, trail_steps, on_step)
 
         # 3. Emit alerts
         alerts = node_res["alerts"] + container_stats["alerts"]

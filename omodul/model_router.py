@@ -79,13 +79,19 @@ class ModelRouter:
         try:
             if in_tokens:
                 self.cost_tracker.record(
-                    category="llm", provider="router",
-                    model_or_tier=model, unit="token_in", quantity=in_tokens,
+                    category="llm",
+                    provider="router",
+                    model_or_tier=model,
+                    unit="token_in",
+                    quantity=in_tokens,
                 )
             if out_tokens:
                 self.cost_tracker.record(
-                    category="llm", provider="router",
-                    model_or_tier=model, unit="token_out", quantity=out_tokens,
+                    category="llm",
+                    provider="router",
+                    model_or_tier=model,
+                    unit="token_out",
+                    quantity=out_tokens,
                 )
         except Exception:  # noqa: BLE001 — pricing table gaps must not break routing
             _log.warning("model_router: cost booking skipped (pricing table gap)")

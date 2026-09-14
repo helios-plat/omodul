@@ -1,4 +1,5 @@
 """Cross-Framework Benchmark Report — compare EU, CPT, Robust, and Salience."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -134,7 +135,7 @@ def cross_framework_benchmark_report(
     if salience_asset_pricing is not None:
         try:
             sal_res = salience_asset_pricing(
-                returns.T,     # (N, T): N assets, T states
+                returns.T,  # (N, T): N assets, T states
                 market_payoffs,  # (T,)
             )
             salient_prices = np.asarray(sal_res["salient_price"])

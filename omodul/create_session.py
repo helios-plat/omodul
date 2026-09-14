@@ -4,24 +4,27 @@ omodul.create_session — Create a new agent session with a unique ID.
 Pillars: fingerprint
 Sync omodul.
 """
+
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, ClassVar
+from typing import ClassVar
 
 from pydantic import BaseModel
 
 from omodul._base import BaseConfig, build_result, compute_fingerprint
 
 
-def compute_fingerprint_for(config: "Config", input_data: "InputData") -> str:
+def compute_fingerprint_for(config: Config, input_data: InputData) -> str:
     """Fingerprint over initial_model + agent_type."""
-    return compute_fingerprint({
-        "initial_model": input_data.initial_model or config.initial_model,
-        "agent_type": input_data.agent_type or config.agent_type,
-    })
+    return compute_fingerprint(
+        {
+            "initial_model": input_data.initial_model or config.initial_model,
+            "agent_type": input_data.agent_type or config.agent_type,
+        }
+    )
 
 
 class Config(BaseConfig):
@@ -60,7 +63,7 @@ def create_session(
             "model": resolved_model,
             "agent_type": resolved_type,
             "history": [],
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
         }
 
         return build_result(

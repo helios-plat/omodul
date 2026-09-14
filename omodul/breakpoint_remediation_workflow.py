@@ -5,6 +5,7 @@ wrong answers, then builds a structured remediation plan.
 
 Pillars: fingerprint + decision_trail + cost + report
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -57,7 +58,9 @@ async def breakpoint_remediation_workflow(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     try:
-        trail.record(event="start", user_id=input_data.user_id, n_wrong=len(input_data.wrong_questions))
+        trail.record(
+            event="start", user_id=input_data.user_id, n_wrong=len(input_data.wrong_questions)
+        )
 
         if not input_data.wrong_questions:
             trail.record(event="no_wrong_questions")
@@ -84,11 +87,15 @@ async def breakpoint_remediation_workflow(
         result = await find_common_breakpoint(wq_list, caller=caller, model=config.model)
         trail.record(event="breakpoints_found", count=len(result.breakpoints))
 
-        fp = compute_fingerprint({"user_id": input_data.user_id, "session_id": input_data.session_id})
+        fp = compute_fingerprint(
+            {"user_id": input_data.user_id, "session_id": input_data.session_id}
+        )
 
         remediation_lines = [f"# Remediation Plan\n\nUser: {input_data.user_id}\n"]
-        remediation_lines.append(f"Dominant error: {result.dominant_error_type}\n\n## Breakpoints\n")
-        for bp in result.breakpoints[:config.max_remediation_items]:
+        remediation_lines.append(
+            f"Dominant error: {result.dominant_error_type}\n\n## Breakpoints\n"
+        )
+        for bp in result.breakpoints[: config.max_remediation_items]:
             remediation_lines.append(f"- {bp}\n")
         remediation_lines.append(f"\n## Summary\n{result.summary}\n")
         remediation_text = "".join(remediation_lines)

@@ -5,6 +5,7 @@ Enforces: variant.answer is always cleared after LLM generation (red line).
 
 Pillars: fingerprint + decision_trail + cost
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -71,13 +72,15 @@ async def variant_generation_workflow(
                     subject=config.subject,
                 )
                 item = await generate_variant(inp, caller=caller, model=config.model)
-                all_variants.append({
-                    "source_id": src.source_id,
-                    "question": item.question,
-                    "answer": item.answer,
-                    "kernel_verified": item.kernel_verified,
-                    "success": item.success,
-                })
+                all_variants.append(
+                    {
+                        "source_id": src.source_id,
+                        "question": item.question,
+                        "answer": item.answer,
+                        "kernel_verified": item.kernel_verified,
+                        "success": item.success,
+                    }
+                )
                 if item.success:
                     success_count += 1
 
@@ -86,10 +89,12 @@ async def variant_generation_workflow(
             if on_step:
                 on_step("variant_generation_workflow", src.source_id)
 
-        fp = compute_fingerprint({
-            "source_id": input_data.sources[0].source_id if input_data.sources else "",
-            "variant_type": config.variant_type,
-        })
+        fp = compute_fingerprint(
+            {
+                "source_id": input_data.sources[0].source_id if input_data.sources else "",
+                "variant_type": config.variant_type,
+            }
+        )
 
         trail_path = trail.write(output_dir)
         trail.record(event="done", total=len(all_variants), success=success_count)

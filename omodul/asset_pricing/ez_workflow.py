@@ -1,4 +1,5 @@
 """Epstein-Zin Asset Pricing Workflow — Bansal-Yaron long-run risks."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -18,11 +19,11 @@ except ImportError:  # pragma: no cover
 
 # Default Bansal-Yaron (2004) monthly calibration
 _BY_CALIBRATION = {
-    "mu": 0.0015,      # mean consumption growth
-    "rho": 0.979,      # long-run risk persistence
-    "phi": 0.044,      # long-run risk volatility loading
+    "mu": 0.0015,  # mean consumption growth
+    "rho": 0.979,  # long-run risk persistence
+    "phi": 0.044,  # long-run risk volatility loading
     "sigma_bar": 0.0078,  # mean volatility
-    "nu": 0.987,       # volatility persistence
+    "nu": 0.987,  # volatility persistence
     "sigma_omega": 2.3e-6,  # volatility-of-volatility
 }
 
@@ -58,8 +59,9 @@ def _fallback_ez_solver(
     }
 
 
-def _fallback_aggregator(C: np.ndarray, CE: np.ndarray, *, discount: float,
-                          risk_aversion: float, ies: float) -> np.ndarray:
+def _fallback_aggregator(
+    C: np.ndarray, CE: np.ndarray, *, discount: float, risk_aversion: float, ies: float
+) -> np.ndarray:
     rho = 1.0 - 1.0 / ies
     if abs(rho) < 1e-12:
         return C ** (1.0 - discount) * CE**discount
@@ -164,7 +166,8 @@ def epstein_zin_asset_pricing_workflow(
             aggregator_check = float(agg_val[0])
         except Exception:
             agg_arr = _fallback_aggregator(
-                C_check, CE_check,
+                C_check,
+                CE_check,
                 discount=discount,
                 risk_aversion=risk_aversion,
                 ies=ies,
@@ -172,7 +175,8 @@ def epstein_zin_asset_pricing_workflow(
             aggregator_check = float(agg_arr[0])
     else:
         agg_arr = _fallback_aggregator(
-            C_check, CE_check,
+            C_check,
+            CE_check,
             discount=discount,
             risk_aversion=risk_aversion,
             ies=ies,

@@ -5,6 +5,7 @@ After deletion, user records are not queryable.
 
 Pillars: fingerprint + decision_trail
 """
+
 from __future__ import annotations
 
 import time
@@ -61,7 +62,7 @@ async def user_data_workflow(
     store: dict[str, UserRecord] | None = None,
     on_step: Any = None,
 ) -> dict:
-    cost = CostTracker()
+    CostTracker()
     trail = Trail()
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)

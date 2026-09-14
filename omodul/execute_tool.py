@@ -3,6 +3,7 @@ omodul.execute_tool — Permission-gated tool execution with sync/async dispatch
 
 Pillars: decision_trail
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -49,8 +50,7 @@ async def execute_tool(
     trail = Trail()
 
     try:
-        trail.record(event="permission_check", step_no=0,
-                     tool_name=input_data.tool_name)
+        trail.record(event="permission_check", step_no=0, tool_name=input_data.tool_name)
 
         if input_data.permission_checker is not None:
             perm = await _call(
@@ -61,8 +61,10 @@ async def execute_tool(
             if perm == "deny":
                 return build_result(
                     status="failed",
-                    error={"type": "PermissionDenied",
-                           "message": f"tool '{input_data.tool_name}' was denied"},
+                    error={
+                        "type": "PermissionDenied",
+                        "message": f"tool '{input_data.tool_name}' was denied",
+                    },
                     trail=trail,
                 )
             if perm == "ask":
@@ -81,8 +83,10 @@ async def execute_tool(
         if tool_fn is None:
             return build_result(
                 status="failed",
-                error={"type": "ToolNotFound",
-                       "message": f"tool '{input_data.tool_name}' not in registry"},
+                error={
+                    "type": "ToolNotFound",
+                    "message": f"tool '{input_data.tool_name}' not in registry",
+                },
                 trail=trail,
             )
 
@@ -98,9 +102,12 @@ async def execute_tool(
             tool_result = raw
             exit_code = 0
 
-        trail.record(event="tool_result", step_no=2,
-                     exit_code=exit_code,
-                     tool_call_id=input_data.tool_call_id)
+        trail.record(
+            event="tool_result",
+            step_no=2,
+            exit_code=exit_code,
+            tool_call_id=input_data.tool_call_id,
+        )
 
         loop = asyncio.get_event_loop()
         await asyncio.shield(loop.run_in_executor(None, trail.write, output_dir))

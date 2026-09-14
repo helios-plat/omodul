@@ -1,10 +1,10 @@
 """Python-side HTML → plain text extraction (fallback when JS Readability not available)."""
+
 from __future__ import annotations
 
 import lxml.html
-from readability import Document
-
 from oprim._logging import log
+from readability import Document
 
 
 def extract_main_content(html: str, title: str = "") -> str:

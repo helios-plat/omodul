@@ -25,9 +25,7 @@ def run_harness(
 ) -> dict[str, Any]:
     """Run one harness command. ``master`` is rejected. Caller workspace is not deleted."""
     if argv is None:
-        built = harness_argv(
-            engine, prompt, model=model, streaming=streaming, bin=bin, extra=extra
-        )
+        built = harness_argv(engine, prompt, model=model, streaming=streaming, bin=bin, extra=extra)
         if not built.get("ok"):
             return built
         argv = list(built["argv"])

@@ -3,6 +3,7 @@
 No DB access. Caller resolves view_id → view dict first.
 User-provided params always take precedence over view defaults.
 """
+
 from __future__ import annotations
 
 

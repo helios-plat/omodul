@@ -18,7 +18,7 @@ from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, date, datetime
 from pathlib import Path
-from typing import Any, ClassVar, Literal, Set
+from typing import Any, ClassVar, Literal
 
 from obase.cost_tracker import CostTracker
 from pydantic import BaseModel, Field
@@ -32,8 +32,8 @@ from omodul._report import write_markdown_report
 class MacroDailyReportConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "macro_daily_report"
     _omodul_version: ClassVar[str] = "1.0.0"
-    _enabled_pillars: ClassVar[Set[str]] = {"fingerprint", "decision_trail", "report", "cost"}
-    _fingerprint_fields: ClassVar[Set[str]] = {"trade_date", "report_type"}
+    _enabled_pillars: ClassVar[set[str]] = {"fingerprint", "decision_trail", "report", "cost"}
+    _fingerprint_fields: ClassVar[set[str]] = {"trade_date", "report_type"}
 
     trade_date: date
     report_type: Literal["daily", "weekly"] = "daily"
@@ -85,10 +85,10 @@ def macro_daily_report(
     Returns dict with: findings, fingerprint, decision_trail, report_path,
     cost_usd, status, error.
     """
-    from oskill.macro_surprise_compute import macro_surprise_compute
-    from oskill.macro_cycle_engine_v2 import macro_cycle_engine_v2
-    from oskill.policy_sector_attribution import policy_sector_attribution
     from oprim.policy_event_extraction import PolicyNews
+    from oskill.macro_cycle_engine_v2 import macro_cycle_engine_v2
+    from oskill.macro_surprise_compute import macro_surprise_compute
+    from oskill.policy_sector_attribution import policy_sector_attribution
 
     started_at = datetime.now(UTC)
     if output_dir:

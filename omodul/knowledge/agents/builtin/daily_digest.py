@@ -1,4 +1,5 @@
 """DailyDigestAgent — summarise last-24h substrates and push to user."""
+
 from __future__ import annotations
 
 import time
@@ -55,7 +56,11 @@ class DailyDigestAgent(Agent):
         if not new_subs:
             return AgentResult(
                 success=True,
-                output={"new_substrates": 0, "digest": f"No new substrates in {time_range}.", "time_range": time_range},
+                output={
+                    "new_substrates": 0,
+                    "digest": f"No new substrates in {time_range}.",
+                    "time_range": time_range,
+                },
                 trace=trace,
                 citations=[],
             )
@@ -124,7 +129,12 @@ class DailyDigestAgent(Agent):
 
         return AgentResult(
             success=True,
-            output={"new_substrates": len(new_subs), "digest": digest_text, "time_range": time_range, "title": title_prefix},
+            output={
+                "new_substrates": len(new_subs),
+                "digest": digest_text,
+                "time_range": time_range,
+                "title": title_prefix,
+            },
             trace=trace,
             citations=citations,
             total_input_tokens=total_input,
@@ -137,6 +147,7 @@ class DailyDigestAgent(Agent):
         try:
             from oprim.meta_db import open_meta_db
             from oskill.knowledge._context import meta_db_path
+
             db = open_meta_db(meta_db_path())
             rows = db.fetchall(
                 "SELECT id, title, created_at FROM substrate "
@@ -149,8 +160,6 @@ class DailyDigestAgent(Agent):
 
     def _get_dispatcher(self):
         try:
-            from oprim.push import PushDispatcher
-            from oprim._config import cfg
             # Return None if not configured — push is best-effort
             return None  # real dispatcher requires channel config from env
         except Exception:
@@ -158,9 +167,7 @@ class DailyDigestAgent(Agent):
 
     @staticmethod
     def _build_digest_prompt(substrates: list[dict], title_prefix: str = "今日") -> str:
-        items = "\n".join(
-            f"- {s.get('title') or '(无标题)'}" for s in substrates
-        )
+        items = "\n".join(f"- {s.get('title') or '(无标题)'}" for s in substrates)
         return (
             f"请用中文总结{title_prefix}新增到知识库的内容，突出主题，不超过200字。\n\n"
             f"新增内容:\n{items}\n"

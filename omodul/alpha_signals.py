@@ -1,4 +1,5 @@
 """Alpha signal generators for Layer 3 (omodul)."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -27,14 +28,24 @@ def _basis_decomposition_fallback(
     return {"annualized_basis_pct": annualized_basis_pct, "residual": residual, "basis": basis}
 
 
-def _bocpd_fallback(returns: np.ndarray, hazard: float = 0.01, confidence_threshold: float = 0.6) -> dict:
+def _bocpd_fallback(
+    returns: np.ndarray, hazard: float = 0.01, confidence_threshold: float = 0.6
+) -> dict:
     n = len(returns)
     prob = 1.0 - hazard ** max(1, n // 4)
-    return {"current_regime_probability": min(prob, 0.99), "current_run_length": n, "regime_changes": []}
+    return {
+        "current_regime_probability": min(prob, 0.99),
+        "current_run_length": n,
+        "regime_changes": [],
+    }
 
 
 def _ofi_fallback(
-    bid_prices: np.ndarray, bid_sizes: np.ndarray, ask_prices: np.ndarray, ask_sizes: np.ndarray, window: int = 60
+    bid_prices: np.ndarray,
+    bid_sizes: np.ndarray,
+    ask_prices: np.ndarray,
+    ask_sizes: np.ndarray,
+    window: int = 60,
 ) -> np.ndarray:
     bp = np.asarray(bid_prices, dtype=float)
     bs = np.asarray(bid_sizes, dtype=float)
@@ -42,6 +53,7 @@ def _ofi_fallback(
     as_ = np.asarray(ask_sizes, dtype=float)
     mid = (bp + ap) / 2
     return (bs - as_) / np.where(mid > 0, mid, 1.0)
+
 
 _VALID_DIRECTION_MODES = {"long_only", "short_only", "long_short"}
 
@@ -190,9 +202,7 @@ def ofi_meanrev(
         raise ValueError(f"entry_threshold must be > 0, got {entry_threshold}")
 
     _ofi = order_flow_imbalance or _ofi_fallback
-    ofi_arr = _ofi(
-        bid_prices, bid_sizes, ask_prices, ask_sizes, window=ofi_window_sec
-    )
+    ofi_arr = _ofi(bid_prices, bid_sizes, ask_prices, ask_sizes, window=ofi_window_sec)
 
     window_mean = float(np.nanmean(ofi_arr))
     window_std = float(np.nanstd(ofi_arr))

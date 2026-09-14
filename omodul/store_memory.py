@@ -12,7 +12,7 @@ import json
 import os
 import uuid
 from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, ClassVar
 
 from pydantic import ConfigDict
@@ -166,7 +166,7 @@ def store_memory(
             "memory_id": memory_id,
             "status": status,
             "steps": trail,
-            "ts": datetime.now(timezone.utc).isoformat(),
+            "ts": datetime.now(UTC).isoformat(),
         }
         if output_dir:
             os.makedirs(output_dir, exist_ok=True)

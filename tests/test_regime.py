@@ -16,8 +16,10 @@ class TestRegimeReplaySearch:
         rng = np.random.default_rng(42)
         current = pd.DataFrame({"price": rng.normal(0, 1, 30)})
         historical = [
-            {"panel": pd.DataFrame({"price": rng.normal(0, 1, 30)}),
-             "forward_returns": rng.normal(0.001, 0.01, 20)}
+            {
+                "panel": pd.DataFrame({"price": rng.normal(0, 1, 30)}),
+                "forward_returns": rng.normal(0.001, 0.01, 20),
+            }
             for _ in range(5)
         ]
         result = regime_replay_search(current, historical, top_k=3)
@@ -29,8 +31,10 @@ class TestRegimeReplaySearch:
         rng = np.random.default_rng(42)
         current = pd.DataFrame({"price": rng.normal(0, 1, 30)})
         historical = [
-            {"panel": pd.DataFrame({"price": rng.normal(0, 1, 30)}),
-             "forward_returns": rng.normal(0.001, 0.01, 30)}
+            {
+                "panel": pd.DataFrame({"price": rng.normal(0, 1, 30)}),
+                "forward_returns": rng.normal(0.001, 0.01, 30),
+            }
             for _ in range(10)
         ]
         result = regime_replay_search(current, historical, forward_days=20)
@@ -62,7 +66,8 @@ class TestRegimeChangeDetector:
             regime_change_detector(
                 pd.DataFrame({"x": [1, 2, 3]}),
                 pd.Series(["A", "B", "A"]),
-                window_before=30, window_after=30,
+                window_before=30,
+                window_after=30,
             )
 
     def test_length_mismatch_raises(self):
@@ -78,11 +83,15 @@ class TestRegimeConditionalDashboard:
         assert result["summary"]["n_regimes"] == 3
 
     def test_with_pairwise_shift(self, spy_returns, regime_labels):
-        result = regime_conditional_dashboard_data(spy_returns, regime_labels, include_pairwise_shift=True)
+        result = regime_conditional_dashboard_data(
+            spy_returns, regime_labels, include_pairwise_shift=True
+        )
         assert result["pairwise_shift_matrix"] is not None
 
     def test_without_transitions(self, spy_returns, regime_labels):
-        result = regime_conditional_dashboard_data(spy_returns, regime_labels, include_transitions=False)
+        result = regime_conditional_dashboard_data(
+            spy_returns, regime_labels, include_transitions=False
+        )
         assert result["transition_analysis"] is None
 
     def test_length_mismatch_raises(self):

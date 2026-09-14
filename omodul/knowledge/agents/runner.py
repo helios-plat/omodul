@@ -1,4 +1,5 @@
 """AgentRunner — executes an agent with timeout tracking and trace persistence."""
+
 from __future__ import annotations
 
 import asyncio
@@ -77,7 +78,7 @@ class AgentRunner:
             )
             return result
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             elapsed = time.monotonic() - t0
             msg = f"Timeout after {agent.timeout_seconds}s"
             log.error("agent_run_timeout", agent=agent.name, run_id=run_id, elapsed=elapsed)

@@ -7,6 +7,7 @@ Composition: conflict_resolution (oskill K-G1).
 Produces a conflict pair list + decision_trail recording which pairs were
 checked and which conflicts were confirmed.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -16,7 +17,11 @@ from typing import Any, ClassVar
 from obase.provider_registry import ProviderRegistry
 
 from omodul._base import (
-    BaseConfig, CostTracker, Trail, build_result, compute_fingerprint,
+    BaseConfig,
+    CostTracker,
+    Trail,
+    build_result,
+    compute_fingerprint,
 )
 
 
@@ -32,7 +37,7 @@ class ConflictDetectionConfig(BaseConfig):
 
 async def conflict_detection_workflow(
     config: ConflictDetectionConfig,
-    input_data: Any,   # ConflictDetectionInput (oprim._aii_graph_types)
+    input_data: Any,  # ConflictDetectionInput (oprim._aii_graph_types)
     output_dir: Path,
     *,
     on_step=None,
@@ -46,10 +51,12 @@ async def conflict_detection_workflow(
 
     trail = Trail()
     cost = CostTracker()
-    fingerprint = compute_fingerprint({
-        "corpus_id": config.corpus_id,
-        "batch_id": config.batch_id,
-    })
+    fingerprint = compute_fingerprint(
+        {
+            "corpus_id": config.corpus_id,
+            "batch_id": config.batch_id,
+        }
+    )
 
     new_texts = list(getattr(input_data, "new_ku_texts", []))
     new_embeddings = list(getattr(input_data, "new_ku_embeddings", []))

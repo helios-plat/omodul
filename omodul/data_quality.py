@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import numpy as np
-import pandas as pd
-
 import oprim
 import oskill
+import pandas as pd
 
 
 def panel_data_quality_check(
@@ -57,7 +56,8 @@ def panel_data_quality_check(
         valid_data = series.dropna().values
         if len(valid_data) > 5:
             outlier_result = oskill.detect_outliers_robust(
-                valid_data, methods=["zscore", "iqr"],
+                valid_data,
+                methods=["zscore", "iqr"],
                 thresholds={"zscore": outlier_threshold_zscore},
             )
             n_outliers = outlier_result["n_outliers"]
@@ -66,7 +66,11 @@ def panel_data_quality_check(
             n_outliers = 0
             outlier_pct = 0.0
         outlier_score = max(0, 1.0 - outlier_pct * 10)
-        field_result["outliers"] = {"n_outliers": n_outliers, "pct": outlier_pct, "score": outlier_score}
+        field_result["outliers"] = {
+            "n_outliers": n_outliers,
+            "pct": outlier_pct,
+            "score": outlier_score,
+        }
 
         # Freshness
         freshness_score = 1.0
@@ -89,10 +93,10 @@ def panel_data_quality_check(
         # Field score
         w = score_weights
         field_result["field_score"] = (
-            gap_score * w.get("gap", 0.3) +
-            outlier_score * w.get("outlier", 0.3) +
-            freshness_score * w.get("freshness", 0.2) +
-            drift_score * w.get("drift", 0.2)
+            gap_score * w.get("gap", 0.3)
+            + outlier_score * w.get("outlier", 0.3)
+            + freshness_score * w.get("freshness", 0.2)
+            + drift_score * w.get("drift", 0.2)
         )
         per_field[col] = field_result
 
@@ -104,13 +108,17 @@ def panel_data_quality_check(
         "overall_score": overall,
         "issues_summary": {
             "fields_with_gaps": [k for k, v in per_field.items() if v["gaps"]["n_gaps"] > 0],
-            "fields_with_outliers": [k for k, v in per_field.items() if v["outliers"]["n_outliers"] > 0],
+            "fields_with_outliers": [
+                k for k, v in per_field.items() if v["outliers"]["n_outliers"] > 0
+            ],
             "stale_fields": [k for k, v in per_field.items() if v["freshness"]["score"] < 0.5],
             "fields_with_drift": [k for k, v in per_field.items() if v["drift"]["score"] < 0.5],
         },
         "panel_metadata": {
-            "n_rows": len(panel), "n_columns": len(numeric_cols),
-            "first_ts": str(panel.index[0]), "last_ts": str(panel.index[-1]),
+            "n_rows": len(panel),
+            "n_columns": len(numeric_cols),
+            "first_ts": str(panel.index[0]),
+            "last_ts": str(panel.index[-1]),
         },
         "warnings": [],
     }
@@ -144,7 +152,7 @@ def cross_source_consistency_check(
     corr_data = {s: {s2: np.nan for s2 in sources} for s in sources}
     for i, s1 in enumerate(sources):
         corr_data[s1][s1] = 1.0
-        for s2 in sources[i + 1:]:
+        for s2 in sources[i + 1 :]:
             v1 = multi_source_data[s1].dropna()
             v2 = multi_source_data[s2].dropna()
             common = v1.index.intersection(v2.index)
@@ -196,13 +204,15 @@ def cross_source_consistency_check(
         consistency_scores[s] = float(np.mean(valid_corrs)) if valid_corrs else 0.0
 
     # Recommended source
-    recommended = max(consistency_scores, key=consistency_scores.get) if consistency_scores else sources[0]
+    recommended = (
+        max(consistency_scores, key=consistency_scores.get) if consistency_scores else sources[0]
+    )
 
     # Find lowest correlation pair
     min_corr = 1.0
     min_pair = ""
     for i, s1 in enumerate(sources):
-        for s2 in sources[i + 1:]:
+        for s2 in sources[i + 1 :]:
             c = pairwise_corr.loc[s1, s2]
             if not np.isnan(c) and c < min_corr:
                 min_corr = c
@@ -216,7 +226,9 @@ def cross_source_consistency_check(
         "recommended_source": recommended,
         "summary": {
             "n_sources": n_sources,
-            "all_consistent": all(c >= consistency_threshold_corr for c in consistency_scores.values()),
+            "all_consistent": all(
+                c >= consistency_threshold_corr for c in consistency_scores.values()
+            ),
             "lowest_correlation_pair": min_pair,
         },
         "warnings": [],

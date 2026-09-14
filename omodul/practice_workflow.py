@@ -5,28 +5,26 @@ KC template is derived from data/guangdong_math_kc.py.
 
 Pillars: fingerprint + decision_trail + cost
 """
+
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 from typing import Any, ClassVar
-
-from pydantic import BaseModel
 
 from omodul._base import BaseConfig, CostTracker, Trail, build_result, compute_fingerprint
 
 # Template questions by KC module keyword (fallback if KC not found in dict)
 _KC_TEMPLATES: dict[str, tuple[str, str]] = {
-    "conic":      ("已知椭圆 x²/4 + y²/3 = 1，求过焦点的直线与椭圆交点坐标。", "GDMATH-CONIC-01"),
-    "func":       ("求函数 f(x) = 2x² - 3x + 1 的最小值。", "GDMATH-FUNC-01"),
-    "ineq":       ("解不等式 x² - 5x + 6 < 0。", "GDMATH-INEQ-01"),
-    "trig":       ("已知 sin(α) = 3/5，α∈(0, π/2)，求 cos(2α)。", "GDMATH-TRIG-01"),
-    "seq":        ("等差数列 {a_n} 中，a_1=2，公差 d=3，求 a_10。", "GDMATH-SEQ-01"),
-    "prob":       ("从一批产品中随机取3件，求至少1件次品的概率。", "GDMATH-PROB-01"),
-    "deriv":      ("求函数 f(x) = x³ - 3x² + 2 的极值。", "GDMATH-DERIV-01"),
-    "set":        ("已知全集 U={1,2,3,4,5}，集合 A={1,3}，B={2,4}，求 A∪B 与 ∁ᵤA。", "GDMATH-SET-01"),
-    "vector":     ("已知向量 a=(2,-1)，b=(1,3)，求 2a-b 及 a·b。", "GDMATH-VEC-01"),
-    "stat":       ("一组数据 2,4,6,8,10，求平均数和方差。", "GDMATH-STAT-01"),
+    "conic": ("已知椭圆 x²/4 + y²/3 = 1，求过焦点的直线与椭圆交点坐标。", "GDMATH-CONIC-01"),
+    "func": ("求函数 f(x) = 2x² - 3x + 1 的最小值。", "GDMATH-FUNC-01"),
+    "ineq": ("解不等式 x² - 5x + 6 < 0。", "GDMATH-INEQ-01"),
+    "trig": ("已知 sin(α) = 3/5，α∈(0, π/2)，求 cos(2α)。", "GDMATH-TRIG-01"),
+    "seq": ("等差数列 {a_n} 中，a_1=2，公差 d=3，求 a_10。", "GDMATH-SEQ-01"),
+    "prob": ("从一批产品中随机取3件，求至少1件次品的概率。", "GDMATH-PROB-01"),
+    "deriv": ("求函数 f(x) = x³ - 3x² + 2 的极值。", "GDMATH-DERIV-01"),
+    "set": ("已知全集 U={1,2,3,4,5}，集合 A={1,3}，B={2,4}，求 A∪B 与 ∁ᵤA。", "GDMATH-SET-01"),
+    "vector": ("已知向量 a=(2,-1)，b=(1,3)，求 2a-b 及 a·b。", "GDMATH-VEC-01"),
+    "stat": ("一组数据 2,4,6,8,10，求平均数和方差。", "GDMATH-STAT-01"),
 }
 
 
@@ -65,8 +63,8 @@ async def practice_workflow(
     Uses oprim.generate_variant with a KC-specific template question.
     Returns {status, items: [{question, kc_id, difficulty}], count}.
     """
-    from oprim.generate_variant import VariantInput, generate_variant
     from obase.provider_registry import ProviderRegistry
+    from oprim.generate_variant import VariantInput, generate_variant
 
     if caller is None:
         try:
@@ -96,13 +94,15 @@ async def practice_workflow(
                 subject="math",
             )
             item = await generate_variant(inp, caller=caller, model=config.model)
-            items.append({
-                "question": item.question or template_q,
-                "kc_id": config.kc_id,
-                "difficulty": item.difficulty,
-                "question_type": config.question_type,
-                "kernel_verified": item.kernel_verified,
-            })
+            items.append(
+                {
+                    "question": item.question or template_q,
+                    "kc_id": config.kc_id,
+                    "difficulty": item.difficulty,
+                    "question_type": config.question_type,
+                    "kernel_verified": item.kernel_verified,
+                }
+            )
             trail.record(event=f"item_{i + 1}", success=item.success)
             if on_step:
                 on_step("practice_workflow", f"item_{i + 1}")
@@ -144,6 +144,9 @@ def _difficulty_to_variant_type(difficulty: float) -> str:
 class _MockCaller:
     async def __call__(self, **kwargs: Any) -> dict:
         return {
-            "content": '{"question": "求函数 f(x) = x² + 2x - 3 的零点。", "answer": "", "difficulty": "medium", "kc_ids": []}',
+            "content": (
+                '{"question": "求函数 f(x) = x² + 2x - 3 的零点。", '
+                '"answer": "", "difficulty": "medium", "kc_ids": []}'
+            ),
             "usage": {"input_tokens": 0, "output_tokens": 0},
         }
