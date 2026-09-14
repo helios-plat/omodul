@@ -83,7 +83,6 @@ class CostTracker:
 # Trail (decision_trail)
 # ---------------------------------------------------------------------------
 
-@dataclass
 _PII_KEYS = frozenset({"user_id", "student_id", "account_id", "email", "phone", "name", "username", "device_id", "user_identifier"})
 
 def _public_event(value: Any) -> Any:
@@ -95,6 +94,7 @@ def _public_event(value: Any) -> Any:
     return value
 
 
+@dataclass
 class Trail:
     """decision_trail 记录器."""
     steps: list[dict] = field(default_factory=list)
