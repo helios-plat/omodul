@@ -3,14 +3,14 @@ name = "omodul"
 version = "1.36.0"
 description = "End-to-end financial analysis features built on oprim + oskill"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 license = { text = "MIT" }
 authors = [{ name = "Wiki" }]
 keywords = ["finance", "quantitative", "meta-functions", "backtest", "regime", "risk"]
 
 dependencies = [
-    "oprim @ git+https://github.com/helios-plat/oprim.git@833243d7ca7087116606f70cdb88e8f1f631f260",
-    "oskill @ git+https://github.com/helios-plat/oskill.git@c39a38a37c6eb06648a4fc1f2e32a1e3016c983e",
+    "oprim @ git+https://github.com/helios-plat/oprim.git@e7f9c65196437d3bff09401aa02bc817d071eec3",
+    "oskill @ git+https://github.com/helios-plat/oskill.git@7edb9044a742302a6a525bc35edbb6f6775c021b",
     "obase @ git+https://github.com/helios-plat/obase.git@a229627f96845ee5dccef9c8997241bd727f32ca",
     "numpy>=1.24",
     "scipy>=1.11",
