@@ -159,7 +159,7 @@ async def echo_loop_session(
 
 class SpacedReviewConfig(BaseConfig):
     """间隔复习调度配置。"""
-    _omodul_name: ClassVar[str] = "spaced_review_schedule"
+    _omodul_name: ClassVar[str] = "spaced_review_recommendation"
     _omodul_version: ClassVar[str] = "1.0.0"
     _enabled_pillars: ClassVar[set[str]] = {"decision_trail", "fingerprint"}
 
@@ -187,10 +187,9 @@ async def spaced_review_schedule(
     on_step=None,
 ) -> dict:
     """
-    计算下一次复习时间并更新卡片调度。
+    生成非权威的复习建议。最终 due/FSRS state 只能由 oprim FSRS adapter 产生。
 
-    Echo-Loop 使用固定间隔表（符合艾宾浩斯遗忘曲线）：
-    - 首学后 6h -> 1d -> 2d -> 4d -> 7d -> 14d -> 28d
+    固定间隔表仅作为 UI scaffold，不写 next_review_at，也不推进 review state。
     """
     trail = Trail()
     _now = input_data.now or datetime.now(timezone.utc)
@@ -212,17 +211,15 @@ async def spaced_review_schedule(
         else:
             is_completed = True
 
-        # 计算下次复习时间
-        from datetime import timedelta
+        # Recommendation only: FSRS remains the sole scheduling authority.
         next_review_at = None
-        if next_review_hours:
-            next_review_at = _now + timedelta(hours=next_review_hours)
 
         trail.record(
             event="schedule_complete",
             next_stage=next_stage,
             next_review_hours=next_review_hours,
-            next_review_at=next_review_at.isoformat() if next_review_at else None,
+            next_review_at=None,
+            recommendation_only=True,
             is_completed=is_completed,
         )
 
@@ -235,7 +232,8 @@ async def spaced_review_schedule(
             trail_path=trail_path,
             cost_usd=0.0,
             next_stage=next_stage,
-            next_review_at=next_review_at.isoformat() if next_review_at else None,
+            next_review_at=None,
+            recommendation_only=True,
             is_completed=is_completed,
         )
 

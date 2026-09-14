@@ -84,6 +84,17 @@ class CostTracker:
 # ---------------------------------------------------------------------------
 
 @dataclass
+_PII_KEYS = frozenset({"user_id", "student_id", "account_id", "email", "phone", "name", "username", "device_id", "user_identifier"})
+
+def _public_event(value: Any) -> Any:
+    """Keep identity out of decision trails; Layer 4 supplies subject_ref."""
+    if isinstance(value, dict):
+        return {k: _public_event(v) for k, v in value.items() if k.lower() not in _PII_KEYS}
+    if isinstance(value, list):
+        return [_public_event(v) for v in value]
+    return value
+
+
 class Trail:
     """decision_trail 记录器."""
     steps: list[dict] = field(default_factory=list)
@@ -91,7 +102,7 @@ class Trail:
 
     def record(self, *, event: str, step_no: int | None = None, **kwargs) -> None:
         sno = step_no if step_no is not None else len(self.steps) + 1
-        self.steps.append({"step_no": sno, "ts": time.time(), "event": event, **kwargs})
+        self.steps.append(_public_event({"step_no": sno, "ts": time.time(), "event": event, **kwargs}))
 
     def write(self, output_dir: Path, suffix: str = "") -> Path:
         path = output_dir / f"decision_trail_{self.run_id}{suffix}.json"

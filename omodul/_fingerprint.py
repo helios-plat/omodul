@@ -1,5 +1,15 @@
 import hashlib
 import json
+
+_PII_KEYS = frozenset({"user_id", "student_id", "account_id", "email", "phone", "name", "username", "device_id", "user_identifier"})
+
+def _public_input(value: Any) -> Any:
+    """Remove real identity fields before any omodul fingerprint is computed."""
+    if isinstance(value, dict):
+        return {k: _public_input(v) for k, v in value.items() if k.lower() not in _PII_KEYS}
+    if isinstance(value, list):
+        return [_public_input(v) for v in value]
+    return value
 from typing import Any, Literal
 
 
@@ -34,15 +44,15 @@ def compute_fingerprint(
 def _hash_input_data(input_data: Any, *, strategy: str) -> str:
     """input_data 类型分派 hash."""
     if hasattr(input_data, "model_dump"):  # pydantic BaseModel
-        canonical = json.dumps(input_data.model_dump(), sort_keys=True, default=str)
+        canonical = json.dumps(_public_input(input_data.model_dump()), sort_keys=True, default=str)
         return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
     elif isinstance(input_data, dict):
-        canonical = json.dumps(input_data, sort_keys=True, default=str)
+        canonical = json.dumps(_public_input(input_data), sort_keys=True, default=str)
         return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
     else:
         # Fallback to str() or something stable
         try:
-            canonical = json.dumps(input_data, sort_keys=True, default=str)
+            canonical = json.dumps(_public_input(input_data), sort_keys=True, default=str)
             return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
         except Exception:
             return hashlib.sha256(str(input_data).encode("utf-8")).hexdigest()
