@@ -10,7 +10,7 @@ keywords = ["finance", "quantitative", "meta-functions", "backtest", "regime", "
 
 dependencies = [
     "oprim @ git+https://github.com/helios-plat/oprim.git@833243d7ca7087116606f70cdb88e8f1f631f260",
-    "oskill @ git+https://github.com/helios-plat/oskill.git@8024bad8ded4e466d903f9fea2a53fa7e7db00fc",
+    "oskill @ git+https://github.com/helios-plat/oskill.git@c39a38a37c6eb06648a4fc1f2e32a1e3016c983e",
     "obase @ git+https://github.com/helios-plat/obase.git@a229627f96845ee5dccef9c8997241bd727f32ca",
     "numpy>=1.24",
     "scipy>=1.11",
