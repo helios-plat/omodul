@@ -9,9 +9,9 @@ authors = [{ name = "Wiki" }]
 keywords = ["finance", "quantitative", "meta-functions", "backtest", "regime", "risk"]
 
 dependencies = [
-    "oprim>=2.11",
-    "oskill>=3.0",
-    "obase>=0.12.1",
+    "oprim @ git+https://github.com/helios-plat/oprim.git@833243d7ca7087116606f70cdb88e8f1f631f260",
+    "oskill @ git+https://github.com/helios-plat/oskill.git@e949980a257f2f84f3b4c5325c73817678c57eaa",
+    "obase @ git+https://github.com/helios-plat/obase.git@a229627f96845ee5dccef9c8997241bd727f32ca",
     "numpy>=1.24",
     "scipy>=1.11",
     "pandas>=2.0",
