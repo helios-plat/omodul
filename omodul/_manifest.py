@@ -5,6 +5,8 @@ from __future__ import annotations
 VERSION = "1.3.0"
 
 ELEMENTS = {
+    # Wave F: skill qualification transaction
+    "evaluate_skill_version": "omodul.evaluate_skill_version",
     # Action Gateway (PR-09)
     "govern_action": "omodul.action_gateway",
     "execute_governed_action": "omodul.action_gateway",
