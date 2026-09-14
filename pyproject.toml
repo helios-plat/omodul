@@ -24,6 +24,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+test = [
+    "pymupdf>=1.27",
+    "duckdb>=1.0",
+    "mcp<2",
+]
 browser-extension = [
     "fastapi>=0.100.0",
     "uvicorn[standard]>=0.20.0",
