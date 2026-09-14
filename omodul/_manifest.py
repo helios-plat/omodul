@@ -42,7 +42,7 @@ ELEMENTS = {
     # Phase 5-6: Audit
     "vcp_silver_record": "omodul.audit",
     "okx_to_nautilus": "omodul.data_normalization",
-    "fixed_list": "omodul.universe_selection",
+    "fixed_list": "oprim.fixed_list",
     # Phase 6E-6F: Bayesian Analysis
     "estimate_alpha_posterior": "omodul.bayesian_analysis.alpha_estimation",
     "compare_strategies_bayesian": "omodul.bayesian_analysis.strategy_comparison",
@@ -111,7 +111,7 @@ CATEGORIES = {
     "strategies": ["bocpd_trend_following", "microstructure_scalper", "funding_rate_arbitrage"],
     "audit": ["vcp_silver_record"],
     "data_normalization": ["okx_to_nautilus"],
-    "universe_selection": ["fixed_list"],
+    "universe_selection": [],
     "bayesian_analysis": [
         "estimate_alpha_posterior",
         "compare_strategies_bayesian",
