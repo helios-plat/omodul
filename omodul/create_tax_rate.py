@@ -18,13 +18,13 @@ from omodul._base import BaseConfig, Trail, build_result, compute_fingerprint
 
 def compute_fingerprint_for(config: CreateTaxRateConfig, input_data: CreateTaxRateInput) -> str:
     """Fingerprint over region_code + name。"""
-    return compute_fingerprint({"region_code": input_data.region_code, "name": input_data.name})
+    return compute_fingerprint({"region_code": input_data.region_code, "label": input_data.name})
 
 
 class CreateTaxRateConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "create_tax_rate"
     _omodul_version: ClassVar[str] = "1.0.0"
-    _fingerprint_fields: ClassVar[set[str]] = {"region_code", "name"}
+    _fingerprint_fields: ClassVar[set[str]] = {"region_code", "label"}
     _enabled_pillars: ClassVar[set[str]] = {"fingerprint"}
 
 
@@ -76,7 +76,7 @@ async def create_tax_rate(
         row = {
             "id": tax_rate_id,
             "region_code": input_data.region_code,
-            "name": input_data.name,
+            "label": input_data.name,
             "rate_percent": input_data.rate_percent,
         }
 

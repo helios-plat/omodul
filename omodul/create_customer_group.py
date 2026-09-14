@@ -17,13 +17,13 @@ def compute_fingerprint_for(
     config: CreateCustomerGroupConfig, input_data: CreateCustomerGroupInput
 ) -> str:
     """Fingerprint over name。"""
-    return compute_fingerprint({"name": input_data.name})
+    return compute_fingerprint({"label": input_data.name})
 
 
 class CreateCustomerGroupConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "create_customer_group"
     _omodul_version: ClassVar[str] = "1.0.0"
-    _fingerprint_fields: ClassVar[set[str]] = {"name"}
+    _fingerprint_fields: ClassVar[set[str]] = {"label"}
     _enabled_pillars: ClassVar[set[str]] = {"fingerprint"}
 
 
@@ -63,7 +63,7 @@ async def create_customer_group(
         fp = compute_fingerprint_for(config, input_data)
 
         group_id = uuid7()
-        row = {"id": group_id, "name": input_data.name}
+        row = {"id": group_id, "label": input_data.name}
 
         if pool is not None:
             await insert_one(pool, table="customer_group", data=row)
