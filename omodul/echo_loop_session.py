@@ -54,7 +54,7 @@ class EchoLoopConfig(BaseConfig):
 
 class EchoLoopInput(BaseModel):
     """事务输入。"""
-    student_id: str
+    subject_ref: str
     audio_b64: str
     transcript: str
     student_retell: str = ""
@@ -93,7 +93,7 @@ async def echo_loop_session(
         trail.record(
             event="session_start",
             session_id=session_id,
-            student_id=input_data.student_id,
+            subject_ref=input_data.subject_ref,
             kc_ids=input_data.reference_kc_ids,
             transcript_length=len(input_data.transcript),
         )
@@ -172,7 +172,7 @@ class SpacedReviewConfig(BaseConfig):
 
 class SpacedReviewInput(BaseModel):
     """间隔复习调度输入。"""
-    student_id: str
+    subject_ref: str
     material_id: str
     current_stage: int = 0  # 0=首学, 1-7=复习轮次
     card_dict: dict = Field(default_factory=dict)
@@ -198,7 +198,7 @@ async def spaced_review_schedule(
     try:
         trail.record(
             event="schedule_calc",
-            student_id=input_data.student_id,
+            subject_ref=input_data.subject_ref,
             material_id=input_data.material_id,
             current_stage=input_data.current_stage,
         )
@@ -261,7 +261,7 @@ class DifficultSentenceConfig(BaseConfig):
 
 
 class DifficultSentenceInput(BaseModel):
-    student_id: str
+    subject_ref: str
     material_id: str
     sentence: str
     sentence_index: int
@@ -285,7 +285,7 @@ async def difficult_sentence_archive(
     try:
         trail.record(
             event="archive_difficult_sentence",
-            student_id=input_data.student_id,
+            subject_ref=input_data.subject_ref,
             material_id=input_data.material_id,
             sentence_index=input_data.sentence_index,
             difficulty=input_data.difficulty,
@@ -326,7 +326,7 @@ class ContextualFlashcardConfig(BaseConfig):
 
 
 class ContextualFlashcardInput(BaseModel):
-    student_id: str
+    subject_ref: str
     material_id: str
     difficult_sentences: list[dict]  # 来自 intensive_listen
     vocabulary: list[str] = Field(default_factory=list)  # 来自 retell/other
@@ -350,7 +350,7 @@ async def contextual_flashcard_generate(
     try:
         trail.record(
             event="generate_flashcards",
-            student_id=input_data.student_id,
+            subject_ref=input_data.subject_ref,
             material_id=input_data.material_id,
             difficult_count=len(input_data.difficult_sentences),
             vocab_count=len(input_data.vocabulary),
