@@ -1,5 +1,6 @@
 import hashlib
 import json
+from typing import Any, Literal
 
 _PII_KEYS = frozenset({"user_id", "student_id", "account_id", "email", "phone", "name", "username", "device_id", "user_identifier"})
 
@@ -10,9 +11,6 @@ def _public_input(value: Any) -> Any:
     if isinstance(value, list):
         return [_public_input(v) for v in value]
     return value
-from typing import Any, Literal
-
-
 def compute_fingerprint(
     config: Any,
     input_data: Any,
