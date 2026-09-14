@@ -53,6 +53,9 @@ build-backend = "hatchling.build"
 [tool.hatch.version]
 path = "omodul/_version.py"
 
+[tool.hatch.metadata]
+allow-direct-references = true
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "--strict-markers -v"
