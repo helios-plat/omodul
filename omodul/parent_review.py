@@ -15,7 +15,7 @@ class ParentReviewConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "parent_review"
     _omodul_version: ClassVar[str] = "0.1.0"
     _enabled_pillars: ClassVar[set] = {"fingerprint", "decision_trail"}
-    _fingerprint_fields: ClassVar[set[str]] = {"parent_id", "subject_ref"}
+    _fingerprint_fields: ClassVar[set[str]] = {"subject_ref", "subject_ref"}
 
 class ParentReviewInput(BaseModel):
     parent_id: uuid.UUID
