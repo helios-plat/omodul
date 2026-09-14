@@ -685,6 +685,7 @@ from .sandbox_session import eval_in_sandbox, sandbox_scope, sandbox_session  # 
 # ── 防御底座 (loop breaker + folding) ────────────────────────────
 from .context_compactor import context_compactor  # noqa: F401
 from .evaluate_skill_version import SkillEvaluationConfig, evaluate_skill_version  # noqa: F401
+from .qualify_change import ChangeQualificationConfig, qualify_change  # noqa: F401
 from .execution_health_monitor import execution_health_monitor  # noqa: F401
 from .implicit_feedback_processor import implicit_feedback_processor  # noqa: F401
 from .phase_spec_driven_plan import phase_spec_driven_plan  # noqa: F401
