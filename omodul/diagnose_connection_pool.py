@@ -8,7 +8,7 @@ from typing import Any, ClassVar, Literal
 from obase.cost_tracker import CostTracker
 from pydantic import BaseModel
 
-from oprim import postgres_long_running_queries, postgres_locks_status
+from oprim._postgres import postgres_long_running_queries, postgres_locks_status
 from oskill import diagnose_pattern_match, compute_severity_score, classify_signal
 
 from omodul._base_config import BaseConfig
