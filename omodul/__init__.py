@@ -302,7 +302,17 @@ from .refactor_transaction import (
 )
 from .rewind_to_checkpoint import RewindConfig, RewindInput, rewind_to_checkpoint
 from .run_and_fix import RunAndFixConfig, RunAndFixInput, run_and_fix
-from .run_subagent import SubagentConfig, SubagentInput, run_subagent
+from .run_subagent import (
+    HookSpec,
+    SubagentConfig,
+    SubagentDefinition,
+    SubagentInput,
+    SubagentPermissions,
+    _current_cost,
+    _current_depth,
+    _current_trail,
+    run_subagent,
+)
 from .security_audit import SecurityAuditConfig, SecurityAuditInput, security_audit
 from .socratic_tutor_session import (
     SocraticTutorConfig,
@@ -410,7 +420,17 @@ from omodul.symbol_dim_score import (
 
 
 # 统一的 compute_fingerprint_for(omodul_name, config, input_data) 路由
-def compute_fingerprint_for(omodul_name: str, config: Any, input_data: Any) -> str:
+def compute_fingerprint_for(
+    omodul_name: str | Any,
+    config: Any,
+    input_data: Any | None = None,
+) -> str:
+    # Preserve the established two-argument run_subagent helper while also
+    # supporting the generic three-argument router.
+    if input_data is None:
+        input_data = config
+        config = omodul_name
+        omodul_name = "run_subagent"
     routers = {
         "initialize_project": compute_fingerprint_for_initialize,
         "run_subagent": compute_fingerprint_for_run_subagent,
@@ -424,40 +444,10 @@ def compute_fingerprint_for(omodul_name: str, config: Any, input_data: Any) -> s
     return routers[omodul_name](config, input_data)
 
 
-# Constants and extra classes for test compatibility
+# Constants retained for the established run_subagent contract.
 RECURSION_DEPTH_LIMIT = 5
 RefactorConfig = RefactorTransactionConfig
 RefactorInput = RefactorTransactionInput
-
-from dataclasses import dataclass, field
-
-
-@dataclass
-class SubagentDefinition:
-    name: str
-    description: str
-    instructions: str
-    tools: list[str] = field(default_factory=list)
-
-
-@dataclass
-class SubagentPermissions:
-    allowed_tools: list[str] = field(default_factory=list)
-    denied_tools: list[str] = field(default_factory=list)
-    max_usd: float = 1.0
-
-
-@dataclass
-class HookSpec:
-    event: str
-    command: str
-    matcher: str | None = None
-
-
-from contextvars import ContextVar
-
-_current_cost: ContextVar[float] = ContextVar("_current_cost", default=0.0)
-_current_depth: ContextVar[int] = ContextVar("_current_depth", default=0)
 
 # ── 红蓝对抗审判庭 (高阶审判模块) ────────────────────────────────────
 from omodul.adversarial_chamber import (  # noqa: F401

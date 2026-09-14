@@ -14,6 +14,16 @@ from pathlib import Path
 from typing import Any, ClassVar, Literal
 from pydantic import BaseModel, Field
 
+RECURSION_DEPTH_LIMIT = 5
+
+
+# Runtime-local coordination state.  These ContextVars are intentionally
+# private implementation state, but are exported by ``omodul`` for the
+# existing test/integration contract.
+_current_cost: ContextVar[CostTracker | None]  # declared after CostTracker
+_current_depth: ContextVar[int]
+_current_trail: ContextVar[list[dict]]
+
 class LLMCaller:
     """obase.LLMCaller Protocol 占位（生产从 obase.ProviderRegistry 取实例）。"""
 
@@ -33,6 +43,11 @@ class CostTracker:
         self.in_tokens += in_tok
         self.out_tokens += out_tok
         return cost
+
+
+_current_cost = ContextVar("omodul_current_cost", default=None)
+_current_depth = ContextVar("omodul_current_depth", default=0)
+_current_trail = ContextVar("omodul_current_trail", default=[])
 
 @dataclass
 class HookSpec:
