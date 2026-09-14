@@ -1,4 +1,7 @@
 __version__ = "1.36.0"
+__3o_canonical_exports__ = frozenset({
+    "longvideo_produce", "narrated_video_produce", "presenter_video_produce", "shot_rework_produce",
+})
 from typing import Any
 
 from omodul.longvideo_produce import (
