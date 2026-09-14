@@ -16,7 +16,7 @@ class InstantSolveConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "instant_solve"
     _omodul_version: ClassVar[str] = "0.1.0"
     _enabled_pillars: ClassVar[set] = {"fingerprint", "decision_trail"}
-    _fingerprint_fields: ClassVar[set[str]] = {"student_id"}
+    _fingerprint_fields: ClassVar[set[str]] = {"subject_ref"}
 
 class InstantSolveInput(BaseModel):
     student_id: uuid.UUID

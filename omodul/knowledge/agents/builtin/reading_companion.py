@@ -55,11 +55,15 @@ class ReadingCompanionAgent(Agent):
         substrate_ctx = "\n\n".join(
             f"[{r.id}] {getattr(r, 'title', '')} \n{getattr(r, 'highlight', '')}" for r in results
         )
+        # §20 graph context injected by stratum router (never inside `question`,
+        # which doubles as the hybrid_search query).
+        graph_ctx = (params.get("graph_context") or "").strip()
         prompt = (
             f"根据用户知识库内容回答问题。每个观点引用来源（用 [substrate_id] 标记）。\n\n"
-            f"用户问题: {question}\n\n"
-            f"知识库相关内容:\n{substrate_ctx}\n\n"
-            f"回答（中文，简洁准确，必含来源标记）:"
+            + (f"已知概念背景:\n{graph_ctx}\n\n" if graph_ctx else "")
+            + f"用户问题: {question}\n\n"
+            + f"知识库相关内容:\n{substrate_ctx}\n\n"
+            + f"回答（中文，简洁准确，必含来源标记）:"
         )
 
         # 3. LLM call

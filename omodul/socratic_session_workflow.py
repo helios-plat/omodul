@@ -20,7 +20,7 @@ class SocraticConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "socratic_session_workflow"
     _omodul_version: ClassVar[str] = "1.0.0"
     _enabled_pillars: ClassVar[set[str]] = {"fingerprint", "decision_trail", "cost"}
-    _fingerprint_fields: ClassVar[set[str]] = {"question_hash", "user_id"}
+    _fingerprint_fields: ClassVar[set[str]] = {"question_hash", "subject_ref"}
 
     mode: str = "mixed"       # "deep" | "mixed" | "sprint"
     max_turns: int = 20

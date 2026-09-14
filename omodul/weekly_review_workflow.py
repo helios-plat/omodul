@@ -6,10 +6,10 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, ClassVar, Literal
 
-from pydantic import BaseModel, Field
-
 from obase.cost_tracker import CostTracker
 from obase.provider_registry import ProviderRegistry
+from pydantic import BaseModel, Field
+
 from omodul._base_config import BaseConfig
 from omodul._decision_trail import build_decision_trail, record_step
 from omodul._fingerprint import compute_fingerprint
@@ -113,7 +113,7 @@ Provide a general summary and group them by category.
 """
         response = llm(messages=[{"role": "user", "content": prompt}], max_tokens=2000)
         llm_content = response.get("content", "No summary generated.")
-        
+
         findings.summary = llm_content
         findings.groups = [
             ActivityGroup(category="General", count=len(input_data.activities))
@@ -198,7 +198,7 @@ def _write_markdown_report(
         f.write("## Findings\n")
         f.write(f"Groups: {len(findings.groups)}\n\n")
         f.write("## Trail\n")
-        f.write(f"Steps recorded.\n\n")
+        f.write("Steps recorded.\n\n")
         f.write("## Cost\n")
         f.write(f"USD: {cost_tracker.total_usd}\n\n")
         f.write("## Reproducibility\n")

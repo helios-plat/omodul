@@ -95,7 +95,7 @@ class DecisionLogConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "decision_log_correlation"
     _omodul_version: ClassVar[str] = "1.0.0"
     _enabled_pillars: ClassVar[set[str]] = {"decision_trail", "report"}
-    _fingerprint_fields: ClassVar[set[str]] = {"user_id", "period"}
+    _fingerprint_fields: ClassVar[set[str]] = {"subject_ref", "period"}
     user_id: str
     period: str = "30d"
 
@@ -119,7 +119,7 @@ class ColdStartConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "cold_start_briefing"
     _omodul_version: ClassVar[str] = "1.0.0"
     _enabled_pillars: ClassVar[set[str]] = {"fingerprint", "report"}
-    _fingerprint_fields: ClassVar[set[str]] = {"user_id"}
+    _fingerprint_fields: ClassVar[set[str]] = {"subject_ref"}
     user_id: str
 
 class MultiSourceConfig(BaseConfig):

@@ -22,7 +22,7 @@ class WelcomeEmailConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "send_welcome_email"
     _omodul_version: ClassVar[str] = "1.0.0"
     _enabled_pillars: ClassVar[set[str]] = {"fingerprint"}
-    _fingerprint_fields: ClassVar[set[str]] = {"user_id_hash", "template_id"}
+    _fingerprint_fields: ClassVar[set[str]] = {"subject_ref_hash", "template_id"}
 
     user_id_hash: str
     template_id: str = "welcome_v1"

@@ -20,7 +20,7 @@ class ReadingGuideConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "reading_guide_workflow"
     _omodul_version: ClassVar[str] = "1.0.0"
     _enabled_pillars: ClassVar[set[str]] = {"fingerprint", "decision_trail", "cost"}
-    _fingerprint_fields: ClassVar[set[str]] = {"question_hash", "user_id", "subject"}
+    _fingerprint_fields: ClassVar[set[str]] = {"question_hash", "subject_ref", "subject"}
 
     max_turns: int = 15
     model: str = "claude-sonnet-4-6"

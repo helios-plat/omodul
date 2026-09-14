@@ -43,7 +43,7 @@ class UserFeedbackConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "user_feedback_loop"
     _omodul_version: ClassVar[str] = "1.0.0"
     _enabled_pillars: ClassVar[set[str]] = {"fingerprint", "decision_trail"}
-    _fingerprint_fields: ClassVar[set[str]] = {"user_id", "signal_id"}
+    _fingerprint_fields: ClassVar[set[str]] = {"subject_ref", "signal_id"}
     user_id: str
     signal_id: str
 
@@ -79,7 +79,7 @@ class AlertPersonalizationConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "alert_personalization"
     _omodul_version: ClassVar[str] = "1.0.0"
     _enabled_pillars: ClassVar[set[str]] = {"fingerprint"}
-    _fingerprint_fields: ClassVar[set[str]] = {"user_id", "alert_type"}
+    _fingerprint_fields: ClassVar[set[str]] = {"subject_ref", "alert_type"}
     user_id: str
     alert_type: str = "signal_crossing"
 

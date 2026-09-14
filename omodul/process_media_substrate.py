@@ -39,7 +39,7 @@ class MediaConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "process_media_substrate"
     _omodul_version: ClassVar[str] = "1.0.0"
     _enabled_pillars: ClassVar[set] = {"fingerprint", "decision_trail", "report", "cost"}
-    _fingerprint_fields: ClassVar[set] = {"video_url", "user_id_hash"}
+    _fingerprint_fields: ClassVar[set] = {"video_url", "subject_ref_hash"}
 
     video_url: str
     user_id_hash: str

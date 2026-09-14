@@ -16,7 +16,11 @@ from typing import Any, ClassVar
 from obase.provider_registry import ProviderRegistry
 
 from omodul._base import (
-    BaseConfig, CostTracker, Trail, build_result, compute_fingerprint,
+    BaseConfig,
+    CostTracker,
+    Trail,
+    build_result,
+    compute_fingerprint,
 )
 
 

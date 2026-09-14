@@ -14,9 +14,9 @@ import traceback
 from pathlib import Path
 from typing import Any, ClassVar, Literal
 
+from obase.persistence import PgPool, update_one
 from pydantic import BaseModel
 
-from obase.persistence import PgPool, update_one
 from omodul._base_config import BaseConfig
 from omodul._fingerprint import compute_fingerprint
 
@@ -25,7 +25,7 @@ class VerifyEmailConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "verify_email_workflow"
     _omodul_version: ClassVar[str] = "1.0.0"
     _enabled_pillars: ClassVar[set[str]] = {"fingerprint"}
-    _fingerprint_fields: ClassVar[set[str]] = {"user_id_hash", "action"}
+    _fingerprint_fields: ClassVar[set[str]] = {"subject_ref_hash", "action"}
 
     user_id_hash: str
     user_id: str

@@ -22,7 +22,7 @@ class NotifDispatchConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "notification_dispatch_workflow"
     _omodul_version: ClassVar[str] = "1.0.0"
     _enabled_pillars: ClassVar[set[str]] = {"fingerprint"}
-    _fingerprint_fields: ClassVar[set[str]] = {"user_id_hash", "notification_type", "channel"}
+    _fingerprint_fields: ClassVar[set[str]] = {"subject_ref_hash", "notification_type", "channel"}
 
     user_id_hash: str
     notification_type: str

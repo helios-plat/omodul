@@ -30,7 +30,7 @@ class MonthlyReviewConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "monthly_review_cron_orchestrator"
     _omodul_version: ClassVar[str] = "1.0.0"
     _enabled_pillars: ClassVar[Set[str]] = {"fingerprint", "decision_trail", "report", "cost"}
-    _fingerprint_fields: ClassVar[Set[str]] = {"user_id_hash", "year_month"}
+    _fingerprint_fields: ClassVar[Set[str]] = {"subject_ref_hash", "year_month"}
 
     user_id_hash: str
     year_month: str  # "2026-05"

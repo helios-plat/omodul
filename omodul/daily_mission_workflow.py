@@ -19,7 +19,7 @@ class DailyMissionConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "daily_mission_workflow"
     _omodul_version: ClassVar[str] = "1.0.0"
     _enabled_pillars: ClassVar[set[str]] = {"fingerprint", "decision_trail"}
-    _fingerprint_fields: ClassVar[set[str]] = {"user_id", "mission_date"}
+    _fingerprint_fields: ClassVar[set[str]] = {"subject_ref", "mission_date"}
 
     mission_count: int = 5
     review_ratio: float = 0.4

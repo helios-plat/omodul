@@ -23,7 +23,7 @@ class SyncPrefsConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "sync_user_preferences"
     _omodul_version: ClassVar[str] = "1.0.0"
     _enabled_pillars: ClassVar[set[str]] = {"fingerprint"}
-    _fingerprint_fields: ClassVar[set[str]] = {"user_id_hash"}
+    _fingerprint_fields: ClassVar[set[str]] = {"subject_ref_hash"}
 
     user_id_hash: str
     user_id: str
