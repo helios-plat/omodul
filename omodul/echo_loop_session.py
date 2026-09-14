@@ -25,7 +25,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from omodul._base import BaseConfig, CostTracker, Trail, build_result
 from oskill.echo_loop_skill import EchoLoopResult, run_complete_echo_loop
-from oprim.cognitive import KCState
+from obase.cognitive_types import KCState
 
 
 # ──────────────────────────────────────────────────────────────────────────────
