@@ -710,6 +710,12 @@ RECURSION_DEPTH_LIMIT = 5
 RefactorConfig = RefactorTransactionConfig
 RefactorInput = RefactorTransactionInput
 
+# 3O canonical elements (one public class per element; ports/models remain in
+# their canonical modules for explicit dependency injection).
+from .accepted_progress_projection import AcceptedProgressProjection  # noqa: E402
+from .code_knowledge_graph import CodeKnowledgeGraph  # noqa: E402
+from .experiment_engine import ExperimentEngine  # noqa: E402
+
 __all__ = [
     "ARTIFACT_TYPES",
     "AdaptiveQuizConfig",
@@ -1170,4 +1176,10 @@ __all__ = [
     "variant_generation_workflow",
     "wayfinding_store",
     "web_research_task",
+]
+
+__all__ += [
+    "AcceptedProgressProjection",
+    "CodeKnowledgeGraph",
+    "ExperimentEngine",
 ]

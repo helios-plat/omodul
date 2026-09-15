@@ -158,3 +158,26 @@ CATEGORIES = {
     # --- Tide v4 extraction: B3-B5 (3 omoduls) ---
     "tide_v4_scoring": ["symbol_dim_score", "regime_inference", "candidate_pool"],
 }
+
+# 3O canonical element manifest (Wave N1-N7).  This is deliberately kept
+# separate from the historical business-workflow registry above.
+CANONICAL_ELEMENTS = {
+    "code_knowledge_graph": {
+        "repo": "omodul",
+        "version": 1,
+        "canonical_import": "omodul.code_knowledge_graph",
+        "canonical_export": "CodeKnowledgeGraph",
+    },
+    "experiment_engine": {
+        "repo": "omodul",
+        "version": 1,
+        "canonical_import": "omodul.experiment_engine",
+        "canonical_export": "ExperimentEngine",
+    },
+    "accepted_progress_projection": {
+        "repo": "omodul",
+        "version": 1,
+        "canonical_import": "omodul.accepted_progress_projection",
+        "canonical_export": "AcceptedProgressProjection",
+    },
+}
