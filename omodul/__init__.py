@@ -446,3 +446,43 @@ from omodul.reading_guide_workflow import (
     ReadingGuideInput,
     reading_guide_workflow,
 )
+
+
+__manifest__ = {
+    "package": 'omodul',
+    "version": __version__,
+    "elements": [
+        {
+            "name": 'longvideo_produce',
+            "kind": 'omodul',
+            "module": 'omodul.longvideo_produce',
+            "signature": '(config, input_data, output_dir) -> dict',
+            "depends_on": ['agentic_longvideo_pipeline'],
+            "pillars": ['cost', 'decision_trail', 'fingerprint', 'report'],
+        },
+        {
+            "name": 'narrated_video_produce',
+            "kind": 'omodul',
+            "module": 'omodul.narrated_video_produce',
+            "signature": '(config, input_data, output_dir) -> dict',
+            "depends_on": ['injected_renderer'],
+            "pillars": ['cost', 'decision_trail', 'fingerprint', 'report'],
+        },
+        {
+            "name": 'presenter_video_produce',
+            "kind": 'omodul',
+            "module": 'omodul.presenter_video_produce',
+            "signature": '(config, input_data, output_dir) -> dict',
+            "depends_on": ['injected_renderer'],
+            "pillars": ['cost', 'decision_trail', 'fingerprint', 'report'],
+        },
+        {
+            "name": 'shot_rework_produce',
+            "kind": 'omodul',
+            "module": 'omodul.shot_rework_produce',
+            "signature": '(config, input_data, output_dir) -> dict',
+            "depends_on": ['injected_renderer'],
+            "pillars": ['cost', 'decision_trail', 'fingerprint', 'report'],
+        },
+    ],
+}
