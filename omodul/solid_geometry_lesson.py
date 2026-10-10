@@ -18,6 +18,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from pathlib import Path
 from typing import ClassVar
 
@@ -49,17 +50,28 @@ class SolidGeometryLessonInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-async def solid_geometry_lesson(
+def solid_geometry_lesson(
     config: SolidGeometryLessonConfig,
     input_data: SolidGeometryLessonInput,
     output_dir: Path,
     *,
-    on_step=None,
+    on_step: Callable[[dict], None] | None = None,
 ) -> dict:
-    """解一道立体几何题并产出交互课数据。"""
+    """解一道立体几何题并产出交互课数据。
+
+    纯计算（sympy）、无 IO 并发，按 3O 本性为同步 omodul；服务层用
+    ``await asyncio.to_thread(solid_geometry_lesson, ...)`` 调用。
+    ``on_step`` 为同步回调 ``Callable[[dict], None]``，在每个事务步骤后调用。
+    """
     trail = Trail()
     cost = CostTracker()
     spec = input_data.spec
+
+    def step(event: str, **fields: object) -> None:
+        trail.record(event=event, **fields)
+        if on_step is not None:
+            on_step({"event": event, **fields})
+
     fingerprint = compute_fingerprint(
         {
             "omodul": config._omodul_name,
@@ -69,20 +81,20 @@ async def solid_geometry_lesson(
         }
     )
     try:
-        trail.record(event="spec_received", body=spec.body, query_type=spec.query.type, n_givens=len(spec.givens))
+        step("spec_received", body=spec.body, query_type=spec.query.type, n_givens=len(spec.givens))
 
         solution = solve_solid_geometry(spec, scale=config.scale)
-        trail.record(event="solved", answer_latex=solution.answer_latex, n_steps=len(solution.steps))
+        step("solved", answer_latex=solution.answer_latex, n_steps=len(solution.steps))
 
         coords = [
             solution.math_points[name]
             for key in QUERY_ARITY[spec.query.type]
             for name in spec.query.operand(key)
         ]
-        check = numeric_query_value(spec.query.type, coords)
+        check = numeric_query_value(spec.query.type, coords=coords)
         delta = abs(check - solution.answer_value)
         ok = delta <= config.cross_check_tolerance * max(1.0, abs(check))
-        trail.record(event="cross_checked", numeric=check, exact=solution.answer_value, delta=delta, ok=ok)
+        step("cross_checked", numeric=check, exact=solution.answer_value, delta=delta, ok=ok)
         if not ok:
             raise ValueError(f"cross-check mismatch: exact={solution.answer_value} numeric={check}")
 
