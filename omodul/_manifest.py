@@ -84,6 +84,11 @@ ELEMENTS = {
     "solid_geometry_lesson": "omodul.solid_geometry_lesson",
     "conic_chord_lesson": "omodul.conic_chord_lesson",
     "equation_balancing_lesson": "omodul.equation_balancing_lesson",
+    # --- Education: Echo Loop listening practice (consumer: Mneme) ---
+    "echo_loop_session": "omodul.echo_loop_session",
+    "spaced_review_schedule": "omodul.echo_loop_session",
+    "difficult_sentence_archive": "omodul.echo_loop_session",
+    "contextual_flashcard_generate": "omodul.echo_loop_session",
 }
 
 CATEGORIES = {
@@ -152,5 +157,5 @@ CATEGORIES = {
     # --- Tide v4 extraction: B3-B5 (3 omoduls) ---
     "tide_v4_scoring": ["symbol_dim_score", "regime_inference", "candidate_pool"],
     # --- Education: K-12 exact kernels (derived from wy51ai/edulab, Apache-2.0; consumer: Mneme) ---
-    "edu_k12": ["solid_geometry_lesson", "conic_chord_lesson", "equation_balancing_lesson"],
+    "edu_k12": ["solid_geometry_lesson", "conic_chord_lesson", "equation_balancing_lesson", "echo_loop_session", "spaced_review_schedule", "difficult_sentence_archive", "contextual_flashcard_generate"],
 }
