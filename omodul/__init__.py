@@ -446,3 +446,13 @@ from omodul.reading_guide_workflow import (
     ReadingGuideInput,
     reading_guide_workflow,
 )
+
+# repo3o intake elements
+from omodul.long_to_short_video_workflow import long_to_short_video_workflow
+from omodul.long_to_short_video_workflow import compute_fingerprint_for as long_to_short_video_workflow_fingerprint
+from omodul.deep_research_workflow import deep_research_workflow
+from omodul.deep_research_workflow import compute_fingerprint_for as deep_research_workflow_fingerprint
+from omodul.podcast_generation_workflow import podcast_generation_workflow
+from omodul.podcast_generation_workflow import compute_fingerprint_for as podcast_generation_workflow_fingerprint
+from omodul.marketing_video_generation import marketing_video_generation
+from omodul.marketing_video_generation import compute_fingerprint_for as marketing_video_generation_fingerprint
