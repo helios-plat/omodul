@@ -3,6 +3,7 @@ omodul.index_codebase — Scan, embed, and vector-write codebase files concurren
 
 Pillars: fingerprint, cost
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -25,12 +26,14 @@ async def _call(fn: Any, **kwargs: Any) -> Any:
     return result
 
 
-def compute_fingerprint_for(config: "Config", input_data: "InputData") -> str:
+def compute_fingerprint_for(config: Config, input_data: InputData) -> str:
     """Fingerprint over root_path + sorted extensions."""
-    return compute_fingerprint({
-        "root_path": input_data.root_path,
-        "extensions": sorted(config.extensions),
-    })
+    return compute_fingerprint(
+        {
+            "root_path": input_data.root_path,
+            "extensions": sorted(config.extensions),
+        }
+    )
 
 
 class Config(BaseConfig):
@@ -41,6 +44,7 @@ class Config(BaseConfig):
 
     max_concurrent: int = 5
     extensions: list[str] = [".py", ".ts", ".js", ".go", ".rs"]
+    incremental: bool = False
 
 
 class InputData(BaseModel):
@@ -48,8 +52,26 @@ class InputData(BaseModel):
     scanner: Any = None
     embedder: Any = None
     vector_writer: Any = None
+    # WAVE G: incremental update mode (None/空 = 全量 rebuild)
+    changed_files: list[dict[str, Any]] | None = None
+    index_revision: str = ""
+    source_revision: str = ""
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
+
+
+def _freshness_metadata(
+    *, changed: list[dict[str, Any]], prev_index_revision: str
+) -> dict[str, str]:
+    """freshness metadata: source/index revision + last applied change。"""
+    source_revision = compute_fingerprint({"changes": changed})
+    index_revision = compute_fingerprint({"prev": prev_index_revision, "source": source_revision})
+    last = changed[-1] if changed else {}
+    return {
+        "source_revision": source_revision,
+        "index_revision": index_revision,
+        "last_applied_change": (f"{last.get('kind', '')}:{last.get('path', '')}" if last else ""),
+    }
 
 
 async def index_codebase(
@@ -66,10 +88,90 @@ async def index_codebase(
     try:
         fp = compute_fingerprint_for(config, input_data)
 
+        # WAVE G incremental mode:只处理受影响文件,等价于全量 rebuild 结果
+        changed = list(input_data.changed_files or []) if config.incremental else []
+        if changed:
+            touched = [
+                c.get("path", "")
+                for c in changed
+                if c.get("kind") in ("added", "modified", "renamed") and c.get("path")
+            ]
+            removed = [
+                (c.get("old_path") or c.get("path", ""))
+                for c in changed
+                if c.get("kind") in ("deleted", "renamed")
+            ]
+            inc_results: dict[str, int] = {
+                "indexed": 0,
+                "skipped": 0,
+                "failed": 0,
+                "deleted": 0,
+            }
+            semaphore = asyncio.Semaphore(config.max_concurrent)
+
+            async def embed_one(f: str) -> None:
+                async with semaphore:
+                    p = Path(f)
+                    if not p.exists():
+                        inc_results["skipped"] += 1
+                        return
+                    try:
+                        content = p.read_text(encoding="utf-8", errors="ignore")
+                    except OSError:
+                        inc_results["skipped"] += 1
+                        return
+                    if not content.strip():
+                        inc_results["skipped"] += 1
+                        return
+                    embedding: list = []
+                    if input_data.embedder is not None:
+                        embedding = await _call(input_data.embedder, text=content)
+                    if input_data.vector_writer is not None:
+                        await _call(
+                            input_data.vector_writer,
+                            path=f,
+                            embedding=embedding,
+                            content=content,
+                        )
+                    inc_results["indexed"] += 1
+
+            gathered = await asyncio.gather(
+                *[embed_one(f) for f in touched],
+                return_exceptions=True,
+            )
+            for exc in gathered:
+                if isinstance(exc, BaseException) and not isinstance(exc, asyncio.CancelledError):
+                    inc_results["failed"] += 1
+            for dead in removed:
+                try:
+                    if input_data.vector_writer is not None:
+                        await _call(
+                            input_data.vector_writer,
+                            path=dead,
+                            embedding=[],
+                            content="",
+                            delete=True,
+                        )
+                    inc_results["deleted"] += 1
+                except Exception:
+                    inc_results["failed"] += 1
+            freshness = _freshness_metadata(
+                changed=changed, prev_index_revision=input_data.index_revision
+            )
+            result = build_result(
+                status="completed",
+                error=None,
+                fingerprint=fp,
+                cost_usd=cost.total_usd,
+                **inc_results,
+            )
+            result.update(freshness)
+            return result
+
         if input_data.scanner is not None:
-            files: list[str] = await _call(input_data.scanner,
-                                           root=input_data.root_path,
-                                           extensions=config.extensions)
+            files: list[str] = await _call(
+                input_data.scanner, root=input_data.root_path, extensions=config.extensions
+            )
         else:
             files = []
 
@@ -92,19 +194,16 @@ async def index_codebase(
                     results["skipped"] += 1
                     return
 
-                file_fp = compute_fingerprint(
-                    {"path": f, "mtime": str(p.stat().st_mtime)}
-                )
+                file_fp = compute_fingerprint({"path": f, "mtime": str(p.stat().st_mtime)})
 
                 embedding: list = []
                 if input_data.embedder is not None:
                     embedding = await _call(input_data.embedder, text=content)
 
                 if input_data.vector_writer is not None:
-                    await _call(input_data.vector_writer,
-                                path=f,
-                                embedding=embedding,
-                                content=content)
+                    await _call(
+                        input_data.vector_writer, path=f, embedding=embedding, content=content
+                    )
 
                 results["indexed"] += 1
 
@@ -116,13 +215,19 @@ async def index_codebase(
             if isinstance(exc, BaseException) and not isinstance(exc, asyncio.CancelledError):
                 results["failed"] += 1
 
-        return build_result(
+        freshness = _freshness_metadata(
+            changed=[{"kind": "full-rebuild", "path": input_data.root_path}],
+            prev_index_revision=input_data.index_revision,
+        )
+        result = build_result(
             status="completed",
             error=None,
             fingerprint=fp,
             cost_usd=cost.total_usd,
             **results,
         )
+        result.update(freshness)
+        return result
 
     except asyncio.CancelledError:
         raise
