@@ -9,14 +9,16 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from dataclasses import field
 from pathlib import Path
 from typing import Any, ClassVar
 
 from pydantic import BaseModel, ConfigDict
 
 from omodul._base import (
-    BaseConfig, CostTracker, Trail, build_result,
+    BaseConfig,
+    CostTracker,
+    Trail,
+    build_result,
 )
 
 

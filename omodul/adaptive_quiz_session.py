@@ -19,7 +19,7 @@ class AdaptiveQuizConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "adaptive_quiz_session"
     _omodul_version: ClassVar[str] = "1.0.0"
     _enabled_pillars: ClassVar[set[str]] = {"fingerprint", "decision_trail"}
-    _fingerprint_fields: ClassVar[set[str]] = {"user_id", "session_id"}
+    _fingerprint_fields: ClassVar[set[str]] = {"subject_ref", "session_id"}
 
     target_count: int = 10
     mastery_threshold: float = 0.75

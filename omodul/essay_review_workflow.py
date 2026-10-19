@@ -8,16 +8,17 @@ Report content: rubric scores + guidance questions (NO model essay).
 from __future__ import annotations
 
 import asyncio
-import hashlib
-import json
-import uuid
 from pathlib import Path
 from typing import Any, ClassVar
 
 from pydantic import BaseModel, ConfigDict
 
 from omodul._base import (
-    BaseConfig, CostTracker, Trail, build_result, compute_fingerprint,
+    BaseConfig,
+    CostTracker,
+    Trail,
+    build_result,
+    compute_fingerprint,
     write_report,
 )
 
@@ -137,11 +138,11 @@ async def essay_review_workflow(
 
 def _build_report(result, input_data: InputData) -> str:
     lines = [
-        f"# 作文评测报告",
-        f"",
+        "# 作文评测报告",
+        "",
         f"**年级**：{input_data.grade_level}  **文体**：{input_data.essay_type}",
         f"**是否需要修改**：{'是' if result.revision_needed else '否'}",
-        f"",
+        "",
         "## 各维度得分",
         "",
     ]

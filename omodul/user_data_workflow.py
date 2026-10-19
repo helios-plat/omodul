@@ -20,7 +20,7 @@ class UserDataConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "user_data_workflow"
     _omodul_version: ClassVar[str] = "1.0.0"
     _enabled_pillars: ClassVar[set[str]] = {"fingerprint", "decision_trail"}
-    _fingerprint_fields: ClassVar[set[str]] = {"user_id", "operation"}
+    _fingerprint_fields: ClassVar[set[str]] = {"subject_ref", "operation"}
 
     soft_delete: bool = True
 

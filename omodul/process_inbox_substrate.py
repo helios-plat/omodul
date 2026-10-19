@@ -32,7 +32,7 @@ class InboxConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "process_inbox_substrate"
     _omodul_version: ClassVar[str] = "1.0.0"
     _enabled_pillars: ClassVar[set[str]] = {"fingerprint", "decision_trail", "report"}
-    _fingerprint_fields: ClassVar[set[str]] = {"file_checksum", "medium_hint", "user_id_hash"}
+    _fingerprint_fields: ClassVar[set[str]] = {"file_checksum", "medium_hint", "subject_ref_hash"}
 
     file_path: Path  # Path to the uploaded temp file
     file_checksum: str  # SHA-256 of the file (caller computed)

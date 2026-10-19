@@ -19,7 +19,7 @@ class ForceAnalysisConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "force_analysis_workflow"
     _omodul_version: ClassVar[str] = "1.0.0"
     _enabled_pillars: ClassVar[set[str]] = {"fingerprint", "decision_trail", "cost"}
-    _fingerprint_fields: ClassVar[set[str]] = {"question_hash", "user_id"}
+    _fingerprint_fields: ClassVar[set[str]] = {"question_hash", "subject_ref"}
 
     max_turns: int = 15
     model: str = "claude-sonnet-4-6"

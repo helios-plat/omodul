@@ -4,6 +4,10 @@ from __future__ import annotations
 
 import numpy as np
 
+from omodul.portfolio.cvar_risk_workflow import CvarRiskConfig, cvar_risk_workflow
+
+__all__ = ["CvarRiskConfig", "cvar_risk_workflow"]
+
 
 def kelly_allocator(
     win_rate: float,

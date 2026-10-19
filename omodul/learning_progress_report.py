@@ -19,7 +19,7 @@ class LearningProgressConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "learning_progress_report"
     _omodul_version: ClassVar[str] = "1.0.0"
     _enabled_pillars: ClassVar[set[str]] = {"fingerprint", "decision_trail", "report"}
-    _fingerprint_fields: ClassVar[set[str]] = {"user_id", "period_key"}
+    _fingerprint_fields: ClassVar[set[str]] = {"subject_ref", "period_key"}
 
     report_period_days: int = 30
     min_attempts_per_kc: int = 3

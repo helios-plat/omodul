@@ -23,7 +23,7 @@ class ExportUserDataConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "export_user_data_csv"
     _omodul_version: ClassVar[str] = "1.0.0"
     _enabled_pillars: ClassVar[set[str]] = {"fingerprint", "report"}
-    _fingerprint_fields: ClassVar[set[str]] = {"user_id_hash", "export_scope"}
+    _fingerprint_fields: ClassVar[set[str]] = {"subject_ref_hash", "export_scope"}
 
     user_id_hash: str
     user_id: str

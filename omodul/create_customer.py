@@ -24,7 +24,7 @@ def compute_fingerprint_for(config: CreateCustomerConfig, input_data: CreateCust
 class CreateCustomerConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "create_customer"
     _omodul_version: ClassVar[str] = "1.0.0"
-    _fingerprint_fields: ClassVar[set[str]] = {"email"}
+    _fingerprint_fields: ClassVar[set[str]] = {"subject_ref"}
     _enabled_pillars: ClassVar[set[str]] = {"fingerprint"}
 
 

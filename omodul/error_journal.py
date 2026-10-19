@@ -14,7 +14,7 @@ class ErrorJournalConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "error_journal"
     _omodul_version: ClassVar[str] = "0.1.0"
     _enabled_pillars: ClassVar[set] = {"fingerprint", "decision_trail"}
-    _fingerprint_fields: ClassVar[set[str]] = {"student_id"}
+    _fingerprint_fields: ClassVar[set[str]] = {"subject_ref"}
 
 class ErrorJournalInput(BaseModel):
     student_id: uuid.UUID

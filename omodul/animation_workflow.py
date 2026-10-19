@@ -17,12 +17,14 @@ from pathlib import Path
 from typing import Any, ClassVar
 
 from oprim._animation_types import AnimationInput, AnimationResult
+from oskill._generate_animation import generate_animation
 
 from omodul._base import (
-    BaseConfig, Trail, build_result, compute_fingerprint,
+    BaseConfig,
+    Trail,
+    build_result,
+    compute_fingerprint,
 )
-
-from oskill._generate_animation import generate_animation
 
 
 class AnimationConfig(BaseConfig):
