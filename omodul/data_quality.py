@@ -151,7 +151,7 @@ def cross_source_consistency_check(
             if len(common) > 10:
                 corr_result = oprim.pearson_spearman_corr(
                     pd.Series(v1.loc[common].values),
-                    pd.Series(v2.loc[common].values),
+                    y=pd.Series(v2.loc[common].values),
                 )
                 c = corr_result.get("pearson_r", np.nan)
             else:

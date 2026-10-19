@@ -251,12 +251,16 @@ def regime_conditional_dashboard_data(
             returns_df = pd.DataFrame({"returns": returns})
             for r1 in regimes:
                 row = {}
-                data_r1 = oprim.regime_filter_data(returns_df, regime_labels, r1)["returns"].values
+                data_r1 = oprim.regime_filter_data(
+                    returns_df, regime_labels=regime_labels, target_regime=r1
+                )["returns"].values
                 for r2 in regimes:
                     if r1 == r2:
                         row[r2] = False
                     else:
-                        data_r2 = oprim.regime_filter_data(returns_df, regime_labels, r2)["returns"].values
+                        data_r2 = oprim.regime_filter_data(
+                            returns_df, regime_labels=regime_labels, target_regime=r2
+                        )["returns"].values
                         if len(data_r1) > 10 and len(data_r2) > 10:
                             shift = oskill.distribution_shift_test(data_r1, data_r2)
                             row[r2] = shift["shift_detected"]
