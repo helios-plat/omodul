@@ -160,10 +160,11 @@ async def run_and_fix(
                     pass  # pragma: no cover
 
             files_ctx = "\n\n".join(file_parts)
+            files_part = f"Files:\n{files_ctx}\n\n" if files_ctx else ""
             prompt = (
                 f"This command failed:\n```\n{input_data.command}\n```\n\n"
                 f"Error output:\n```\n{result.stderr[:2000]}\n{result.stdout[-1000:]}\n```\n\n"
-                f"{'Files:\n' + files_ctx if files_ctx else ''}\n\n"
+                f"{files_part}"
                 f"Return JSON edits to fix the error:\n"
                 f'[{{"path": "file.py", "search": "old", "replace": "new"}}]\n'
                 f"Return ONLY the JSON array."
