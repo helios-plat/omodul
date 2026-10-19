@@ -19,7 +19,7 @@ class GradePaperConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "grade_paper_workflow"
     _omodul_version: ClassVar[str] = "1.0.0"
     _enabled_pillars: ClassVar[set[str]] = {"fingerprint", "decision_trail", "cost", "report"}
-    _fingerprint_fields: ClassVar[set[str]] = {"paper_id", "user_id"}
+    _fingerprint_fields: ClassVar[set[str]] = {"paper_id", "subject_ref"}
 
     subject: str = "math"
     grade_level: int = 8

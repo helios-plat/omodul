@@ -19,7 +19,7 @@ class BreakpointRemediationConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "breakpoint_remediation_workflow"
     _omodul_version: ClassVar[str] = "1.0.0"
     _enabled_pillars: ClassVar[set[str]] = {"fingerprint", "decision_trail", "cost", "report"}
-    _fingerprint_fields: ClassVar[set[str]] = {"user_id", "session_id"}
+    _fingerprint_fields: ClassVar[set[str]] = {"subject_ref", "session_id"}
 
     max_remediation_items: int = 5
     priority_kcs: list[str] = []

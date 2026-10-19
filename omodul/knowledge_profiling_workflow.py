@@ -19,7 +19,7 @@ class KnowledgeProfilingConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "knowledge_profiling_workflow"
     _omodul_version: ClassVar[str] = "1.0.0"
     _enabled_pillars: ClassVar[set[str]] = {"fingerprint", "decision_trail", "report"}
-    _fingerprint_fields: ClassVar[set[str]] = {"user_id", "kc_list_hash"}
+    _fingerprint_fields: ClassVar[set[str]] = {"subject_ref", "kc_list_hash"}
 
     peer_group_size: int = 100
     min_attempts_for_mastery: int = 3

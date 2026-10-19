@@ -27,7 +27,7 @@ class DailyDigestConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "daily_digest_workflow"
     _omodul_version: ClassVar[str] = "1.0.0"
     _enabled_pillars: ClassVar[set[str]] = {"fingerprint", "report"}
-    _fingerprint_fields: ClassVar[set[str]] = {"digest_date", "user_id_hash"}
+    _fingerprint_fields: ClassVar[set[str]] = {"digest_date", "subject_ref_hash"}
 
     digest_date: date
     user_id_hash: str

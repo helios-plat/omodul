@@ -7,11 +7,8 @@ Pillars: fingerprint + decision_trail + cost
 """
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 from typing import Any, ClassVar
-
-from pydantic import BaseModel
 
 from omodul._base import BaseConfig, CostTracker, Trail, build_result, compute_fingerprint
 
@@ -65,8 +62,8 @@ async def practice_workflow(
     Uses oprim.generate_variant with a KC-specific template question.
     Returns {status, items: [{question, kc_id, difficulty}], count}.
     """
-    from oprim.generate_variant import VariantInput, generate_variant
     from obase.provider_registry import ProviderRegistry
+    from oprim.generate_variant import VariantInput, generate_variant
 
     if caller is None:
         try:

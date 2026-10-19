@@ -28,7 +28,7 @@ class DisciplineBannerConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "discipline_banner_toast_data"
     _omodul_version: ClassVar[str] = "1.0.0"
     _enabled_pillars: ClassVar[Set[str]] = {"fingerprint", "decision_trail"}
-    _fingerprint_fields: ClassVar[Set[str]] = {"user_id_hash", "trade_date"}
+    _fingerprint_fields: ClassVar[Set[str]] = {"subject_ref_hash", "trade_date"}
 
     user_id_hash: str
     trade_date: date
