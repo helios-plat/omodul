@@ -369,6 +369,8 @@ class TestMultiAgentWorktreeWorkflow:
         repo = tmp_path / "repo"
         repo.mkdir()
         _git("init", "-b", "main", repo=repo)
+        _git("config", "user.name", "omodul-test", repo=repo)
+        _git("config", "user.email", "omodul-test@example.invalid", repo=repo)
         (repo / "f.txt").write_text("x")
         _git("add", ".", repo=repo)
         _git("commit", "-m", "init", repo=repo)
