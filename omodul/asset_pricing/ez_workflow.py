@@ -156,7 +156,7 @@ def epstein_zin_asset_pricing_workflow(
         try:
             agg_val = epstein_zin_aggregator(
                 C_check,
-                CE_check,
+                continuation_value=CE_check,
                 discount=discount,
                 risk_aversion=risk_aversion,
                 ies=ies,
