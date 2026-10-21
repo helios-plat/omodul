@@ -305,7 +305,7 @@ def factor_attribution_report(
                 attr["betas"][f] * fac[f].values for f in attr["factor_names"]
             )
             residuals = ret - predicted
-            ks_test = oprim.kolmogorov_smirnov_test(residuals, "norm", mode="one_sample")
+            ks_test = oprim.kolmogorov_smirnov_test(residuals, sample_b="norm", mode="one_sample")
             model_result["residual_analysis"] = {
                 "ks_statistic": ks_test["statistic"],
                 "ks_pvalue": ks_test["p_value"],

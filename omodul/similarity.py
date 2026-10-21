@@ -69,11 +69,11 @@ def smart_peer_finder(
     method_scores: dict[str, np.ndarray] = {}
 
     if "cosine" in sig_methods:
-        sims = oprim.cosine_similarity_batch(query_sig, sig_matrix)
+        sims = oprim.cosine_similarity_batch(query_sig, database=sig_matrix)
         method_scores["cosine"] = 1.0 - sims  # distance
 
     if "euclidean" in sig_methods:
-        dists = oprim.euclidean_distance_matrix(query_sig.reshape(1, -1), sig_matrix)
+        dists = oprim.euclidean_distance_matrix(query_sig.reshape(1, -1), y=sig_matrix)
         method_scores["euclidean"] = dists[0]
 
     # Time series methods via oskill
@@ -181,11 +181,11 @@ def event_cascade_clusterer(
     n = len(embeddings)
     # Batch: compute full similarity matrix at once
     dist_matrix = np.zeros((n, n))
-    sims = oprim.cosine_similarity_batch(embeddings, embeddings)
+    sims = oprim.cosine_similarity_batch(embeddings, database=embeddings)
     if sims.ndim == 1:
         # Single query mode - fall back to row-by-row
         for i in range(n):
-            row_sims = oprim.cosine_similarity_batch(embeddings[i], embeddings)
+            row_sims = oprim.cosine_similarity_batch(embeddings[i], database=embeddings)
             dist_matrix[i] = np.clip(1.0 - row_sims, 0.0, 2.0)
     else:
         dist_matrix = np.clip(1.0 - sims, 0.0, 2.0)

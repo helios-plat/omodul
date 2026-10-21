@@ -187,7 +187,7 @@ def tail_risk_analyzer(
     # Normality test
     normality_test = None
     if include_normality_test:
-        ks = oprim.kolmogorov_smirnov_test(ret.values, "norm", mode="one_sample")
+        ks = oprim.kolmogorov_smirnov_test(ret.values, sample_b="norm", mode="one_sample")
         normality_test = {
             "ks_statistic": ks["statistic"],
             "ks_pvalue": ks["p_value"],

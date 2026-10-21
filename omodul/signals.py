@@ -64,7 +64,7 @@ def alert_calibration_engine(
                 successes = int(g_outcomes.sum())
                 failures = len(g_outcomes) - successes
                 bandit_state = oprim.bayes_beta_update(
-                    bandit_prior_alpha, bandit_prior_beta,
+                    bandit_prior_alpha, prior_beta=bandit_prior_beta,
                     successes=successes, failures=failures,
                 )
                 bandit_state["n_observed"] = len(g_outcomes)
@@ -120,7 +120,7 @@ def thesis_invalidation_monitor(
             continue
 
         # Latest Brier score
-        brier = oprim.brier_score_decomposed(preds, outcomes)
+        brier = oprim.brier_score_decomposed(preds, outcomes=outcomes)
         latest_brier = brier["brier_score"]
 
         # Rolling Brier
@@ -128,7 +128,7 @@ def thesis_invalidation_monitor(
         for i in range(rolling_window, len(preds) + 1):
             w_preds = preds[i - rolling_window:i]
             w_out = outcomes[i - rolling_window:i]
-            rb = oprim.brier_score_decomposed(w_preds, w_out)
+            rb = oprim.brier_score_decomposed(w_preds, outcomes=w_out)
             rolling_briers.append(rb["brier_score"])
 
         # Trend analysis

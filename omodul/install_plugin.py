@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 from oskill import compose_plugin_manifest
+from oskill import compose_plugin_manifest
 import json
 import re
 import sys
