@@ -271,7 +271,7 @@ from .refactor_transaction import (
 )
 from .rewind_to_checkpoint import RewindConfig, RewindInput, rewind_to_checkpoint
 from .run_and_fix import RunAndFixConfig, RunAndFixInput, run_and_fix
-from .run_subagent import SubagentConfig, SubagentInput, run_subagent
+from .run_subagent import SubagentConfig, SubagentInput, _current_trail, run_subagent
 from .security_audit import SecurityAuditConfig, SecurityAuditInput, security_audit
 from .socratic_tutor_session import (
     SocraticTutorConfig,
