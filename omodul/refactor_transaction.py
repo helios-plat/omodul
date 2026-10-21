@@ -3,6 +3,8 @@
 from __future__ import annotations
 from oskill import apply_edit_block
 from oprim import file_read, file_write
+from oskill import apply_edit_block
+from oprim import file_read, file_write
 import json
 import re
 import sys

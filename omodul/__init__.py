@@ -1,4 +1,4 @@
-__version__ = "1.49.0"
+from omodul._version import __version__ as __version__  # single source: _version.py
 from typing import Any
 
 from omodul.add_customer_address import add_customer_address
@@ -133,6 +133,10 @@ from omodul.index_codebase import index_codebase
 from omodul.init_project import init_project
 from omodul.login_provider import login_provider
 from omodul.mark_draft_order_paid import mark_draft_order_paid
+from omodul.optimize_skill import Config as OptimizeSkillConfig
+from omodul.optimize_skill import InputData as OptimizeSkillInput
+from omodul.optimize_skill import compute_fingerprint_for as optimize_skill_fingerprint
+from omodul.optimize_skill import optimize_skill
 
 # New omodul modules (batch 1.29)
 from omodul.process_prompt import process_prompt
@@ -150,7 +154,6 @@ from omodul.remove_gift_card_from_cart import (
 from omodul.remove_gift_card_from_cart import remove_gift_card_from_cart
 from omodul.remove_prices_from_list import remove_prices_from_list
 from omodul.reset_user_password import reset_user_password
-from omodul.run_subagent_task import run_subagent_task
 from omodul.set_cart_billing_address import (
     compute_fingerprint_for as set_cart_billing_address_fingerprint,
 )
@@ -237,9 +240,6 @@ from .compact_conversation import (
 )
 from .compute_fingerprint_for_generate_tests import compute_fingerprint_for_generate_tests
 from .compute_fingerprint_for_initialize import compute_fingerprint_for_initialize
-from .compute_fingerprint_for_run_subagent import (
-    compute_fingerprint_for as compute_fingerprint_for_run_subagent,
-)
 from .create_checkpoint import CreateCheckpointConfig, CreateCheckpointInput, create_checkpoint
 from .explain_codebase import ExplainCodebaseConfig, ExplainCodebaseInput, explain_codebase
 from .generate_commit_message import (
@@ -271,7 +271,6 @@ from .refactor_transaction import (
 )
 from .rewind_to_checkpoint import RewindConfig, RewindInput, rewind_to_checkpoint
 from .run_and_fix import RunAndFixConfig, RunAndFixInput, run_and_fix
-from .run_subagent import SubagentConfig, SubagentInput, run_subagent
 from .security_audit import SecurityAuditConfig, SecurityAuditInput, security_audit
 from .socratic_tutor_session import (
     SocraticTutorConfig,
@@ -382,7 +381,6 @@ from omodul.symbol_dim_score import (
 def compute_fingerprint_for(omodul_name: str, config: Any, input_data: Any) -> str:
     routers = {
         "initialize_project": compute_fingerprint_for_initialize,
-        "run_subagent": compute_fingerprint_for_run_subagent,
         "generate_tests": compute_fingerprint_for_generate_tests,
         "symbol_dim_score": compute_fingerprint_for_symbol_dim_score,
         "regime_inference": compute_fingerprint_for_regime_inference,
@@ -440,7 +438,6 @@ from omodul.force_analysis_workflow import (
     ForceAnalysisInput,
     force_analysis_workflow,
 )
-
 from omodul.reading_guide_workflow import (
     ReadingGuideConfig,
     ReadingGuideInput,
@@ -640,3 +637,14 @@ from omodul.tts_manager import (
     evaluate_task_complexity,
     tts_scale_workflow,
 )
+
+
+from omodul.code_audit_workflow import AuditConfig, AuditInput, audit_repository_workflow
+from omodul.context_builder import ContextBuilderConfig, ContextInput, build_context_workflow
+from omodul.evidence_refine import EvidenceConfig, EvidenceInput, evidence_refine_workflow
+
+from omodul.run_subagent_task import run_subagent_task
+from .compute_fingerprint_for_run_subagent import (
+    compute_fingerprint_for as compute_fingerprint_for_run_subagent,
+)
+from .run_subagent import SubagentConfig, SubagentInput, run_subagent

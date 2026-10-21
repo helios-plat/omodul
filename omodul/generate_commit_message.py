@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 from oprim import count_tokens, git_diff
+from oprim import count_tokens, git_diff
 import sys
 import os
 from pathlib import Path

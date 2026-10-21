@@ -2,6 +2,83 @@
 
 <!-- Governance: see RELEASE_POLICY.md. main = release branch; feat branches deleted after merge; oprim → oskill → omodul merge order required; container bind-mount means git checkout is a live operation. -->
 
+## [1.50.2] — 2026-10-22
+
+### Fixed — 版本号单源 (SPEC §1.4)
+
+`omodul/__init__.py` 与 `omodul/_version.py` 各写了一份 `__version__`，于是
+`import omodul; omodul.__version__` 报的是 `__init__` 里那份旧值（1.50.0），
+与 `pyproject.toml` / hatch 打包取的 `_version.py`（1.50.1）不一致。现 `__init__`
+直接 `from omodul._version import __version__`，版本号只有一处。
+
+### Tests
+- `221 failed, 2081 passed, 182 skipped`（同一 `--ignore` 口径）。
+  上一版是 `232 failed, 2070 passed` —— 多出的 11 项通过是本次单源修复带来的
+  （这些用例断言的是 `omodul.__version__` 与打包元数据一致）。其余 221 项为
+  `origin/main` 上同样存在的既有失败。
+
+## [1.50.1] — 2026-10-22
+
+### Fixed
+
+- 与 `origin/main` 合并（v1.50.0 之后 main 前进 25 个提交）。冲突解决时保留了双方：
+  main 的 repo3o-intake / 3O-Veya 导出块、`_current_depth` ContextVar、
+  `run_subagent` 系列导出；本分支的 `omodul.behavior` 完整诊断导出。
+  解决前 `omodul.SubagentConfig` / `_current_depth` 等导出缺失会导致 4 个测试模块
+  收集期 ImportError，现已恢复。
+
+### Tests
+- `232 failed, 2070 passed, 182 skipped`（忽略 `test_changeset_and_loop.py` /
+  `test_run_subagent.py`，两者需要未安装的 `croniter`）。
+  同一命令在 `origin/main` worktree 上是 `232 failed, 2057 passed` —— 失败集合
+  完全一致（既有红灯），多出的 13 项通过是 v1.50.0 新增的行为测试。
+
+## [1.50.0] — 2026-10-22
+
+### Added (upstreaming consumer patches — 3O 主库成为唯一来源)
+
+合回 helios 使用方线上「上游没有」的 `omodul.behavior` 能力。详见
+`/data/soffy/projects/ext/3o_upstream_report.md`。
+
+omodul = 业务事务层，这四项都是「交易行为诊断」同一业务事务内的诊断维度与
+规则提取，归位正确（不是新的原子或算法，不应下沉到 oprim/oskill）。
+
+**`trade_journal_analyzer` 诊断维度补全 (3)**
+- feat(disposition): 持仓时长维度 —— 用 `hold_days` / `duration_days` 列比较
+  盈利单与亏损单的平均持仓天数，输出 `ratio_loss_to_win_hold` / `severity` /
+  `evidence`（Odean 1998 处置效应的时长形式；原先只有盈亏金额形式）
+- feat(overtrading): 忙碌日 vs 冷清日 PnL —— 按日成交笔数的 Q3/Q1 分位切分，
+  输出 `busy_day_avg_pnl` / `quiet_day_avg_pnl` / `severity` / `evidence`
+- feat(anchoring): 价格聚集 CV —— 对成交≥ 3 笔的标的算价格变异系数，
+  CV < 5% 视为价格锚定，输出 `anchored_symbol_ratio` / `anchored_symbols`
+
+**`chasing` 不再强制依赖 benchmark_returns**
+- fix: 原实现下 `chasing` 诊断**必须**传 `benchmark_returns` 才输出；现新增
+  自体动量追高检查（同一标的连续买入中，前一笔价格 >3% 涨幅后的买入占比），
+  无 benchmark 也能给出 `chase_ratio` / `severity` / `evidence`。
+  有 benchmark 时行为不变。
+
+**Shadow Account 规则提取 (2 个新元素 + 1 个私有 helper)**
+- feat: `extract_shadow_rules(trades, *, min_support, max_rules)` —— 从盈利
+  回合中提取「纪律化交易规则」（持仓区间、止损、盈亏比、主导方向），
+  样本不足时回退到 `SR0_BASELINE` 基线规则
+- feat: `build_shadow_rule_fn(rules, *, rule_source, fusion_threshold,
+  signal_series)` —— 为 `shadow_account_simulator` 构造确定性 `rule_fn`，
+  支持 `user_extracted` / `fusion_score` / `rsi_mtf` / `hybrid` 四种入场源
+- chore: `_default_baseline_rule()` 私有 helper
+
+**注册方式**：与上游一致，通过 `omodul.behavior.X` 访问（helios
+`journal_service.py` 就是这样调的），不在 `omodul/__init__.py` 里 eager import——
+避免把 pandas/numpy 依赖塞进入口。
+
+### Tests
+- `tests/test_behavior.py` 新增 `TestShadowRuleExtraction` (6 项) 与
+  `TestBuildShadowRuleFn` (8 项)
+- 全套：`1848 passed`，**新增失败 0**（基线 241 项 → 226 项；减少的 15 项
+  均为本次改动顺带消除的既有失败）。唯一失败
+  `test_with_regime_labels` 是既有问题（`oprim.regime_filter_data` 签名不匹配），
+  与本次无关。
+
 ## [1.36.0] — 2026-07-04
 
 ### Added (C3 — 结构化 per-shot 结果 + 镜头级返工)
