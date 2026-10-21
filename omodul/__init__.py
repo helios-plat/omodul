@@ -213,6 +213,7 @@ from omodul.update_tax_rate import compute_fingerprint_for as update_tax_rate_fi
 from omodul.update_tax_rate import update_tax_rate
 from omodul.update_user import update_user
 from omodul.web_research_task import web_research_task
+from omodul.knowledge.agents.builtin.illustration_agent import IllustrationAgent
 
 from ._base import CostTracker, Trail
 from ._base_config import BaseConfig
