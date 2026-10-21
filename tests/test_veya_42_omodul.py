@@ -11,8 +11,6 @@ from __future__ import annotations
 
 import pathlib
 
-import pytest
-
 _OUT = pathlib.Path("/tmp")
 
 
@@ -154,7 +152,11 @@ class TestLongTaskMemoryWorkflow:
 
 class TestCodeInvestigationWorkflow:
     async def test_investigation_with_report(self, tmp_path: pathlib.Path):
-        from omodul import CodeInvestigationConfig, CodeInvestigationInput, code_investigation_workflow
+        from omodul import (
+            CodeInvestigationConfig,
+            CodeInvestigationInput,
+            code_investigation_workflow,
+        )
 
         src = tmp_path / "src"
         src.mkdir()
@@ -174,7 +176,11 @@ class TestCodeInvestigationWorkflow:
         assert r["cost_usd"] > 0
 
     async def test_diagnosis_mode(self, tmp_path: pathlib.Path):
-        from omodul import CodeInvestigationConfig, CodeInvestigationInput, code_investigation_workflow
+        from omodul import (
+            CodeInvestigationConfig,
+            CodeInvestigationInput,
+            code_investigation_workflow,
+        )
 
         src = tmp_path / "src2"
         src.mkdir()
@@ -193,7 +199,11 @@ class TestCodeInvestigationWorkflow:
         assert r["findings"]["root_cause"] == "空指针"
 
     async def test_no_files_fails(self, tmp_path: pathlib.Path):
-        from omodul import CodeInvestigationConfig, CodeInvestigationInput, code_investigation_workflow
+        from omodul import (
+            CodeInvestigationConfig,
+            CodeInvestigationInput,
+            code_investigation_workflow,
+        )
 
         r = await code_investigation_workflow(
             CodeInvestigationConfig(), CodeInvestigationInput(question="x"), tmp_path
@@ -311,7 +321,11 @@ class TestMcpExecutionWorkflow:
 
 class TestMultiAgentWorktreeWorkflow:
     async def test_missing_repo_fails(self, tmp_path: pathlib.Path):
-        from omodul import MultiAgentWorktreeConfig, MultiAgentWorktreeInput, multi_agent_worktree_workflow
+        from omodul import (
+            MultiAgentWorktreeConfig,
+            MultiAgentWorktreeInput,
+            multi_agent_worktree_workflow,
+        )
 
         r = await multi_agent_worktree_workflow(
             MultiAgentWorktreeConfig(),
@@ -326,7 +340,11 @@ class TestMultiAgentWorktreeWorkflow:
         assert "not found" in r["error"]["message"]
 
     async def test_runner_required(self, tmp_path: pathlib.Path):
-        from omodul import MultiAgentWorktreeConfig, MultiAgentWorktreeInput, multi_agent_worktree_workflow
+        from omodul import (
+            MultiAgentWorktreeConfig,
+            MultiAgentWorktreeInput,
+            multi_agent_worktree_workflow,
+        )
 
         r = await multi_agent_worktree_workflow(
             MultiAgentWorktreeConfig(),
@@ -341,11 +359,18 @@ class TestMultiAgentWorktreeWorkflow:
         import asyncio
 
         from oprim.git import _git
-        from omodul import MultiAgentWorktreeConfig, MultiAgentWorktreeInput, multi_agent_worktree_workflow
+
+        from omodul import (
+            MultiAgentWorktreeConfig,
+            MultiAgentWorktreeInput,
+            multi_agent_worktree_workflow,
+        )
 
         repo = tmp_path / "repo"
         repo.mkdir()
         _git("init", "-b", "main", repo=repo)
+        _git("config", "user.name", "omodul-test", repo=repo)
+        _git("config", "user.email", "omodul-test@example.invalid", repo=repo)
         (repo / "f.txt").write_text("x")
         _git("add", ".", repo=repo)
         _git("commit", "-m", "init", repo=repo)

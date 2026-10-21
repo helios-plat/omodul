@@ -8,29 +8,16 @@
 
 from __future__ import annotations
 
-import os
-import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-
-import pytest
-
-# 挂载路径
-_3O_ROOT = Path(__file__).resolve().parent.parent.parent
-sys.path.insert(0, str(_3O_ROOT / "obase"))
-sys.path.insert(0, str(_3O_ROOT / "oprim"))
-sys.path.insert(0, str(_3O_ROOT / "oskill"))
-sys.path.insert(0, str(_3O_ROOT / "omodul"))
 
 from obase.symbolic_executor import SymbolicExecutor
 from oprim._crosshair_verify import _crosshair_verify
 from oskill._extract_counterexample import _extract_counterexample
-from omodul.formal_verify_guard import (
-    Config as GuardConfig,
-    InputData as GuardInput,
-    formal_verify_guard,
-)
 
+from omodul.formal_verify_guard import Config as GuardConfig
+from omodul.formal_verify_guard import InputData as GuardInput
+from omodul.formal_verify_guard import formal_verify_guard
 
 # ============================================================================
 # Sample contracts for testing
@@ -144,7 +131,6 @@ class TestCrosshairVerify:
 
     def test_temp_file_cleaned(self):
         """临时文件在验证后被清理."""
-        import tempfile
         mock_exe = MagicMock()
         mock_exe.verify_file.return_value = {"ok": True}
 
@@ -257,7 +243,11 @@ class TestFormalVerifyGuard:
         def verify_op(code, *, executor):
             return {"ok": False, "stdout": "", "stderr": "ZeroDivisionError:", "exit_code": 1}
 
-        cfg = GuardConfig(verify_op=verify_op, executor=MagicMock(), extractor_skill=_extract_counterexample)
+        cfg = GuardConfig(
+            verify_op=verify_op,
+            executor=MagicMock(),
+            extractor_skill=_extract_counterexample,
+        )
         inp = GuardInput(code="bad code", source_label="fail_test")
         result = formal_verify_guard(cfg, inp, tmp_path)
         assert Path(result["report_path"]).exists()

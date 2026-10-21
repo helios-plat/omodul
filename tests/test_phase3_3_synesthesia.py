@@ -11,28 +11,17 @@ from __future__ import annotations
 import multiprocessing
 import os
 import signal
-import sys
 import time
 from pathlib import Path
 
 import pytest
-
-# 挂载路径
-_3O_ROOT = Path(__file__).resolve().parent.parent.parent
-sys.path.insert(0, str(_3O_ROOT / "obase"))
-sys.path.insert(0, str(_3O_ROOT / "oprim"))
-sys.path.insert(0, str(_3O_ROOT / "oskill"))
-sys.path.insert(0, str(_3O_ROOT / "omodul"))
-
 from obase.posix_shm_allocator import PosixShmAllocator
 from oprim._mmap_zero_copy_rw import _mmap_zero_copy_rw
 from oskill._buffer_stride_alignment import _buffer_stride_alignment
-from omodul.cross_modal_sync_transaction import (
-    Config as SyncConfig,
-    InputData as SyncInput,
-    cross_modal_sync_transaction,
-)
 
+from omodul.cross_modal_sync_transaction import Config as SyncConfig
+from omodul.cross_modal_sync_transaction import InputData as SyncInput
+from omodul.cross_modal_sync_transaction import cross_modal_sync_transaction
 
 # ============================================================================
 # obase: PosixShmAllocator
@@ -48,14 +37,14 @@ class TestPosixShmAllocator:
 
     def test_double_allocate_attaches(self):
         alloc = PosixShmAllocator()
-        shm1 = alloc.allocate("test_double", 512)
+        alloc.allocate("test_double", 512)
         shm2 = alloc.allocate("test_double", 512)
         assert shm2.size == 512
         alloc.free("test_double")
 
     def test_attach_existing(self):
         alloc = PosixShmAllocator()
-        shm1 = alloc.allocate("test_attach", 256)
+        alloc.allocate("test_attach", 256)
         shm2 = alloc.attach("test_attach")
         assert shm2.size == 256
         alloc.free("test_attach")

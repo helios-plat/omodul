@@ -10,27 +10,16 @@ from __future__ import annotations
 
 import json
 import math
-import sys
 from pathlib import Path
-from unittest.mock import MagicMock, patch
-
-import pytest
-
-_3O_ROOT = Path(__file__).resolve().parent.parent.parent
-sys.path.insert(0, str(_3O_ROOT / "obase"))
-sys.path.insert(0, str(_3O_ROOT / "oprim"))
-sys.path.insert(0, str(_3O_ROOT / "oskill"))
-sys.path.insert(0, str(_3O_ROOT / "omodul"))
+from unittest.mock import MagicMock
 
 from obase.mqtt_edge_gateway import MQTTEdgeGateway
 from oprim._publish_hardware_command import _publish_hardware_command
 from oskill._embodied_kinematics_serialize import _embodied_kinematics_serialize
-from omodul.embodied_action_transaction import (
-    Config as EmbodiedConfig,
-    InputData as EmbodiedInput,
-    embodied_action_transaction,
-)
 
+from omodul.embodied_action_transaction import Config as EmbodiedConfig
+from omodul.embodied_action_transaction import InputData as EmbodiedInput
+from omodul.embodied_action_transaction import embodied_action_transaction
 
 # ============================================================================
 # obase: MQTTEdgeGateway

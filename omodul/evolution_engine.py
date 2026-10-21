@@ -16,7 +16,10 @@ from typing import Any
 from obase import OmodulBaseConfig
 from obase.sandbox_runner import SandboxResult
 from oprim import parse_test_output
-from oskill import evo_crossover, evo_debug, evo_draft, evo_improve
+from oskill.evo_crossover import evo_crossover
+from oskill.evo_debug import evo_debug
+from oskill.evo_draft import evo_draft
+from oskill.evo_improve import evo_improve
 from oskill.protocols import LLMCaller
 from pydantic import BaseModel
 
@@ -60,7 +63,7 @@ async def _write_trail_async(output_dir: Path, trail: list) -> None:
 async def run_evolution_workflow(
     config: EvolutionConfig,
     input_data: EvolutionInput,
-    output_dir: Path,
+    output_dir: Path | str,
     *,
     llm: LLMCaller,
     sandbox: Callable[[str, str, int], Awaitable[SandboxResult]],
@@ -71,6 +74,7 @@ async def run_evolution_workflow(
     Composes oskill: [evo_draft, evo_debug, evo_improve, evo_crossover]
     Composes oprim: [parse_test_output]
     """
+    output_dir = Path(output_dir)
     decision_trail = []
     status = "completed"
     error = None

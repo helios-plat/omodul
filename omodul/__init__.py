@@ -424,6 +424,7 @@ class HookSpec:
 from contextvars import ContextVar
 
 _current_cost: ContextVar[float] = ContextVar("_current_cost", default=0.0)
+_current_depth: ContextVar[int] = ContextVar("_current_depth", default=0)
 
 # ── AII Conflict Detection Workflow (M-G1) ───────────────────────────────────
 from omodul.conflict_detection_workflow import ConflictDetectionConfig, conflict_detection_workflow
@@ -443,11 +444,207 @@ from omodul.reading_guide_workflow import (
     reading_guide_workflow,
 )
 
+# repo3o intake elements
+from omodul.long_to_short_video_workflow import long_to_short_video_workflow
+from omodul.long_to_short_video_workflow import compute_fingerprint_for as long_to_short_video_workflow_fingerprint
+from omodul.deep_research_workflow import deep_research_workflow
+from omodul.deep_research_workflow import compute_fingerprint_for as deep_research_workflow_fingerprint
+from omodul.podcast_generation_workflow import podcast_generation_workflow
+from omodul.podcast_generation_workflow import compute_fingerprint_for as podcast_generation_workflow_fingerprint
+from omodul.marketing_video_generation import marketing_video_generation
+from omodul.marketing_video_generation import compute_fingerprint_for as marketing_video_generation_fingerprint
+
+# 3O/Veya workflow exports
+from omodul.active_web_research_workflow import (
+    Config as ActiveWebResearchConfig,
+    InputData as ActiveWebResearchInput,
+    active_web_research_workflow,
+)
+from omodul.adversarial_honeypot_observe import (
+    Config as AdversarialHoneypotConfig,
+    InputData as AdversarialHoneypotInput,
+    adversarial_honeypot_observe,
+)
+from omodul.agent_self_update_workflow import (
+    AgentSelfUpdateConfig,
+    AgentSelfUpdateInput,
+    agent_self_update_workflow,
+)
+from omodul.auto_etl_research_workflow import (
+    Config as AutoEtlResearchConfig,
+    InputData as AutoEtlResearchInput,
+    auto_etl_research_workflow,
+)
+from omodul.causal_fault_diagnose import (
+    Config as CausalFaultDiagnoseConfig,
+    InputData as CausalFaultDiagnoseInput,
+    causal_fault_diagnose,
+)
+from omodul.code_audit_workflow import (
+    AuditConfig,
+    AuditInput,
+    audit_repository_workflow,
+)
+from omodul.code_investigation_workflow import (
+    CodeInvestigationConfig,
+    CodeInvestigationInput,
+    code_investigation_workflow,
+)
+from omodul.content_media_pipeline_workflow import (
+    ContentMediaPipelineConfig,
+    ContentMediaPipelineInput,
+    content_media_pipeline_workflow,
+)
+from omodul.context_builder import (
+    ContextBuilderConfig,
+    ContextInput,
+    build_context_workflow,
+)
+from omodul.cross_modal_sync_transaction import (
+    Config as CrossModalSyncConfig,
+    InputData as CrossModalSyncInput,
+    cross_modal_sync_transaction,
+)
+from omodul.deterministic_operate_assign import (
+    Config as DeterministicOperateAssignConfig,
+    InputData as DeterministicOperateAssignInput,
+    deterministic_operate_assign,
+)
+from omodul.durable_lease_task_workflow import (
+    DurableLeaseTaskConfig,
+    DurableLeaseTaskInput,
+    durable_lease_task_workflow,
+)
+from omodul.embodied_action_transaction import (
+    Config as EmbodiedActionConfig,
+    InputData as EmbodiedActionInput,
+    embodied_action_transaction,
+)
+from omodul.evidence_refine import (
+    EvidenceConfig,
+    EvidenceInput,
+    evidence_refine_workflow,
+)
+from omodul.evolution_engine import (
+    EvolutionConfig,
+    EvolutionInput,
+    run_evolution_workflow,
+)
+from omodul.evolutionary_mating_transaction import (
+    Config as EvolutionaryMatingConfig,
+    InputData as EvolutionaryMatingInput,
+    evolutionary_mating_transaction,
+)
+from omodul.formal_verify_guard import (
+    Config as FormalVerifyGuardConfig,
+    InputData as FormalVerifyGuardInput,
+    formal_verify_guard,
+)
+from omodul.graph_codebase_investigation_workflow import (
+    Config as GraphCodebaseInvestigationConfig,
+    InputData as GraphCodebaseInvestigationInput,
+    graph_codebase_investigation_workflow,
+)
+from omodul.hitl_approval_workflow import (
+    HitlApprovalConfig,
+    HitlApprovalInput,
+    hitl_approval_workflow,
+)
+from omodul.long_horizon_checkpoint_workflow import (
+    Config as LongHorizonCheckpointConfig,
+    InputData as LongHorizonCheckpointInput,
+    long_horizon_checkpoint_workflow,
+)
+from omodul.long_task_memory_workflow import (
+    LongTaskMemoryConfig,
+    LongTaskMemoryInput,
+    long_task_memory_workflow,
+)
+from omodul.mcp_execution_workflow import (
+    McpExecutionConfig,
+    McpExecutionInput,
+    mcp_execution_workflow,
+)
+from omodul.mcp_tool_export_workflow import (
+    McpToolExportConfig,
+    McpToolExportInput,
+    mcp_tool_export_workflow,
+)
+from omodul.multi_agent_worktree_workflow import (
+    MultiAgentWorktreeConfig,
+    MultiAgentWorktreeInput,
+    multi_agent_worktree_workflow,
+)
+from omodul.neuro_symbolic_orchestrate import (
+    Config as NeuroSymbolicOrchestrateConfig,
+    InputData as NeuroSymbolicOrchestrateInput,
+    neuro_symbolic_orchestrate,
+)
+from omodul.nl_agent_synthesis_workflow import (
+    NlAgentSynthesisConfig,
+    NlAgentSynthesisInput,
+    nl_agent_synthesis_workflow,
+)
+from omodul.realtime_voice_agent_workflow import (
+    RealtimeVoiceAgentConfig,
+    RealtimeVoiceAgentInput,
+    realtime_voice_agent_workflow,
+)
+from omodul.root_cause_analysis_workflow import (
+    RootCauseAnalysisConfig,
+    RootCauseAnalysisInput,
+    root_cause_analysis_workflow,
+)
+from omodul.sandbox_execution_workflow import (
+    SandboxExecutionConfig,
+    SandboxExecutionInput,
+    sandbox_execution_workflow,
+)
+from omodul.sandbox_observe_lookahead import (
+    Config as SandboxObserveLookaheadConfig,
+    InputData as SandboxObserveLookaheadInput,
+    sandbox_observe_lookahead,
+)
+from omodul.self_synthesis_skill_workflow import (
+    SelfSynthesisSkillConfig,
+    SelfSynthesisSkillInput,
+    self_synthesis_skill_workflow,
+)
+from omodul.session_tree_mgr import (
+    SessionNodeInput,
+    SessionTreeConfig,
+    session_tree_upsert_workflow,
+)
+from omodul.skills_guided_coding_workflow import (
+    Config as SkillsGuidedCodingConfig,
+    InputData as SkillsGuidedCodingInput,
+    skills_guided_coding_workflow,
+)
+from omodul.swarm_collaborative_workflow import (
+    SwarmCollaborativeConfig,
+    SwarmCollaborativeInput,
+    swarm_collaborative_workflow,
+)
+from omodul.tdd_programming_workflow import (
+    Config as TddProgrammingConfig,
+    InputData as TddProgrammingInput,
+    tdd_programming_workflow,
+)
+from omodul.tool_pipeline import ToolConfig, ToolInput, run_tool_pipeline
+from omodul.tts_manager import (
+    TTSConfig,
+    TTSInput,
+    evaluate_task_complexity,
+    tts_scale_workflow,
+)
 
 
 from omodul.code_audit_workflow import AuditConfig, AuditInput, audit_repository_workflow
 from omodul.context_builder import ContextBuilderConfig, ContextInput, build_context_workflow
 from omodul.evidence_refine import EvidenceConfig, EvidenceInput, evidence_refine_workflow
 
-from omodul.context_builder import ContextBuilderConfig, ContextInput, build_context_workflow
-from omodul.evidence_refine import EvidenceConfig, EvidenceInput, evidence_refine_workflow
+from omodul.run_subagent_task import run_subagent_task
+from .compute_fingerprint_for_run_subagent import (
+    compute_fingerprint_for as compute_fingerprint_for_run_subagent,
+)
+from .run_subagent import SubagentConfig, SubagentInput, run_subagent

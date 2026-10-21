@@ -1,17 +1,17 @@
-"""O1/O2/O3 omodul 层测试: deterministic_operate_assign, neuro_symbolic_orchestrate, sandbox_observe_lookahead."""
+"""O1/O2/O3 omodul tests for assignment, neuro-symbolic, and sandbox lookahead."""
 
 from __future__ import annotations
 
 from pathlib import Path
 from unittest.mock import MagicMock
 
-import pytest
-
 
 class TestDeterministicOperateAssign:
     def test_completed_with_assign(self, tmp_path: Path):
         from omodul.deterministic_operate_assign import (
-            Config, InputData, deterministic_operate_assign,
+            Config,
+            InputData,
+            deterministic_operate_assign,
         )
 
         def assign_op(matrix, *, workers, tasks):
@@ -30,7 +30,9 @@ class TestDeterministicOperateAssign:
 
     def test_failed_no_raise(self, tmp_path: Path):
         from omodul.deterministic_operate_assign import (
-            Config, InputData, deterministic_operate_assign,
+            Config,
+            InputData,
+            deterministic_operate_assign,
         )
 
         def bad_assign(matrix, **kwargs):
@@ -49,7 +51,9 @@ class TestDeterministicOperateAssign:
 class TestNeuroSymbolicOrchestrate:
     def test_sat_verdict(self, tmp_path: Path):
         from omodul.neuro_symbolic_orchestrate import (
-            Config, InputData, neuro_symbolic_orchestrate,
+            Config,
+            InputData,
+            neuro_symbolic_orchestrate,
         )
 
         def z3_op(script):
@@ -63,7 +67,9 @@ class TestNeuroSymbolicOrchestrate:
 
     def test_failed_no_raise(self, tmp_path: Path):
         from omodul.neuro_symbolic_orchestrate import (
-            Config, InputData, neuro_symbolic_orchestrate,
+            Config,
+            InputData,
+            neuro_symbolic_orchestrate,
         )
 
         def bad_z3(script):
@@ -83,7 +89,9 @@ class TestNeuroSymbolicOrchestrate:
 class TestSandboxObserveLookahead:
     def test_safe_probe(self, tmp_path: Path):
         from omodul.sandbox_observe_lookahead import (
-            Config, InputData, sandbox_observe_lookahead,
+            Config,
+            InputData,
+            sandbox_observe_lookahead,
         )
 
         def probe_op(cmd, **kwargs):
@@ -96,7 +104,9 @@ class TestSandboxObserveLookahead:
 
     def test_failed_no_raise(self, tmp_path: Path):
         from omodul.sandbox_observe_lookahead import (
-            Config, InputData, sandbox_observe_lookahead,
+            Config,
+            InputData,
+            sandbox_observe_lookahead,
         )
 
         def bad_probe(cmd, **kwargs):

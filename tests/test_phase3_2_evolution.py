@@ -8,34 +8,17 @@
 
 from __future__ import annotations
 
-import sys
 import time
 from pathlib import Path
 
 import networkx as nx
-import pytest
-
-# 挂载路径
-_3O_ROOT = Path(__file__).resolve().parent.parent.parent
-sys.path.insert(0, str(_3O_ROOT / "obase"))
-sys.path.insert(0, str(_3O_ROOT / "oprim"))
-sys.path.insert(0, str(_3O_ROOT / "oskill"))
-sys.path.insert(0, str(_3O_ROOT / "omodul"))
-
-from obase.population_genome_store import (
-    PopulationGenomeStore, GenomeRecord, PopulationSnapshot,
-)
+from obase.population_genome_store import PopulationGenomeStore
 from oprim._calculate_fitness_score import _calculate_fitness_score
-from oskill._genetic_dag_mutate import (
-    _genetic_dag_mutate,
-    _genetic_dag_crossover,
-)
-from omodul.evolutionary_mating_transaction import (
-    Config as EvoConfig,
-    InputData as EvoInput,
-    evolutionary_mating_transaction,
-)
+from oskill._genetic_dag_mutate import _genetic_dag_crossover, _genetic_dag_mutate
 
+from omodul.evolutionary_mating_transaction import Config as EvoConfig
+from omodul.evolutionary_mating_transaction import InputData as EvoInput
+from omodul.evolutionary_mating_transaction import evolutionary_mating_transaction
 
 # ============================================================================
 # Helpers

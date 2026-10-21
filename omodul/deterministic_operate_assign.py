@@ -109,7 +109,11 @@ def deterministic_operate_assign(
                 "status": "success",
                 "matches": matches,
                 "total_cost": total,
-                "unassigned_workers": [w for i, w in enumerate(workers) if i not in [workers.index(m[0]) for m in matches]],
+                "unassigned_workers": [
+                    w
+                    for i, w in enumerate(workers)
+                    if i not in [workers.index(m[0]) for m in matches]
+                ],
                 "unassigned_tasks": [t for j, t in enumerate(tasks) if j not in assigned_t],
             }
 

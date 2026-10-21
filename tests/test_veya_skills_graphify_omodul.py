@@ -1,28 +1,37 @@
-"""Tests for omodul.skills_guided_coding_workflow, graph_codebase_investigation_workflow, auto_etl_research_workflow."""
+"""Tests for skills-guided coding, graph investigation, and ETL workflows."""
 
 from __future__ import annotations
 
 from pathlib import Path
 from unittest.mock import MagicMock
 
-import pytest
-
-from omodul.skills_guided_coding_workflow import (
-    Config as SkillsConfig,
-    InputData as SkillsInput,
-    skills_guided_coding_workflow,
+from omodul.auto_etl_research_workflow import (
+    Config as EtlConfig,
+)
+from omodul.auto_etl_research_workflow import (
+    InputData as EtlInput,
+)
+from omodul.auto_etl_research_workflow import (
+    auto_etl_research_workflow,
 )
 from omodul.graph_codebase_investigation_workflow import (
     Config as GraphConfig,
+)
+from omodul.graph_codebase_investigation_workflow import (
     InputData as GraphInput,
+)
+from omodul.graph_codebase_investigation_workflow import (
     graph_codebase_investigation_workflow,
 )
-from omodul.auto_etl_research_workflow import (
-    Config as EtlConfig,
-    InputData as EtlInput,
-    auto_etl_research_workflow,
+from omodul.skills_guided_coding_workflow import (
+    Config as SkillsConfig,
 )
-
+from omodul.skills_guided_coding_workflow import (
+    InputData as SkillsInput,
+)
+from omodul.skills_guided_coding_workflow import (
+    skills_guided_coding_workflow,
+)
 
 # ============================================================================
 # skills_guided_coding_workflow
@@ -90,7 +99,12 @@ class TestSkillsGuidedCodingWorkflow:
         assert result["status"] == "failed"
 
     def test_no_injected_ops_works(self, tmp_path: Path):
-        cfg = SkillsConfig(inject_sk=None, rule_check_op=None, skills_registry=None, llm_caller=None)
+        cfg = SkillsConfig(
+            inject_sk=None,
+            rule_check_op=None,
+            skills_registry=None,
+            llm_caller=None,
+        )
         inp = SkillsInput(file_path="test.py")
         result = skills_guided_coding_workflow(cfg, inp, tmp_path)
         assert result["status"] == "completed"
@@ -150,7 +164,11 @@ class TestGraphCodebaseInvestigationWorkflow:
                     {"id": "test.py::process", "type": "function", "name": "process"},
                 ],
                 "edges": [
-                    {"source": "test.py::Service", "target": "test.py::process", "relation": "contains"},
+                    {
+                        "source": "test.py::Service",
+                        "target": "test.py::process",
+                        "relation": "contains",
+                    },
                 ],
             }
 
@@ -221,7 +239,11 @@ class TestAutoEtlResearchWorkflow:
             }
 
         def curation_sk(data, *, normalize_op, pipeline_store):
-            return {"status": "curated", "processed_records": 1, "inferred_schema_sample": {"a": "b"}}
+            return {
+                "status": "curated",
+                "processed_records": 1,
+                "inferred_schema_sample": {"a": "b"},
+            }
 
         def llm(prompt, **kwargs):
             return "summary"

@@ -88,9 +88,11 @@ def tdd_programming_workflow(
         trail.record(event="tdd_red_check", phase="red")
 
         if test_op is not None:
-            initial_test = test_op(
-                input_data.test_command,
-            ) if callable(test_op) else {"passed": False, "exit_code": -1, "stdout": "", "stderr": ""}
+            initial_test = (
+                test_op(input_data.test_command)
+                if callable(test_op)
+                else {"passed": False, "exit_code": -1, "stdout": "", "stderr": ""}
+            )
         else:
             initial_test = {"passed": True, "exit_code": 0, "stdout": "", "stderr": ""}
 
@@ -124,7 +126,12 @@ def tdd_programming_workflow(
             f"## Decision Trail\n```json\n"
             f"{__import__('json').dumps(decision_trail, indent=2)}\n```"
         )
-        report_path = write_report(report_content, output_dir=output_dir, name="tdd_workflow_report", fmt="markdown")
+        report_path = write_report(
+            report_content,
+            output_dir=output_dir,
+            name="tdd_workflow_report",
+            fmt="markdown",
+        )
 
         trail.write(output_dir)
 

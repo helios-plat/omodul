@@ -177,10 +177,13 @@ def adversarial_honeypot_observe(
                 f"### Honeypot Credential Hits ({len(honeypot_hits)}):\n"
                 + "\n".join(f"- `{h}`" for h in honeypot_hits)
                 + f"\n\n### Suspicious Network Patterns ({len(network_hits)}):\n"
-                + "\n".join(f"- Pattern `{n['pattern']}` matched: `{n['match']}`" for n in network_hits)
-                + f"\n\n### Recommendation\n"
-                f"IMMEDIATE ACTION REQUIRED: Terminate sandbox, revoke all credentials, "
-                f"initiate security incident response.\n"
+                + "\n".join(
+                    f"- Pattern `{n['pattern']}` matched: `{n['match']}`"
+                    for n in network_hits
+                )
+                + "\n\n### Recommendation\n"
+                "IMMEDIATE ACTION REQUIRED: Terminate sandbox, revoke all credentials, "
+                "initiate security incident response.\n"
             )
             final_status = "escalated"
         else:

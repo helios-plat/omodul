@@ -115,7 +115,7 @@ def active_web_research_workflow(
         # Phase 2: 生成调研报告
         findings = reach_res.get("collected_info", [])
         report_lines = [
-            f"# Active Web Research Report\n\n",
+            "# Active Web Research Report\n\n",
             f"## Topic: {topic}\n\n",
             f"## Depth Reached: {reach_res.get('depth_reached', 0)}\n\n",
             "## Findings\n\n",

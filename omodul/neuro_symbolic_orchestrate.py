@@ -157,7 +157,6 @@ def neuro_symbolic_orchestrate(
 
             def oracle(subset):
                 if z3_check_op is not None:
-                    import json
                     joint = "\n".join(subset)
                     res = z3_check_op(joint)
                     return res.get("verdict", "unknown")
@@ -194,7 +193,10 @@ def neuro_symbolic_orchestrate(
             try:
                 diagnosis = llm_caller(prompt, temperature=0.0).strip()
             except Exception:
-                diagnosis = f"Conflict detected in {len(mus_core)} constraints. Manual review needed."
+                diagnosis = (
+                    f"Conflict detected in {len(mus_core)} constraints. "
+                    "Manual review needed."
+                )
         else:
             if ir_issues:
                 diagnosis = "IR 结构问题: " + "; ".join(ir_issues[:5])

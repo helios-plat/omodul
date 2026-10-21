@@ -20,6 +20,48 @@ from pydantic import BaseModel
 from omodul._base import BaseConfig, CostTracker, Trail, build_result, write_report
 
 
+class _CausalDAGAdapter:
+    """Adapt the current obase graph API to oprim's injected DAG protocol."""
+
+    def __init__(self, graph: Any) -> None:
+        self._graph = graph
+
+    def get_parents(self, node_id: str) -> list[str]:
+        return list(self._graph.parents(node_id))
+
+    def get_children(self, node_id: str) -> list[str]:
+        return list(self._graph.children(node_id))
+
+    def mutilate(self, target_node: str) -> Any:
+        return self._graph.mutilated_copy(target_node)
+
+    def topological_sort(self) -> list[str]:
+        return list(self._graph.topological_sort())
+
+    def nodes(self) -> list[str]:
+        return list(self._graph.nodes())
+
+    def edges(self) -> list[tuple[str, str]]:
+        return list(self._graph.edges())
+
+
+def _parents_of(graph: Any, node: str) -> list[str]:
+    if hasattr(graph, "parents"):
+        return list(graph.parents(node))
+    if hasattr(graph, "get_parents"):
+        return list(graph.get_parents(node))
+    return []
+
+
+def _as_causal_dag(graph: Any) -> Any:
+    """Expose the legacy protocol expected by oprim without changing obase."""
+    if hasattr(graph, "get_parents") and hasattr(graph, "mutilate"):
+        return graph
+    if hasattr(graph, "parents") and hasattr(graph, "mutilated_copy"):
+        return _CausalDAGAdapter(graph)
+    return graph
+
+
 class Config(BaseConfig):
     """Causal Fault Diagnose 配置."""
 
@@ -84,14 +126,18 @@ def causal_fault_diagnose(
 
     try:
         # Phase 1: 收集崩溃路径上的所有候选节点
-        trail.record(event="causal_analysis_start", crash_path_len=len(crash_path))
+        trail.record(
+            event="causal_analysis_start",
+            crash_path_len=len(crash_path),
+            failure_count=failure_count,
+        )
         candidate_nodes: list[str] = list(crash_path)
 
         # 扩展: 添加每个节点的父节点（潜在上游根因）
-        if causal_graph is not None and hasattr(causal_graph, "get_parents"):
+        if causal_graph is not None:
             for node in crash_path:
                 try:
-                    parents = causal_graph.get_parents(node)
+                    parents = _parents_of(causal_graph, node)
                     for p in parents:
                         if p not in candidate_nodes:
                             candidate_nodes.append(p)
@@ -113,7 +159,7 @@ def causal_fault_diagnose(
             if do_calculus_op is not None and causal_graph is not None:
                 try:
                     do_result = do_calculus_op(
-                        causal_graph,
+                        _as_causal_dag(causal_graph),
                         target_node=node,
                         intervention_value=0.0,  # do(node=0): 消除该节点的影响
                         outcome_nodes=crash_path,
