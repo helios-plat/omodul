@@ -317,3 +317,146 @@ class TestTrainingTaskRecommend:
         # All 3 weakness types should fire
         assert len(result["weakness_identified"]) == 3
         assert len(result["recommended_tasks"]) >= 2
+
+
+class TestShadowRuleExtraction:
+    """Shadow-account rule extraction upstreamed from the Helios consumer line."""
+
+    def test_baseline_rule_when_no_trades(self):
+        from omodul.behavior import extract_shadow_rules
+
+        rules = extract_shadow_rules([])
+        assert len(rules) == 1
+        assert rules[0]["rule_id"] == "SR0_BASELINE"
+        assert rules[0]["direction"] == "long"
+
+    def test_baseline_rule_when_no_pnl_column(self):
+        from omodul.behavior import extract_shadow_rules
+
+        rules = extract_shadow_rules(pd.DataFrame({"symbol": ["AAA", "BBB"]}))
+        assert rules[0]["rule_id"] == "SR0_BASELINE"
+
+    def test_baseline_when_too_few_winning_trades(self):
+        from omodul.behavior import extract_shadow_rules
+
+        trades = pd.DataFrame({"pnl": [10.0, -5.0], "symbol": ["A", "B"]})
+        rules = extract_shadow_rules(trades, min_support=5)
+        assert rules[0]["rule_id"] == "SR0_BASELINE"
+        assert rules[0]["support_count"] == 1
+
+    def test_extracts_rule_from_winning_trades(self, sample_trades):
+        from omodul.behavior import extract_shadow_rules
+
+        rules = extract_shadow_rules(sample_trades, min_support=2)
+        assert rules[0]["rule_id"] == "SR1"
+        assert rules[0]["support_count"] > 0
+        assert rules[0]["direction"] in {"long", "short"}
+        assert 0.01 <= rules[0]["stop_loss_pct"] <= 0.10
+        assert 1.2 <= rules[0]["take_profit_rr"] <= 5.0
+        assert rules[0]["holding_days_range"][0] <= rules[0]["holding_days_range"][1]
+
+    def test_rule_is_json_serialisable(self, sample_trades):
+        import json
+
+        from omodul.behavior import extract_shadow_rules
+
+        rules = extract_shadow_rules(sample_trades)
+        json.dumps(rules)  # must not raise
+
+    def test_accepts_list_of_dicts(self):
+        from omodul.behavior import extract_shadow_rules
+
+        trades = [
+            {"pnl": 100.0, "side": "buy", "symbol": "A", "hold_days": 2},
+            {"pnl": 50.0, "side": "buy", "symbol": "A", "hold_days": 3},
+            {"pnl": -20.0, "side": "sell", "symbol": "B", "hold_days": 1},
+        ]
+        rules = extract_shadow_rules(trades, min_support=2)
+        assert rules[0]["rule_id"] == "SR1"
+
+
+class TestBuildShadowRuleFn:
+    """The rule_fn factory must produce a deterministic callable for the simulator."""
+
+    def _market(self, n: int = 30) -> pd.DataFrame:
+        dates = pd.date_range("2023-01-01", periods=n, freq="B")
+        return pd.DataFrame({"SPY": np.linspace(100.0, 120.0, n)}, index=dates)
+
+    def test_returns_callable(self):
+        from omodul.behavior import build_shadow_rule_fn
+
+        fn = build_shadow_rule_fn([])
+        assert callable(fn)
+
+    def test_baseline_fallback_when_no_rules(self):
+        from omodul.behavior import _default_baseline_rule, build_shadow_rule_fn
+
+        fn = build_shadow_rule_fn([])
+        market = self._market()
+        ts = market.index[-1]
+        out = fn(ts, {"market_data": market})
+        assert out is None or isinstance(out, dict)
+        assert _default_baseline_rule()["rule_id"] == "SR0_BASELINE"
+
+    def test_no_signal_without_market_data(self):
+        from omodul.behavior import build_shadow_rule_fn
+
+        fn = build_shadow_rule_fn([])
+        assert fn(pd.Timestamp("2023-01-05"), {"market_data": None}) is None
+        assert fn(pd.Timestamp("2023-01-05"), {"market_data": pd.DataFrame()}) is None
+
+    def test_enters_on_positive_momentum_then_exits(self):
+        from omodul.behavior import build_shadow_rule_fn
+
+        rules = [
+            {
+                "rule_id": "SR1",
+                "direction": "long",
+                "exit_condition": {"max_holding_days": 2},
+                "stop_loss_pct": 0.03,
+                "take_profit_rr": 2.0,
+            }
+        ]
+        fn = build_shadow_rule_fn(rules)
+        market = self._market()
+        entry = fn(market.index[3], {"market_data": market.iloc[:4]})
+        assert entry is not None
+        assert entry["side"] == "long"
+
+        # Drive it into a stop by feeding a crashing series.
+        crash = pd.DataFrame({"SPY": [120.0, 100.0, 80.0, 60.0]}, index=market.index[:4])
+        exit_trade = fn(market.index[6], {"market_data": crash})
+        assert exit_trade is not None
+        assert exit_trade["side"] == "sell"
+        assert exit_trade["reason"] in {"stop", "target", "timeout"}
+
+    def test_rsi_mtf_source_runs(self):
+        from omodul.behavior import build_shadow_rule_fn
+
+        fn = build_shadow_rule_fn([], rule_source="rsi_mtf")
+        market = self._market(40)
+        out = fn(market.index[-1], {"market_data": market})
+        assert out is None or isinstance(out, dict)
+
+    def test_fusion_score_source_gates_on_threshold(self):
+        from omodul.behavior import build_shadow_rule_fn
+
+        market = self._market()
+        ts = market.index[-1]
+        high = pd.Series([99.0], index=[ts.normalize()])
+        low = pd.Series([1.0], index=[ts.normalize()])
+
+        enter_fn = build_shadow_rule_fn([], rule_source="fusion_score", signal_series=high)
+        assert enter_fn(ts, {"market_data": market}) is not None
+
+        skip_fn = build_shadow_rule_fn([], rule_source="fusion_score", signal_series=low)
+        assert skip_fn(ts, {"market_data": market}) is None
+
+    def test_is_deterministic_for_same_inputs(self):
+        from omodul.behavior import build_shadow_rule_fn
+
+        market = self._market()
+        ts = market.index[10]
+        a = build_shadow_rule_fn([])(ts, {"market_data": market.iloc[:11]})
+        b = build_shadow_rule_fn([])(ts, {"market_data": market.iloc[:11]})
+        assert a == b

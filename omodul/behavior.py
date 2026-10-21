@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable, Literal, Optional
+from collections.abc import Callable
 
 import numpy as np
-import pandas as pd
-
 import oprim
 import oskill
+import pandas as pd
 
 
 def trade_journal_analyzer(
@@ -89,6 +88,26 @@ def trade_journal_analyzer(
             "note": "Simplified: full Odean 1998 requires paper_gains/paper_losses columns",
         }
 
+        # Vibe-Trading holding duration disposition check if hold_days available
+        hold_col = "hold_days" if "hold_days" in trades.columns else ("duration_days" if "duration_days" in trades.columns else None)
+        if hold_col and (trades[hold_col] > 0).any():
+            win_hold = float(trades[trades["pnl"] > 0][hold_col].mean()) if (trades["pnl"] > 0).any() else 0.0
+            loss_hold = float(trades[trades["pnl"] < 0][hold_col].mean()) if (trades["pnl"] < 0).any() else 0.0
+            ratio_hold = float(loss_hold / win_hold) if win_hold > 0 else (float("inf") if loss_hold > 0 else 1.0)
+            sev = "high" if ratio_hold >= 1.5 else ("medium" if ratio_hold >= 1.2 else "low")
+            results["disposition"].update({
+                "ratio_loss_to_win_hold": round(ratio_hold, 2) if np.isfinite(ratio_hold) else None,
+                "avg_winner_hold_days": round(win_hold, 2),
+                "avg_loser_hold_days": round(loss_hold, 2),
+                "severity": sev,
+                "evidence": (
+                    f"Losing trades held avg {loss_hold:.1f}d vs winning trades {win_hold:.1f}d (ratio: {ratio_hold:.2f}). "
+                    + ("Classic disposition effect: holding losers longer than winners." if sev == "high"
+                       else "Moderate hold-losers tendency." if sev == "medium"
+                       else "Hold times roughly symmetric.")
+                ),
+            })
+
     # Overtrading
     if "overtrading" in diagnostics:
         daily_counts = trades.groupby(trades["timestamp"].dt.date).size()
@@ -106,35 +125,115 @@ def trade_journal_analyzer(
             "n_periods": len(daily_counts),
         }
 
+        # Vibe-Trading busy-day vs quiet-day PnL check
+        if has_pnl and len(daily_counts) >= 4:
+            busy_cut = float(daily_counts.quantile(0.75))
+            quiet_cut = float(daily_counts.quantile(0.25))
+            trade_dates = pd.to_datetime(trades["timestamp"]).dt.date
+            busy_days = set(daily_counts[daily_counts >= busy_cut].index)
+            quiet_days = set(daily_counts[daily_counts <= quiet_cut].index)
+            busy_pnl = trades[trade_dates.isin(busy_days)]["pnl"]
+            quiet_pnl = trades[trade_dates.isin(quiet_days)]["pnl"]
+            busy_avg = float(busy_pnl.mean()) if len(busy_pnl) > 0 else 0.0
+            quiet_avg = float(quiet_pnl.mean()) if len(quiet_pnl) > 0 else 0.0
+            gap = quiet_avg - busy_avg
+            base = abs(quiet_avg) if quiet_avg != 0 else 1.0
+            pnl_drag_sev = "high" if (busy_avg < quiet_avg and gap / base >= 1.0) else ("medium" if (busy_avg < quiet_avg and gap / base >= 0.3) else "low")
+            results["overtrading"].update({
+                "busy_day_avg_pnl": round(busy_avg, 2),
+                "quiet_day_avg_pnl": round(quiet_avg, 2),
+                "busy_day_threshold": round(busy_cut, 1),
+                "severity": pnl_drag_sev if pnl_drag_sev != "low" else results["overtrading"]["interpretation"],
+                "evidence": (
+                    f"Busy days (≥{busy_cut:.0f} trades) avg PnL: ${busy_avg:.2f}; quiet days (≤{quiet_cut:.0f}) avg PnL: ${quiet_avg:.2f}. "
+                    + ("High activity hurts returns." if pnl_drag_sev == "high" else "Some drag from high activity." if pnl_drag_sev == "medium" else "Trading activity does not significantly degrade PnL.")
+                ),
+            })
+
     # Chasing Momentum
-    if "chasing" in diagnostics and benchmark_returns is not None:
-        trade_dates = pd.to_datetime(trades["timestamp"]).dt.normalize()
-        directions = trades["side"].map({"buy": 1, "sell": -1}).fillna(0).values
-        momentum = benchmark_returns.rolling(lookback_momentum).mean()
-        common = trade_dates.isin(momentum.index)
-        if common.sum() > 10:
-            mom_vals = momentum.reindex(trade_dates[common]).values
-            dir_vals = directions[common.values]
-            valid = ~np.isnan(mom_vals)
-            corr = float(np.corrcoef(mom_vals[valid], dir_vals[valid])[0, 1])
+    if "chasing" in diagnostics:
+        if benchmark_returns is not None:
+            trade_dates = pd.to_datetime(trades["timestamp"]).dt.normalize()
+            directions = trades["side"].map({"buy": 1, "sell": -1}).fillna(0).values
+            momentum = benchmark_returns.rolling(lookback_momentum).mean()
+            common = trade_dates.isin(momentum.index)
+            if common.sum() > 10:
+                mom_vals = momentum.reindex(trade_dates[common]).values
+                dir_vals = directions[common.values]
+                valid = ~np.isnan(mom_vals)
+                corr = float(np.corrcoef(mom_vals[valid], dir_vals[valid])[0, 1])
+            else:
+                corr = np.nan
+            results["chasing"] = {
+                "momentum_correlation": corr,
+                "ci_low": np.nan, "ci_high": np.nan,
+                "interpretation": "chasing" if corr > 0.3 else "contrarian" if corr < -0.3 else "neutral",
+            }
         else:
-            corr = np.nan
-        results["chasing"] = {
-            "momentum_correlation": corr,
-            "ci_low": np.nan, "ci_high": np.nan,
-            "interpretation": "chasing" if corr > 0.3 else "contrarian" if corr < -0.3 else "neutral",
-        }
+            # Self-momentum price run-up chasing check (Vibe-Trading)
+            buys = trades[trades["side"].astype(str).str.lower().isin(["buy", "long"])].sort_values(["symbol", "timestamp"]).copy()
+            if not buys.empty:
+                buys["prev_price"] = buys.groupby("symbol")["price"].shift(1)
+                matured = buys.dropna(subset=["prev_price"])
+                if not matured.empty:
+                    chased = matured[matured["price"] > matured["prev_price"] * 1.03]
+                    chase_ratio = len(chased) / len(matured)
+                    sev = "high" if chase_ratio >= 0.6 else ("medium" if chase_ratio >= 0.4 else "low")
+                    results["chasing"] = {
+                        "chase_ratio": round(chase_ratio, 3),
+                        "buys_evaluated": len(matured),
+                        "chased_buys": len(chased),
+                        "severity": sev,
+                        "interpretation": "chasing" if sev in ("high", "medium") else "neutral",
+                        "evidence": (
+                            f"{len(chased)}/{len(matured)} buys ({chase_ratio:.0%}) came after a >3% "
+                            "price run-up in the same symbol. "
+                            + ("Strong chasing pattern." if sev == "high" else "Some chasing tendency." if sev == "medium" else "No clear chasing bias.")
+                        ),
+                    }
+                else:
+                    results["chasing"] = {"interpretation": "neutral", "evidence": "insufficient repeat buys per symbol"}
+            else:
+                results["chasing"] = {"interpretation": "neutral", "evidence": "no buys"}
 
     # Anchoring
-    if "anchoring" in diagnostics and has_pnl:
+    if "anchoring" in diagnostics:
         # Check if exits cluster near entry prices (small pnl relative to price)
-        pnl_pct = np.abs(pnl) / (trades["price"].values * trades["quantity"].values + 1e-10)
-        concentration = float((pnl_pct < 0.05).mean())
-        results["anchoring"] = {
-            "exit_price_concentration": concentration,
-            "anchor_zones_identified": int((pnl_pct < 0.02).sum()),
-            "interpretation": "strong" if concentration > 0.6 else "moderate" if concentration > 0.4 else "weak",
-        }
+        if has_pnl:
+            pnl_pct = np.abs(pnl) / (trades["price"].values * trades["quantity"].values + 1e-10)
+            concentration = float((pnl_pct < 0.05).mean())
+            results["anchoring"] = {
+                "exit_price_concentration": concentration,
+                "anchor_zones_identified": int((pnl_pct < 0.02).sum()),
+                "interpretation": "strong" if concentration > 0.6 else "moderate" if concentration > 0.4 else "weak",
+            }
+        else:
+            results["anchoring"] = {"interpretation": "weak"}
+
+        # Price clustering CV check across frequently traded symbols (Vibe-Trading)
+        grouped = trades.groupby("symbol")
+        sym_anchors = []
+        for sym, sub in grouped:
+            if len(sub) >= 3:
+                m_price = float(sub["price"].mean())
+                s_price = float(sub["price"].std())
+                if m_price > 0:
+                    cv = s_price / m_price
+                    sym_anchors.append({"symbol": str(sym), "trades": len(sub), "mean_price": round(m_price, 2), "cv": round(cv, 4)})
+        if sym_anchors:
+            anchored_syms = [s for s in sym_anchors if s["cv"] < 0.05]
+            anchor_ratio = len(anchored_syms) / len(sym_anchors)
+            sev = "high" if anchor_ratio >= 0.66 else ("medium" if anchor_ratio >= 0.33 else "low")
+            results["anchoring"].update({
+                "anchored_symbol_ratio": round(anchor_ratio, 3),
+                "symbols_evaluated": len(sym_anchors),
+                "anchored_symbols": anchored_syms[:5],
+                "severity": sev,
+                "evidence": (
+                    f"{len(anchored_syms)}/{len(sym_anchors)} frequently traded symbols stayed in a narrow price band (CV < 5%). "
+                    + ("Strong price anchoring." if sev == "high" else "Some anchoring on select symbols." if sev == "medium" else "Prices vary naturally across repeat trades.")
+                ),
+            })
 
     # Outlier trades detection using oskill
     if has_pnl:
@@ -312,7 +411,7 @@ def monthly_trade_review(
     period: tuple[int, int],
     llm_client: Callable,
     prompt_builder: Callable[[dict, dict], str],
-    discipline_evaluator: Optional[Callable] = None,
+    discipline_evaluator: Callable | None = None,
 ) -> dict:
     """Generate a monthly trade review with statistics and LLM-narrated insights.
 
@@ -471,3 +570,231 @@ def training_task_recommend(
 
 monthly_trade_review.STABILITY = "experimental"
 training_task_recommend.STABILITY = "experimental"
+
+
+# ── Shadow Account Rule Extraction (Vibe-Trading 3O Port) ─────────────────────
+
+def _default_baseline_rule(support_count: int = 0) -> dict:
+    return {
+        "rule_id": "SR0_BASELINE",
+        "name": "Disciplined Trend Following Baseline",
+        "direction": "long",
+        "entry_condition": {"indicator": "trend_follow", "threshold": 0.0, "direction": "long"},
+        "exit_condition": {"stop_loss_pct": 0.03, "take_profit_rr": 2.0, "max_holding_days": 5},
+        "holding_days_range": [1, 5],
+        "stop_loss_pct": 0.03,
+        "take_profit_rr": 2.0,
+        "support_count": support_count,
+        "coverage_rate": 1.0,
+        "description": "Baseline disciplined rule: 1-5d holding, 3% stop loss, 2.0 RR target",
+    }
+
+
+def extract_shadow_rules(
+    trades: pd.DataFrame | list[dict],
+    *,
+    min_support: int = 2,
+    max_rules: int = 5,
+) -> list[dict]:
+    """Extract disciplined trading rules from profitable user roundtrips.
+
+    Inspired by Vibe-Trading Shadow Account extractor.
+
+    Args:
+        trades: DataFrame or list of dicts with trade fields.
+        min_support: Minimum profitable trades required for a rule.
+        max_rules: Maximum number of rules to produce.
+
+    Returns:
+        List of rule dictionaries specifying direction, holding range,
+        stop loss, take profit RR, entry/exit conditions, and support count.
+    """
+    if isinstance(trades, list):
+        if not trades:
+            return [_default_baseline_rule()]
+        df = pd.DataFrame(trades)
+    else:
+        df = trades.copy()
+
+    if df.empty:
+        return [_default_baseline_rule()]
+
+    # Normalize column names
+    pnl_col = "realized_pnl_usd" if "realized_pnl_usd" in df.columns else ("pnl" if "pnl" in df.columns else None)
+    if not pnl_col:
+        return [_default_baseline_rule()]
+
+    profitable = df[df[pnl_col] > 0]
+    if len(profitable) < min_support:
+        return [_default_baseline_rule(support_count=len(profitable))]
+
+    rules = []
+    dir_col = "direction" if "direction" in df.columns else ("side" if "side" in df.columns else None)
+
+    # 1. Holding duration rule
+    hold_days = []
+    if "hold_days" in profitable.columns:
+        hold_days = profitable["hold_days"].dropna().tolist()
+    elif "created_at" in profitable.columns and "closed_at" in profitable.columns:
+        t_open = pd.to_datetime(profitable["created_at"])
+        t_close = pd.to_datetime(profitable["closed_at"])
+        diffs = (t_close - t_open).dt.total_seconds() / 86400.0
+        hold_days = diffs[diffs > 0].tolist()
+
+    min_hold = int(max(1, np.floor(np.percentile(hold_days, 10)))) if hold_days else 1
+    max_hold = int(max(min_hold + 1, np.ceil(np.percentile(hold_days, 90)))) if hold_days else 5
+
+    # 2. Risk/Reward & Stop Loss extraction
+    avg_rr = 2.0
+    if "rr_ratio" in profitable.columns and profitable["rr_ratio"].notna().any():
+        avg_rr = float(profitable["rr_ratio"].dropna().median())
+        avg_rr = max(1.2, min(5.0, avg_rr))
+
+    stop_pct = 0.03
+    if "entry_price" in profitable.columns and "stop_loss" in profitable.columns:
+        valid_stops = profitable.dropna(subset=["entry_price", "stop_loss"])
+        if not valid_stops.empty:
+            diff_pct = (valid_stops["entry_price"] - valid_stops["stop_loss"]).abs() / valid_stops["entry_price"]
+            stop_pct = float(diff_pct.median())
+            stop_pct = max(0.01, min(0.10, stop_pct))
+
+    dominant_dir = "long"
+    if dir_col:
+        long_count = (profitable[dir_col].astype(str).str.lower().isin(["long", "buy"])).sum()
+        short_count = len(profitable) - long_count
+        if short_count > long_count:
+            dominant_dir = "short"
+
+    rules.append({
+        "rule_id": "SR1",
+        "name": f"Disciplined {dominant_dir.upper()} Momentum Rule",
+        "direction": dominant_dir,
+        "entry_condition": {"indicator": "momentum", "threshold": 0.01, "direction": dominant_dir},
+        "exit_condition": {
+            "stop_loss_pct": round(stop_pct, 4),
+            "take_profit_rr": round(avg_rr, 2),
+            "max_holding_days": max_hold,
+        },
+        "holding_days_range": [min_hold, max_hold],
+        "stop_loss_pct": round(stop_pct, 4),
+        "take_profit_rr": round(avg_rr, 2),
+        "support_count": len(profitable),
+        "coverage_rate": round(len(profitable) / max(len(df), 1), 3),
+        "description": f"Extracted from {len(profitable)} winning trades: hold {min_hold}-{max_hold}d, stop {stop_pct:.1%}, target RR {avg_rr:.1f}",
+    })
+
+    return rules
+
+
+def build_shadow_rule_fn(
+    rules: list[dict],
+    *,
+    rule_source: str = "user_extracted",
+    fusion_threshold: float = 60.0,
+    signal_series: pd.Series | None = None,
+) -> Callable[[pd.Timestamp, dict], dict | None]:
+    """Build a deterministic rule_fn for shadow_account_simulator.
+
+    Supports:
+      - 'user_extracted': trades based on extracted disciplined parameters
+      - 'fusion_score': entries gated by Fusion Score threshold
+      - 'rsi_mtf': entries gated by multi-timeframe RSI oversold/overbought
+      - 'hybrid': combines fusion score entry gate with user-extracted exit rules
+    """
+    rule = rules[0] if rules else _default_baseline_rule()
+    direction = rule.get("direction", "long")
+    max_hold = rule.get("exit_condition", {}).get("max_holding_days", 5)
+    stop_loss_pct = float(rule.get("stop_loss_pct", 0.03))
+    take_profit_rr = float(rule.get("take_profit_rr", 2.0))
+    target_gain_pct = stop_loss_pct * take_profit_rr
+
+    # State tracking across simulation loop
+    state = {
+        "in_position": False,
+        "entry_price": 0.0,
+        "entry_date": None,
+        "side": direction,
+        "bars_held": 0,
+    }
+
+    def _rule_fn(ts: pd.Timestamp, context: dict) -> dict | None:
+        market_data = context.get("market_data")
+        if market_data is None or len(market_data) == 0:
+            return None
+
+        # Last close price
+        last_row = market_data.iloc[-1]
+        curr_price = float(last_row.iloc[0]) if isinstance(last_row, pd.Series) else float(last_row)
+
+        if state["in_position"]:
+            state["bars_held"] += 1
+            entry_p = state["entry_price"]
+            if entry_p <= 0:
+                state["in_position"] = False
+                return None
+
+            gain_pct = (curr_price - entry_p) / entry_p if state["side"] == "long" else (entry_p - curr_price) / entry_p
+
+            hit_stop = gain_pct <= -stop_loss_pct
+            hit_target = gain_pct >= target_gain_pct
+            hit_timeout = state["bars_held"] >= max_hold
+
+            if hit_stop or hit_target or hit_timeout:
+                notional = 10000.0
+                pnl = gain_pct * notional
+                state["in_position"] = False
+                exit_side = "sell" if state["side"] == "long" else "buy"
+                return {
+                    "side": exit_side,
+                    "price": curr_price,
+                    "quantity": notional / max(entry_p, 1e-6),
+                    "pnl": pnl,
+                    "reason": "target" if hit_target else ("stop" if hit_stop else "timeout"),
+                }
+            return None
+
+        # Entry logic
+        should_enter = False
+        if rule_source == "fusion_score" and signal_series is not None:
+            # Check fusion score at date
+            ts_norm = ts.normalize() if hasattr(ts, "normalize") else ts
+            score = signal_series.get(ts_norm, signal_series.get(ts, None))
+            if score is not None and score >= fusion_threshold:
+                should_enter = True
+        elif rule_source == "rsi_mtf":
+            if len(market_data) >= 14:
+                series = market_data.iloc[:, 0] if market_data.ndim > 1 else market_data
+                delta = series.diff()
+                up = delta.clip(lower=0).rolling(14).mean()
+                down = (-delta.clip(upper=0)).rolling(14).mean()
+                rs = up / (down + 1e-10)
+                rsi = 100.0 - (100.0 / (1.0 + rs))
+                if not rsi.empty and float(rsi.iloc[-1]) < 35.0:
+                    should_enter = True
+        else:
+            # Default momentum or user rule: entry when prior return positive
+            if len(market_data) >= 3:
+                series = market_data.iloc[:, 0] if market_data.ndim > 1 else market_data
+                ret_3 = (float(series.iloc[-1]) - float(series.iloc[-3])) / float(series.iloc[-3])
+                if direction == "long" and ret_3 > 0:
+                    should_enter = True
+                elif direction == "short" and ret_3 < 0:
+                    should_enter = True
+
+        if should_enter:
+            state["in_position"] = True
+            state["entry_price"] = curr_price
+            state["entry_date"] = ts
+            state["side"] = direction
+            state["bars_held"] = 0
+            return {
+                "side": direction,
+                "price": curr_price,
+                "quantity": 10000.0 / max(curr_price, 1e-6),
+                "pnl": 0.0,
+            }
+
+        return None
+
+    return _rule_fn
+
