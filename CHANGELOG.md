@@ -2,6 +2,22 @@
 
 <!-- Governance: see RELEASE_POLICY.md. main = release branch; feat branches deleted after merge; oprim → oskill → omodul merge order required; container bind-mount means git checkout is a live operation. -->
 
+## [1.50.1] — 2026-10-22
+
+### Fixed
+
+- 与 `origin/main` 合并（v1.50.0 之后 main 前进 25 个提交）。冲突解决时保留了双方：
+  main 的 repo3o-intake / 3O-Veya 导出块、`_current_depth` ContextVar、
+  `run_subagent` 系列导出；本分支的 `omodul.behavior` 完整诊断导出。
+  解决前 `omodul.SubagentConfig` / `_current_depth` 等导出缺失会导致 4 个测试模块
+  收集期 ImportError，现已恢复。
+
+### Tests
+- `232 failed, 2070 passed, 182 skipped`（忽略 `test_changeset_and_loop.py` /
+  `test_run_subagent.py`，两者需要未安装的 `croniter`）。
+  同一命令在 `origin/main` worktree 上是 `232 failed, 2057 passed` —— 失败集合
+  完全一致（既有红灯），多出的 13 项通过是 v1.50.0 新增的行为测试。
+
 ## [1.50.0] — 2026-10-22
 
 ### Added (upstreaming consumer patches — 3O 主库成为唯一来源)
