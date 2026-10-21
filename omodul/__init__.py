@@ -1,4 +1,4 @@
-__version__ = "1.50.0"
+from omodul._version import __version__ as __version__  # single source: _version.py
 from typing import Any
 
 from omodul.add_customer_address import add_customer_address

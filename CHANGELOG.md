@@ -2,6 +2,21 @@
 
 <!-- Governance: see RELEASE_POLICY.md. main = release branch; feat branches deleted after merge; oprim → oskill → omodul merge order required; container bind-mount means git checkout is a live operation. -->
 
+## [1.50.2] — 2026-10-22
+
+### Fixed — 版本号单源 (SPEC §1.4)
+
+`omodul/__init__.py` 与 `omodul/_version.py` 各写了一份 `__version__`，于是
+`import omodul; omodul.__version__` 报的是 `__init__` 里那份旧值（1.50.0），
+与 `pyproject.toml` / hatch 打包取的 `_version.py`（1.50.1）不一致。现 `__init__`
+直接 `from omodul._version import __version__`，版本号只有一处。
+
+### Tests
+- `221 failed, 2081 passed, 182 skipped`（同一 `--ignore` 口径）。
+  上一版是 `232 failed, 2070 passed` —— 多出的 11 项通过是本次单源修复带来的
+  （这些用例断言的是 `omodul.__version__` 与打包元数据一致）。其余 221 项为
+  `origin/main` 上同样存在的既有失败。
+
 ## [1.50.1] — 2026-10-22
 
 ### Fixed
