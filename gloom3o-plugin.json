@@ -1,0 +1,14 @@
+{
+  "name": "gloom3o.omodul",
+  "version": "1.0.0",
+  "description": "Gloom 3O portfolio and broker synchronization module",
+  "entrypoint": "omodul.brokers.portfolio_sync",
+  "dependencies": [
+    "gloom3o.obase>=1.0.0",
+    "gloom3o.oprim>=1.0.0"
+  ],
+  "capabilities": [
+    "portfolio-sync",
+    "read-only-broker-access"
+  ]
+}
