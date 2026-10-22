@@ -427,6 +427,7 @@ from contextvars import ContextVar
 
 _current_cost: ContextVar[float] = ContextVar("_current_cost", default=0.0)
 _current_depth: ContextVar[int] = ContextVar("_current_depth", default=0)
+_current_trail: ContextVar[list[dict] | None] = ContextVar("_current_trail", default=None)
 
 # ── AII Conflict Detection Workflow (M-G1) ───────────────────────────────────
 from omodul.conflict_detection_workflow import ConflictDetectionConfig, conflict_detection_workflow
