@@ -452,6 +452,11 @@ from omodul.long_to_short_video_workflow import long_to_short_video_workflow
 from omodul.long_to_short_video_workflow import compute_fingerprint_for as long_to_short_video_workflow_fingerprint
 from omodul.deep_research_workflow import deep_research_workflow
 from omodul.deep_research_workflow import compute_fingerprint_for as deep_research_workflow_fingerprint
+from omodul.market_evidence_report import (
+    MarketEvidenceReportConfig,
+    market_evidence_report,
+)
+from omodul.market_evidence_report import compute_fingerprint_for as market_evidence_report_fingerprint
 from omodul.podcast_generation_workflow import podcast_generation_workflow
 from omodul.podcast_generation_workflow import compute_fingerprint_for as podcast_generation_workflow_fingerprint
 from omodul.marketing_video_generation import marketing_video_generation
