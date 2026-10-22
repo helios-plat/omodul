@@ -23,7 +23,8 @@ from omodul.knowledge.start_mcp_server import (
 )
 
 
-_MIGRATIONS = Path("/home/soffy/projects/platform/oprim/oprim/meta_db/migrations")
+import oprim.meta_db as _oprim_meta_db_mod
+_MIGRATIONS = Path(_oprim_meta_db_mod.__file__).parent / "migrations"
 
 
 class TestCreateStratumMcpServer:
