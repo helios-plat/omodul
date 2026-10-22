@@ -219,7 +219,15 @@ class AutomataScheduler:
                     result = await self.execute_callback(synthetic_prompt)
             else:
                 result = await self.execute_callback(synthetic_prompt)
-            status = "success"
+            # A host runner reports a failed mission as a ``HEADLESS FAILED:``
+            # string instead of raising (server/automata.py). Monitoring reads
+            # ``status``, so classify the prefix here rather than losing it in
+            # the result text (acceptance P3-4).
+            status = (
+                "failed"
+                if str(result).startswith("HEADLESS FAILED:")
+                else "success"
+            )
         except asyncio.CancelledError:
             self._results.append(
                 {
