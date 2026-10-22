@@ -213,6 +213,7 @@ from omodul.update_tax_rate import compute_fingerprint_for as update_tax_rate_fi
 from omodul.update_tax_rate import update_tax_rate
 from omodul.update_user import update_user
 from omodul.web_research_task import web_research_task
+from omodul.knowledge.agents.builtin.illustration_agent import IllustrationAgent
 
 from ._base import CostTracker, Trail
 from ._base_config import BaseConfig
@@ -271,7 +272,7 @@ from .refactor_transaction import (
 )
 from .rewind_to_checkpoint import RewindConfig, RewindInput, rewind_to_checkpoint
 from .run_and_fix import RunAndFixConfig, RunAndFixInput, run_and_fix
-from .run_subagent import SubagentConfig, SubagentInput, run_subagent
+from .run_subagent import SubagentConfig, SubagentInput, _current_trail, run_subagent
 from .security_audit import SecurityAuditConfig, SecurityAuditInput, security_audit
 from .socratic_tutor_session import (
     SocraticTutorConfig,
@@ -378,8 +379,13 @@ from omodul.symbol_dim_score import (
 )
 
 
-# 统一的 compute_fingerprint_for(omodul_name, config, input_data) 路由
-def compute_fingerprint_for(omodul_name: str, config: Any, input_data: Any) -> str:
+# Unified fingerprint router. The three-argument form is canonical; the
+# legacy two-argument form derives the operation from config._omodul_name.
+def compute_fingerprint_for(omodul_name: Any, config: Any = None, input_data: Any = None) -> str:
+    if input_data is None:
+        input_data = config
+        config = omodul_name
+        omodul_name = getattr(config, "_omodul_name", "")
     routers = {
         "initialize_project": compute_fingerprint_for_initialize,
         "run_subagent": compute_fingerprint_for_run_subagent,
@@ -388,6 +394,9 @@ def compute_fingerprint_for(omodul_name: str, config: Any, input_data: Any) -> s
         "regime_inference": compute_fingerprint_for_regime_inference,
         "candidate_pool": compute_fingerprint_for_candidate_pool,
     }
+    if omodul_name == "apply_changeset":
+        from omodul.apply_changeset import compute_fingerprint_for as _changeset_fingerprint
+        return _changeset_fingerprint(config, input_data)
     if omodul_name not in routers:
         return ""
     return routers[omodul_name](config, input_data)
@@ -401,19 +410,7 @@ RefactorInput = RefactorTransactionInput
 from dataclasses import dataclass, field
 
 
-@dataclass
-class SubagentDefinition:
-    name: str
-    description: str
-    instructions: str
-    tools: list[str] = field(default_factory=list)
-
-
-@dataclass
-class SubagentPermissions:
-    allowed_tools: list[str] = field(default_factory=list)
-    denied_tools: list[str] = field(default_factory=list)
-    max_usd: float = 1.0
+from .run_subagent import SubagentDefinition, SubagentPermissions
 
 
 @dataclass

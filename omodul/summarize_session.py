@@ -8,6 +8,24 @@ from typing import Any, ClassVar
 from pydantic import BaseModel
 from ._base import BaseConfig, CostTracker, Trail, build_result, compute_fingerprint, extract_text, llm_call, write_report
 
+
+def _msg_text(message: dict) -> str:
+    """Return readable text from a chat message's string or multimodal content."""
+    content = message.get("content", "")
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for item in content:
+            if isinstance(item, dict):
+                text = item.get("text")
+                if text is not None:
+                    parts.append(str(text))
+            elif item is not None:
+                parts.append(str(item))
+        return " ".join(parts)
+    return "" if content is None else str(content)
+
 class SummarizeSessionConfig(BaseConfig):
     max_files_to_scan: int = 100
     head_lines_per_file: int = 10

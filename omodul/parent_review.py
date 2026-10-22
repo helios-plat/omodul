@@ -8,8 +8,6 @@ import uuid
 from typing import ClassVar, List, Dict, Any, Optional
 from pydantic import BaseModel
 from omodul.base import BaseConfig, build_fingerprint, standard_return
-from obase.interaction_history import get_student_history
-from obase.error_tag_store import get_error_distribution
 
 class ParentReviewConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "parent_review"
@@ -40,7 +38,11 @@ async def parent_review_summary(
     # 假设此处有鉴权检查，校验 parent_id -> student_id 绑定关系
     trail.append({"event": "auth_checked", "parent_id": str(input_data.parent_id)})
 
-    # 3. 提取数据 (Report)
+    # 3. 提取数据 (Report). Load persistence adapters only when executing the
+    # workflow so importing the public package does not open storage modules.
+    from obase.interaction_history import get_student_history
+    from obase.error_tag_store import get_error_distribution
+
     history = await get_student_history(pool=pool, student_id=input_data.student_id, limit=input_data.limit)
     error_dist = await get_error_distribution(pool=pool, student_id=input_data.student_id)
     

@@ -30,18 +30,18 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from omodul import (
-    RECURSION_DEPTH_LIMIT,
+from omodul import RECURSION_DEPTH_LIMIT
+from omodul.compute_fingerprint_for_run_subagent import compute_fingerprint_for as run_subagent_fingerprint
+from omodul.run_subagent import (
+    CostTracker,
+    HookSpec,
     SubagentConfig,
     SubagentDefinition,
     SubagentInput,
     SubagentPermissions,
-    CostTracker,
-    HookSpec,
     _current_cost,
     _current_depth,
     _current_trail,
-    compute_fingerprint_for,
     run_subagent,
 )
 
@@ -452,7 +452,7 @@ async def test_bonus_fingerprint_stub():
     """fingerprint 未启用，但 compute_fingerprint_for 可用（桩备用）。"""
     config = make_config()
     inp = make_input()
-    fp = compute_fingerprint_for(config, inp)
+    fp = run_subagent_fingerprint(config, inp)
     ok = len(fp) == 16 and all(c in "0123456789abcdef" for c in fp)
     report("BONUS_fingerprint_stub", ok, f"fp={fp}")
 
