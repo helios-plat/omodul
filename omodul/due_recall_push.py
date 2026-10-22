@@ -4,11 +4,11 @@
 """
 
 from __future__ import annotations
+import os
 import uuid
 from typing import ClassVar, List, Dict, Any, Optional
 from pydantic import BaseModel
 from omodul.base import BaseConfig, build_fingerprint, standard_return
-from obase.notify.telegram import telegram_send as send_message # 假设使用现有的通知通道
 
 class DueRecallPushConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "due_recall_push"
@@ -36,7 +36,8 @@ async def due_recall_push_workflow(
 
     push_count = 0
     errors = []
-    
+    bot_token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
+
     for item in input_data.due_items:
         student_id = item.get("student_id")
         kc_id = item.get("kc_id")
@@ -45,9 +46,21 @@ async def due_recall_push_workflow(
         message = f"你的知识点【{kc_id}】该复习啦！点击开始同类题挑战。"
         
         try:
-            # 2. 调用现有预警系统/通知通道 (Channels)
-            # 这里简化为直接调用 obase.notify
-            await send_message(chat_id=str(student_id), text=message)
+            # Notification dependencies are loaded only at execution time to
+            # avoid making every ``import omodul`` depend on Telegram wiring.
+            if not bot_token:
+                raise RuntimeError("TELEGRAM_BOT_TOKEN is not configured")
+            from obase.notify.telegram import TelegramRequest, telegram_send
+
+            result = await telegram_send(
+                TelegramRequest(
+                    bot_token=bot_token,
+                    chat_id=str(student_id),
+                    text=message,
+                )
+            )
+            if not result.ok:
+                raise RuntimeError(result.error or "Telegram notification failed")
             push_count += 1
             trail.append({"event": "pushed", "student_id": str(student_id), "kc_id": kc_id})
         except Exception as e:
