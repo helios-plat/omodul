@@ -10,7 +10,6 @@ from typing import ClassVar, List, Dict, Any, Optional
 from pydantic import BaseModel
 from omodul.base import BaseConfig, build_fingerprint, standard_return
 from oskill.cold_start_single import cold_start_single, ColdStartInput
-from obase.interaction_history import start_interaction_session, update_interaction_session
 
 class InstantSolveConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "instant_solve"
@@ -40,7 +39,10 @@ async def instant_solve(
     fp = build_fingerprint(config, input_hash)
     trail.append({"event": "fingerprint_computed", "fp": fp})
 
-    # 2. 启动持久化会话 (History & Trail)
+    # 2. 启动持久化会话 (History & Trail). Resolve the DB adapter only
+    # when executing the workflow; package imports must not require DB wiring.
+    from obase.interaction_history import start_interaction_session, update_interaction_session
+
     session_id = await start_interaction_session(
         pool=pool,
         student_id=input_data.student_id,
