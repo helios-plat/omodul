@@ -13,10 +13,9 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-# Import the defining OBase submodules directly. The package root eagerly
-# exposes many integrations and may still be initializing when Omodul is
-# imported as a capability from another package.
-from obase.cost_tracker import CostTracker, current_cost
+# Import the config type from its defining module. Cost-tracker symbols are
+# resolved inside the workflow because this module can be imported while OBase
+# is still initializing through a cross-package Omodul capability import.
 from obase.omodul_base_config import OmodulBaseConfig
 from pydantic import BaseModel
 
@@ -69,6 +68,8 @@ async def audit_repository_workflow(
     业务事务: 下载代码 -> 审计 -> 返回结果。
     严格的三件套签名。
     """
+    from obase.cost_tracker import CostTracker, current_cost
+
     decision_trail = []
 
     # 1. 成本上下文初始化 (规范 §5.6 C1)
