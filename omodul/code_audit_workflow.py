@@ -13,9 +13,11 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from obase import CostTracker, OmodulBaseConfig, current_cost
-from oprim import execute_sandbox_cmd  # noqa: F401  (组合声明, 见下方伪代码步骤 2)
-from oskill import audit_sandbox_script  # noqa: F401  (组合声明, 见下方伪代码步骤 3)
+# Import the defining OBase submodules directly. The package root eagerly
+# exposes many integrations and may still be initializing when Omodul is
+# imported as a capability from another package.
+from obase.cost_tracker import CostTracker, current_cost
+from obase.omodul_base_config import OmodulBaseConfig
 from pydantic import BaseModel
 
 
