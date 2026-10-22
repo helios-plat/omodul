@@ -13,7 +13,18 @@ import asyncio
 from pathlib import Path
 from typing import Any, ClassVar
 
-from obase.provider_registry import ProviderRegistry
+
+class _ProviderRegistryProxy:
+    """Lazy provider-registry facade preserving the patchable public module seam."""
+
+    @staticmethod
+    def get(*args, **kwargs):
+        from obase.provider_registry import ProviderRegistry as registry
+        return registry.get(*args, **kwargs)
+
+
+ProviderRegistry = _ProviderRegistryProxy
+
 
 from omodul._base import (
     BaseConfig,

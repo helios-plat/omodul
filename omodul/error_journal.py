@@ -8,7 +8,6 @@ import uuid
 from typing import ClassVar, List, Dict, Any, Optional
 from pydantic import BaseModel
 from omodul.base import BaseConfig, build_fingerprint, standard_return
-from obase.error_tag_store import get_error_distribution
 
 class ErrorJournalConfig(BaseConfig):
     _omodul_name: ClassVar[str] = "error_journal"
@@ -34,7 +33,9 @@ async def error_journal_diagnostic(
     fp = build_fingerprint(config, str(input_data.student_id))
     trail.append({"event": "fingerprint_computed", "fp": fp})
 
-    # 2. 从 obase 提取数据 (Decision Trail)
+    # 2. 从 obase 提取数据 (Decision Trail)。延迟导入避免包初始化顺序循环。
+    from obase.error_tag_store import get_error_distribution
+
     dist = await get_error_distribution(
         pool=pool, 
         student_id=input_data.student_id,

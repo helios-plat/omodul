@@ -8,7 +8,23 @@ import time
 import uuid
 from pathlib import Path
 
-from obase import ProviderRegistry
+
+class _ProviderRegistryProxy:
+    """Lazy registry facade preserving the module-level injection/test seam."""
+
+    @staticmethod
+    def has(*args, **kwargs):
+        from obase.provider_registry import ProviderRegistry as registry
+        return registry.has(*args, **kwargs)
+
+    @staticmethod
+    def get(*args, **kwargs):
+        from obase.provider_registry import ProviderRegistry as registry
+        return registry.get(*args, **kwargs)
+
+
+ProviderRegistry = _ProviderRegistryProxy
+
 from oprim import image_generate
 from oprim.llm import LLMResponse, llm_call
 
@@ -78,6 +94,7 @@ class IllustrationAgent(Agent):
 
         trace: list[AgentStep] = []
 
+        # Registry lookup is lazy and remains patchable at module scope.
         # Guard: provider must be registered before doing any work
         if not ProviderRegistry.has("image_gen", provider):
             err = f"{provider} provider not registered (DASHSCOPE_API_KEY missing)"

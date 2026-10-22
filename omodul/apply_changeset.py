@@ -12,6 +12,10 @@ from pathlib import Path
 from typing import Any, ClassVar
 from pydantic import BaseModel
 
+from oskill._apply_edit_block import apply_edit_block as _apply_edit_block
+from oskill._apply_unified_diff import apply_unified_diff as _apply_unified_diff
+from oskill._types import EditBlock as OskillEditBlock
+
 def compute_fingerprint_for(config: ChangesetConfig,
                             input_data: ChangesetInput) -> str:
     """计算 apply_changeset fingerprint，供服务层去重。"""
@@ -98,6 +102,107 @@ class ChangesetInput(BaseModel):
     versionstore: Any = None
     message: str = ''
 
+def _record_step(trail: list[dict], *, step_no: int, event: str, **details) -> None:
+    trail.append({"step_no": step_no, "event": event, **details})
+
+
+def _safe_path(path: str, sandbox_root: str) -> Path:
+    candidate = Path(path).expanduser().resolve()
+    if sandbox_root:
+        root = Path(sandbox_root).expanduser().resolve()
+        try:
+            candidate.relative_to(root)
+        except ValueError as exc:
+            raise PermissionError(f"path outside sandbox: {path}") from exc
+    return candidate
+
+
+def _file_read(path: Path) -> str:
+    return path.read_text(encoding="utf-8", errors="replace") if path.exists() else ""
+
+
+def _compute_content(edit: Edit, original: str) -> dict:
+    if edit.full_content is not None:
+        return {"content": edit.full_content, "conflicts": [], "rejects": []}
+    if edit.blocks:
+        blocks = [
+            OskillEditBlock(search=block.search, replace=block.replace) for block in edit.blocks
+        ]
+        result = _apply_edit_block(original, blocks=blocks)
+        return {
+            "content": result.content,
+            "conflicts": result.conflicts,
+            "rejects": result.rejects,
+        }
+    if edit.unified_diff:
+        result = _apply_unified_diff(original, diff=edit.unified_diff)
+        return {
+            "content": result.content,
+            "conflicts": result.conflicts,
+            "rejects": result.rejects,
+        }
+    return {"content": None, "conflicts": ["edit has no content"], "rejects": []}
+
+
+def _validate_edit(content: str, *, path: str, enabled: bool) -> dict:
+    if not enabled or Path(path).suffix != ".py":
+        return {"ok": True, "errors": []}
+    try:
+        compile(content, path, "exec")
+    except SyntaxError as exc:
+        return {
+            "ok": False,
+            "errors": [
+                {
+                    "type": type(exc).__name__,
+                    "message": exc.msg,
+                    "line": exc.lineno,
+                    "offset": exc.offset,
+                }
+            ],
+        }
+    return {"ok": True, "errors": []}
+
+
+def _file_write(path: Path, *, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding="utf-8")
+
+
+def _write_trail(trail: list[dict], output_dir: Path, run_id: str) -> Path:
+    path = output_dir / f"decision_trail_{run_id}.json"
+    path.write_text(json.dumps(trail, ensure_ascii=False, indent=2), encoding="utf-8")
+    return path
+
+
+def _build_result(
+    status: str,
+    error: dict | None,
+    applied: list[str],
+    skipped: list[str],
+    failed_paths: list[str],
+    snapshot_rev: str | None,
+    fingerprint: str,
+    trail: list[dict],
+    output_dir: Path,
+    run_id: str,
+) -> dict:
+    return {
+        "status": status,
+        "error": error,
+        "applied": applied,
+        "skipped": skipped,
+        "failed_paths": failed_paths,
+        "snapshot_rev": snapshot_rev,
+        "fingerprint": fingerprint,
+        "decision_trail": {
+            "path": str(output_dir / f"decision_trail_{run_id}.json"),
+            "steps": len(trail),
+            "run_id": run_id,
+        },
+        "cost_usd": 0.0,
+    }
+
 def apply_changeset(
     config: ChangesetConfig,
     input_data: ChangesetInput,
@@ -146,7 +251,9 @@ def apply_changeset(
     snapshot_rev: str | None = None
 
     # ── fingerprint ────────────────────────────────────────────────────────
-    fingerprint = compute_fingerprint_for(config, input_data)
+    # The public helper returns a full SHA-256 digest; the apply_changeset
+    # result preserves the historical 24-character idempotency key contract.
+    fingerprint = compute_fingerprint_for(config, input_data)[:24]
     _record_step(trail, step_no=0, event="changeset_start",
                  fingerprint=fingerprint, n_edits=len(input_data.edits),
                  message=input_data.message)
